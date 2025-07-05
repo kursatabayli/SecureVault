@@ -1,0 +1,45 @@
+services:
+  securevault.apigateway:
+    image: ${DOCKER_REGISTRY-}securevaultapigateway
+    build:
+      context: .
+      dockerfile: src/gateways/SecureVault.ApiGateway/Dockerfile
+    ports: 
+      - "7202:8081"
+    depends_on:
+      - securevault.vault.api
+  
+  securevault.vault.api:
+    image: ${DOCKER_REGISTRY-}securevaultvaultapi
+    build:
+      context: .
+      dockerfile: src/services/Vault/SecureVault.Vault.Api/Dockerfile
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=${DB_HOST};Username=${DB_USER};Password=${DB_PASSWORD};Database=${DB_NAME}
+    volumes:
+      - D:\https:/https/
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+
+  postgres-db:
+    image: postgres:17
+    container_name: postgres-db
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db_migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_initial_schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+volumes:
+  postgres_data:

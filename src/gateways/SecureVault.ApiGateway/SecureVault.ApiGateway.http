@@ -1,0 +1,6 @@
+@SecureVault.ApiGateway_HostAddress = http://localhost:5234
+
+GET {{SecureVault.ApiGateway_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

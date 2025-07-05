@@ -1,0 +1,41 @@
+{
+  "GlobalConfiguration": {},
+  "Routes": [
+    {
+      "DownstreamPathTemplate": "/api/VaultItem/{itemType}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "securevault.vault.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/VaultItem/{itemType}",
+      "UpstreamHttpMethod": [ "Get" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/VaultItem/",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "securevault.vault.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/VaultItem/",
+      "UpstreamHttpMethod": [ "Post", "Put" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/VaultItem/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "securevault.vault.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/VaultItem/{id}",
+      "UpstreamHttpMethod": [ "Delete" ]
+    }
+  ]
+}

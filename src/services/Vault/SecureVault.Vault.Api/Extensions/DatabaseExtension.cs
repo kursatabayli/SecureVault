@@ -1,0 +1,19 @@
+﻿using Microsoft.EntityFrameworkCore;
+using SecureVault.Vault.Infrastructure.Context;
+
+namespace SecureVault.Vault.Api.Extensions
+{
+    public static class DatabaseExtension
+    {
+        public static IServiceCollection AddDbContextConfiguration(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddDbContext<AppDbContext>(options =>
+                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"),
+                    sqlOptions => sqlOptions.EnableRetryOnFailure())
+                        .UseSnakeCaseNamingConvention()
+            );
+
+            return services;
+        }
+    }
+}

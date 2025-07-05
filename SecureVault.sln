@@ -1,0 +1,144 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36221.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "gateways", "gateways", "{1E116009-665F-4A82-8BC6-E24B81BCCC89}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "services", "services", "{E6F40B5C-2068-4169-B22D-3D2640C12962}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "shared", "shared", "{55F0C392-5DEA-460A-B61A-865970409C0B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{92381097-70E7-47F7-B47E-98AEB6ACE184}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.ApiGateway", "src\gateways\SecureVault.ApiGateway\SecureVault.ApiGateway.csproj", "{EF2C8522-D873-478F-8E6B-C659DB8DD573}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Identity", "Identity", "{E3000CD1-DFAF-4C17-BCDC-3B250636109C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Vault", "Vault", "{572F5DF9-12F6-465C-9B8D-4B93676C8033}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.Identity.Application", "src\services\Identity\SecureVault.Identity.Application\SecureVault.Identity.Application.csproj", "{C230B087-6472-4CBF-9711-6FE817E4507F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.Identity.Domain", "src\services\Identity\SecureVault.Identity.Domain\SecureVault.Identity.Domain.csproj", "{F7784E8B-2CCE-43EE-AB22-493B70617DDE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.Identity.Infrastructure", "src\services\Identity\SecureVault.Identity.Infrastructure\SecureVault.Identity.Infrastructure.csproj", "{4F544BC5-C0F3-42E7-9109-BE1DECFB0874}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.Identity.Api", "src\services\Identity\SecureVault.Identity.Api\SecureVault.Identity.Api.csproj", "{7F950DEE-A472-43B3-8B88-CF5AEBCBB302}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "clients", "clients", "{ED07848C-E7B8-4F49-B0A6-DBF1DD66702D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.Vault.Application", "src\services\Vault\SecureVault.Vault.Application\SecureVault.Vault.Application.csproj", "{DDA827DA-9CF8-4504-9E3C-571614689534}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.Vault.Domain", "src\services\Vault\SecureVault.Vault.Domain\SecureVault.Vault.Domain.csproj", "{8575DA2A-3FC0-40D7-9489-6EB6A36F3960}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.Vault.Infrastructure", "src\services\Vault\SecureVault.Vault.Infrastructure\SecureVault.Vault.Infrastructure.csproj", "{B9452E8E-D553-4C7A-B81C-3650DCBB4459}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.Shared.Dto", "src\shared\SecureVault.Shared.Dto\SecureVault.Shared.Dto.csproj", "{17EF426B-FC76-4AFE-B516-CCA492BFF0A5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.Vault.Api", "src\services\Vault\SecureVault.Vault.Api\SecureVault.Vault.Api.csproj", "{9932701D-B97F-486E-8B8F-B9C3EDA67758}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.Shared.Result", "src\shared\SecureVault.Shared.Result\SecureVault.Shared.Result.csproj", "{88D7ACE5-91CC-4FFB-ABEA-DBF71CF3D0A0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "db_migrations", "db_migrations", "{2482BC15-738A-40AE-97DA-2374AE29208E}"
+	ProjectSection(SolutionItems) = preProject
+		db_migrations\001_initial_schema.sql = db_migrations\001_initial_schema.sql
+		002_add_soft_delete_to_vault_items.sql = 002_add_soft_delete_to_vault_items.sql
+	EndProjectSection
+EndProject
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{81DDED9D-158B-E303-5F62-77A2896D2A5A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.App", "src\clients\SecureVault.App\SecureVault.App.csproj", "{1412509E-33D6-43E1-96FC-293512F65722}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
+	ProjectSection(SolutionItems) = preProject
+		.env = .env
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EF2C8522-D873-478F-8E6B-C659DB8DD573}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EF2C8522-D873-478F-8E6B-C659DB8DD573}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EF2C8522-D873-478F-8E6B-C659DB8DD573}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EF2C8522-D873-478F-8E6B-C659DB8DD573}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C230B087-6472-4CBF-9711-6FE817E4507F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C230B087-6472-4CBF-9711-6FE817E4507F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C230B087-6472-4CBF-9711-6FE817E4507F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C230B087-6472-4CBF-9711-6FE817E4507F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7784E8B-2CCE-43EE-AB22-493B70617DDE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7784E8B-2CCE-43EE-AB22-493B70617DDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7784E8B-2CCE-43EE-AB22-493B70617DDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7784E8B-2CCE-43EE-AB22-493B70617DDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F544BC5-C0F3-42E7-9109-BE1DECFB0874}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F544BC5-C0F3-42E7-9109-BE1DECFB0874}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F544BC5-C0F3-42E7-9109-BE1DECFB0874}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F544BC5-C0F3-42E7-9109-BE1DECFB0874}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F950DEE-A472-43B3-8B88-CF5AEBCBB302}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F950DEE-A472-43B3-8B88-CF5AEBCBB302}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F950DEE-A472-43B3-8B88-CF5AEBCBB302}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F950DEE-A472-43B3-8B88-CF5AEBCBB302}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DDA827DA-9CF8-4504-9E3C-571614689534}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDA827DA-9CF8-4504-9E3C-571614689534}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DDA827DA-9CF8-4504-9E3C-571614689534}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DDA827DA-9CF8-4504-9E3C-571614689534}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8575DA2A-3FC0-40D7-9489-6EB6A36F3960}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8575DA2A-3FC0-40D7-9489-6EB6A36F3960}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8575DA2A-3FC0-40D7-9489-6EB6A36F3960}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8575DA2A-3FC0-40D7-9489-6EB6A36F3960}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9452E8E-D553-4C7A-B81C-3650DCBB4459}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9452E8E-D553-4C7A-B81C-3650DCBB4459}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9452E8E-D553-4C7A-B81C-3650DCBB4459}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9452E8E-D553-4C7A-B81C-3650DCBB4459}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17EF426B-FC76-4AFE-B516-CCA492BFF0A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17EF426B-FC76-4AFE-B516-CCA492BFF0A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17EF426B-FC76-4AFE-B516-CCA492BFF0A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17EF426B-FC76-4AFE-B516-CCA492BFF0A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9932701D-B97F-486E-8B8F-B9C3EDA67758}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9932701D-B97F-486E-8B8F-B9C3EDA67758}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9932701D-B97F-486E-8B8F-B9C3EDA67758}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9932701D-B97F-486E-8B8F-B9C3EDA67758}.Release|Any CPU.Build.0 = Release|Any CPU
+		{88D7ACE5-91CC-4FFB-ABEA-DBF71CF3D0A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{88D7ACE5-91CC-4FFB-ABEA-DBF71CF3D0A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{88D7ACE5-91CC-4FFB-ABEA-DBF71CF3D0A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{88D7ACE5-91CC-4FFB-ABEA-DBF71CF3D0A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1412509E-33D6-43E1-96FC-293512F65722}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1412509E-33D6-43E1-96FC-293512F65722}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1412509E-33D6-43E1-96FC-293512F65722}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1412509E-33D6-43E1-96FC-293512F65722}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1E116009-665F-4A82-8BC6-E24B81BCCC89} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{E6F40B5C-2068-4169-B22D-3D2640C12962} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{55F0C392-5DEA-460A-B61A-865970409C0B} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{EF2C8522-D873-478F-8E6B-C659DB8DD573} = {1E116009-665F-4A82-8BC6-E24B81BCCC89}
+		{E3000CD1-DFAF-4C17-BCDC-3B250636109C} = {E6F40B5C-2068-4169-B22D-3D2640C12962}
+		{572F5DF9-12F6-465C-9B8D-4B93676C8033} = {E6F40B5C-2068-4169-B22D-3D2640C12962}
+		{C230B087-6472-4CBF-9711-6FE817E4507F} = {E3000CD1-DFAF-4C17-BCDC-3B250636109C}
+		{F7784E8B-2CCE-43EE-AB22-493B70617DDE} = {E3000CD1-DFAF-4C17-BCDC-3B250636109C}
+		{4F544BC5-C0F3-42E7-9109-BE1DECFB0874} = {E3000CD1-DFAF-4C17-BCDC-3B250636109C}
+		{7F950DEE-A472-43B3-8B88-CF5AEBCBB302} = {E3000CD1-DFAF-4C17-BCDC-3B250636109C}
+		{ED07848C-E7B8-4F49-B0A6-DBF1DD66702D} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{DDA827DA-9CF8-4504-9E3C-571614689534} = {572F5DF9-12F6-465C-9B8D-4B93676C8033}
+		{8575DA2A-3FC0-40D7-9489-6EB6A36F3960} = {572F5DF9-12F6-465C-9B8D-4B93676C8033}
+		{B9452E8E-D553-4C7A-B81C-3650DCBB4459} = {572F5DF9-12F6-465C-9B8D-4B93676C8033}
+		{17EF426B-FC76-4AFE-B516-CCA492BFF0A5} = {55F0C392-5DEA-460A-B61A-865970409C0B}
+		{9932701D-B97F-486E-8B8F-B9C3EDA67758} = {572F5DF9-12F6-465C-9B8D-4B93676C8033}
+		{88D7ACE5-91CC-4FFB-ABEA-DBF71CF3D0A0} = {55F0C392-5DEA-460A-B61A-865970409C0B}
+		{1412509E-33D6-43E1-96FC-293512F65722} = {ED07848C-E7B8-4F49-B0A6-DBF1DD66702D}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {039ECE7C-A251-471C-97FE-A49A8FA647C7}
+	EndGlobalSection
+EndGlobal
