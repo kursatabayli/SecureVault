@@ -12,8 +12,8 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.6" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\SecureVault.Vault.Application\SecureVault.Vault.Application.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\SecureVault.Vault.Application.Contracts\SecureVault.Vault.Application.Contracts.csproj" />
+    </ItemGroup>
 
 </Project>

@@ -1,25 +1,64 @@
 services:
-  securevault.apigateway:
+  securevault-apigateway:
     image: ${DOCKER_REGISTRY-}securevaultapigateway
     build:
       context: .
       dockerfile: src/gateways/SecureVault.ApiGateway/Dockerfile
-    ports: 
+    ports:
       - "7202:8081"
+      - "5234:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081      
+      - Consul__Host=${CONSUL_HOST}
+    networks:
+      - securevault-net
     depends_on:
-      - securevault.vault.api
-  
-  securevault.vault.api:
+      - securevault-vault-api
+      - securevault-identity-api
+
+  securevault-vault-api:
     image: ${DOCKER_REGISTRY-}securevaultvaultapi
     build:
       context: .
       dockerfile: src/services/Vault/SecureVault.Vault.Api/Dockerfile
     environment:
-      - ConnectionStrings__DefaultConnection=Host=${DB_HOST};Username=${DB_USER};Password=${DB_PASSWORD};Database=${DB_NAME}
-    volumes:
-      - D:\https:/https/
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres-db;Username=${DB_USER};Password=${DB_PASSWORD};Database=${DB_NAME}
+      - Consul__Host=${CONSUL_HOST}
+      - ForwardedHeadersOptions__KnownNetworks=${FORWARDED_HEADERS_KNOWN_NETWORKS}
+    networks:
+      - securevault-net
     depends_on:
+      consul:
+        condition: service_healthy  
       postgres-db:
+        condition: service_healthy
+
+  securevault-identity-api:
+    image: ${DOCKER_REGISTRY-}securevaultidentityapi
+    build:
+      context: .
+      dockerfile: src/services/Identity/SecureVault.Identity.Api/Dockerfile
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres-db;Username=${DB_USER};Password=${DB_PASSWORD};Database=${DB_NAME}
+      - ConnectionStrings__Redis=redis:6379
+      - Consul__Host=${CONSUL_HOST}
+      - ForwardedHeadersOptions__KnownNetworks=${FORWARDED_HEADERS_KNOWN_NETWORKS}
+      - JwtSettings__Key=${JWT_KEY}
+      - JwtSettings__RefreshTokenKey=${JWT_REFRESH_KEY}
+    networks:
+      - securevault-net
+    depends_on:
+      consul:
+        condition: service_healthy  
+      postgres-db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   postgres-db:
@@ -27,6 +66,8 @@ services:
     container_name: postgres-db
     ports:
       - "5433:5432"
+    networks:
+      - securevault-net
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -41,5 +82,41 @@ services:
       retries: 5
     restart: always
 
+  redis:
+    image: redis
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+    networks:
+      - securevault-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  consul:
+    image: hashicorp/consul:latest
+    container_name: consul
+    ports:
+      - "8500:8500"
+    networks:
+      - securevault-net
+    healthcheck:
+      test: ["CMD", "consul", "operator", "raft", "list-peers"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
 volumes:
   postgres_data:
+  
+networks:
+  securevault-net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.22.0.0/16

@@ -6,15 +6,15 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="AutoMapper" Version="14.0.0" />
-        <PackageReference Include="MediatR" Version="12.5.0" />
+        <PackageReference Include="AutoMapper" Version="15.0.0" />
+        <PackageReference Include="MediatR" Version="13.0.0" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.6" />
         <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="9.0.6" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.6" />
     </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\shared\SecureVault.Shared.Result\SecureVault.Shared.Result.csproj" />
-    <ProjectReference Include="..\SecureVault.Vault.Domain\SecureVault.Vault.Domain.csproj" />
+    <ProjectReference Include="..\SecureVault.Vault.Application.Contracts\SecureVault.Vault.Application.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Messages\ReturnMessages.Designer.cs">
@@ -28,6 +28,9 @@
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>ReturnMessages.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Services\" />
   </ItemGroup>
 
 </Project>

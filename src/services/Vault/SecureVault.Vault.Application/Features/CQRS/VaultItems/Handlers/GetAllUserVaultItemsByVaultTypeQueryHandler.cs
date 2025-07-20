@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SecureVault.Shared.Result;
-using SecureVault.Vault.Application.Contracts.RepositoryContracts;
+using SecureVault.Vault.Application.Contracts.Repositories;
 using SecureVault.Vault.Application.Features.CQRS.VaultItems.Queries;
 using SecureVault.Vault.Application.Features.CQRS.VaultItems.Results;
 using SecureVault.Vault.Application.Messages;
@@ -35,21 +35,12 @@ namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
 
                 var mappedVaultItems = await _mapper.ProjectTo<VaultItemResult>(vaultItems).ToListAsync(cancellationToken);
                 
-                return mappedVaultItems;
+                return Result<IReadOnlyCollection<VaultItemResult>>.Success(mappedVaultItems);
             }
             catch (Exception ex)
             {
-                string itemType = request.ItemType switch
-                {
-                    ItemType.Password => _returnMessages[ReturnMessages.ItemType_Password_Plural],
-                    ItemType.TwoFactorAuth => _returnMessages[ReturnMessages.ItemType_TwoFactorAuth_Plural],
-                    ItemType.CreditCard => _returnMessages[ReturnMessages.ItemType_CreditCard_Plural],
-                    _ => throw new NotImplementedException(),
-                };
-
-                _logger.LogError(ex, _returnMessages[ReturnMessages.Error_Operation_List, itemType], nameof(ErrorCode.VaultListFailure));
-                Error error = new(nameof(ErrorCode.VaultListFailure), _returnMessages[ReturnMessages.Error_Operation_List, itemType]);
-                return error;
+                _logger.LogError(ex, "Kullanıcının vault item'ları listelenirken beklenmedik bir hata oluştu. UserId: {UserId}, ItemType: {ItemType}", request.UserId, request.ItemType);
+                return new Error(ErrorCodes.InternalServerError, _returnMessages[ErrorCodes.InternalServerError]);
             }
         }
     }

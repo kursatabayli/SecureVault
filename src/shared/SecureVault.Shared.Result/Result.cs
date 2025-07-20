@@ -28,18 +28,16 @@
             ? _value!
             : throw new InvalidOperationException("Başarısız bir sonucun değeri okunamaz.");
 
-        private Result(T value) : base(true, Error.None)
+        protected Result(T? value, bool isSuccess, Error error)
+            : base(isSuccess, error)
         {
             _value = value;
         }
 
-        private Result(Error error) : base(false, error)
-        {
-            _value = default;
-        }
+        public static Result<T> Success(T value) => new(value, true, Error.None);
+        public static new Result<T> Failure(Error error) => new(default, false, error);
 
-        public static implicit operator Result<T>(T value) => new(value);
-
-        public static implicit operator Result<T>(Error error) => new(error);
+        public static implicit operator Result<T>(T value) => Success(value);
+        public static implicit operator Result<T>(Error error) => Failure(error);
     }
 }

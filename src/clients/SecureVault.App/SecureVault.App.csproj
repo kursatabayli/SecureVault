@@ -58,9 +58,30 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
+      <None Remove="Platforms\Android\Resources\xml\network_security_config.xml" />
+    </ItemGroup>
+
+    <ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.3.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.5" />
+		<PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="9.0.5" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.5" />
+		<PackageReference Include="MudBlazor" Version="8.6.0" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.81" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="9.0.81" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.6" />
+        <PackageReference Include="Otp.NET" Version="1.4.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\shared\SecureVault.Shared.Result\SecureVault.Shared.Result.csproj" />
+      <ProjectReference Include="..\SecureVault.App.Services\SecureVault.App.Services.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <AndroidResource Update="Platforms\Android\Resources\xml\network_security_config.xml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </AndroidResource>
     </ItemGroup>
 
 </Project>

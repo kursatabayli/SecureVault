@@ -1,0 +1,23 @@
+﻿@using SecureVault.App.Services.Constants
+<MudHidden Breakpoint="Breakpoint.SmAndDown" Invert="true">
+    <MudPaper Width="100%" Square="true" Class="py-2 d-md-none" Style="position: fixed; bottom: 0; left: 0; z-index: 1000;" Elevation="3">
+        <MudStack Row="true" Justify="Justify.SpaceAround">
+
+            <MudStack AlignItems="AlignItems.Center" Spacing="0">
+                <MudIconButton Icon="@Icons.Material.Filled.Security" aria-label="2FA" Href="@RouteConstants.TwoFactor"/>
+                <MudText Typo="Typo.caption">2FA</MudText>
+            </MudStack>
+
+            <MudStack AlignItems="AlignItems.Center" Spacing="0">
+                <MudIconButton Icon="@Icons.Material.Filled.Password" aria-label="Parola" />
+                <MudText Typo="Typo.caption">Parola</MudText>
+            </MudStack>
+
+            <MudStack AlignItems="AlignItems.Center" Spacing="0">
+                <MudIconButton Icon="@Icons.Material.Filled.Settings" aria-label="Ayarlar" />
+                <MudText Typo="Typo.caption">Ayarlar</MudText>
+            </MudStack>
+
+        </MudStack>
+    </MudPaper>
+</MudHidden>

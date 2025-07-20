@@ -117,37 +117,13 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Error_Operation_List" xml:space="preserve">
-    <value>An error occurred on the server side while listing {0}.</value>
+  <data name="Vault_ItemNotFound" xml:space="preserve">
+    <value>The requested item was not found.</value>
   </data>
-  <data name="ItemType_Password_Plural" xml:space="preserve">
-    <value>Passwords</value>
+  <data name="UnauthorizedAccess" xml:space="preserve">
+    <value>You are not authorized to perform this action.</value>
   </data>
-  <data name="ItemType_TwoFactorAuth_Plural" xml:space="preserve">
-    <value>Two Factor Authentication Codes</value>
-  </data>
-  <data name="ItemType_CreditCard_Plural" xml:space="preserve">
-    <value>Credit Cards</value>
-  </data>
-  <data name="ItemType_Password" xml:space="preserve">
-    <value>Password</value>
-  </data>
-  <data name="ItemType_TwoFactorAuth" xml:space="preserve">
-    <value>Two Factor Authentication Code</value>
-  </data>
-  <data name="ItemType_CreditCard" xml:space="preserve">
-    <value>Credit Card</value>
-  </data>
-  <data name="Error_Operation_Create" xml:space="preserve">
-    <value>A server-side error occurred while saving {0}.</value>
-  </data>
-  <data name="Error_ItemNotFound" xml:space="preserve">
-    <value>{0} not found.</value>
-  </data>
-  <data name="Error_Unauthorized" xml:space="preserve">
-    <value>Unauthorized Access</value>
-  </data>
-  <data name="Error_Operation_Delete" xml:space="preserve">
-    <value>An error occurred on the server side during the delete operation.</value>
+  <data name="InternalServerError" xml:space="preserve">
+    <value>An unexpected error occurred. Please try again later.</value>
   </data>
 </root>

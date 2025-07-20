@@ -1,41 +1,42 @@
 {
-  "GlobalConfiguration": {},
   "Routes": [
     {
-      "DownstreamPathTemplate": "/api/VaultItem/{itemType}",
+      "UpstreamPathTemplate": "/identity/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "DownstreamPathTemplate": "/{everything}",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "securevault.vault.api",
-          "Port": 8080
-        }
-      ],
-      "UpstreamPathTemplate": "/gateway/VaultItem/{itemType}",
-      "UpstreamHttpMethod": [ "Get" ]
+      "ServiceName": "IdentityService"
     },
     {
-      "DownstreamPathTemplate": "/api/VaultItem/",
+      "UpstreamPathTemplate": "/vault/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "DownstreamPathTemplate": "/{everything}",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "securevault.vault.api",
-          "Port": 8080
-        }
-      ],
-      "UpstreamPathTemplate": "/gateway/VaultItem/",
-      "UpstreamHttpMethod": [ "Post", "Put" ]
-    },
-    {
-      "DownstreamPathTemplate": "/api/VaultItem/{id}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "securevault.vault.api",
-          "Port": 8080
-        }
-      ],
-      "UpstreamPathTemplate": "/gateway/VaultItem/{id}",
-      "UpstreamHttpMethod": [ "Delete" ]
+      "ServiceName": "VaultService",
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
     }
-  ]
+  ],
+  "GlobalConfiguration": {
+    "BaseUrl": "https://localhost:7202",
+    "ServiceDiscoveryProvider": {
+      "Host": "consul",
+      "Port": 8500,
+      "Type": "Consul"
+    },
+    "DownstreamScheme": "http",
+    "LoadBalancerOptions": {
+      "Type": "LeastConnection"
+    },
+    "RateLimitOptions": {
+      "ClientIdHeader": "ClientId",
+      "QuotaExceededMessage": "Rate limit exceeded.",
+      "RateLimitCounterPrefix": "ocelot",
+      "DisableRateLimitHeaders": false,
+      "HttpStatusCode": 429,
+      "ClientWhitelist": []
+    }
+  }
 }

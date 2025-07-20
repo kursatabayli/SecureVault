@@ -1,17 +1,118 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<MudThemeProvider Theme="@_theme" IsDarkMode="true" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+<MudLayout>
+
+    @if (IsAuthPage())
+    {
+        @Body
+    }
+    else
+    {
+        <AuthorizeView>
+            <MudHidden Breakpoint="Breakpoint.SmAndUp" Invert="true">
+                <MudAppBar Elevation="1" Dense="true" Fixed="true">
+                    <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleDrawer" />
+                    <MudSpacer />
+                </MudAppBar>
+
+                <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2" Variant="DrawerVariant.Mini">
+                    <NavMenu />
+                </MudDrawer>
+            </MudHidden>
+        </AuthorizeView>
+
+            <MudMainContent>
+                <MudOverlay Visible="_drawerOpen" OnClick='() => _drawerOpen = false' DarkBackground="false" ZIndex="1100" />
+                <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-8">
+                    @Body
+                </MudContainer>
+            </MudMainContent>
+            <BottomNav />
+    }
+
+</MudLayout>
+
+@code {
+    [Inject] private NavigationManager NavigationManager { get; set; }
+    private MudTheme? _theme = null;
+    private bool _drawerOpen = false;
+
+    private void ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+    private bool IsAuthPage()
+    {
+        var currentUri = NavigationManager.Uri;
+        var authRoutes = new[] { "/login", "/register", "/forgot-password" };
+        var relativePath = new Uri(currentUri).AbsolutePath;
+        return authRoutes.Contains(relativePath.ToLower());
+    }
+    private DrawerVariant _variant => _drawerOpen
+            ? DrawerVariant.Temporary
+            : DrawerVariant.Mini;
+
+    private readonly PaletteLight _lightPalette = new()
+    {
+        Primary = "#0969DA",
+        Secondary = "#8250DF",
+        Background = "#F6F8FA",
+        Surface = "#FFFFFF",
+        AppbarBackground = "#F6F8FA",
+        AppbarText = "#1F2328",
+        DrawerBackground = "#FFFFFF",
+        DrawerText = "#24292F",
+        DrawerIcon = "#1F2328",
+        TextPrimary = "#1F2328",
+        TextSecondary = "#57606A",
+        TextDisabled = "#8C959F",
+        ActionDefault = "#24292F",
+        ActionDisabled = "#D0D7DE",
+        ActionDisabledBackground = "#EAECEF",
+        LinesDefault = "#D8DEE4",
+        TableLines = "#D8DEE4",
+        Divider = "#D0D7DE",
+        OverlayLight = "rgba(0, 0, 0, 0.04)",
+        Info = "#1D76DB",
+        Success = "#2DA44E",
+        Warning = "#FFD33D",
+        Error = "#CF222E",
+        Black = "#000000",
+        White = "#ffffff"
+    };
+
+    private readonly PaletteDark _darkPalette = new()
+    {
+        Primary = "#58A6FF",
+        Secondary = "#D2A8FF",
+        Background = "#0D1117",
+        Surface = "#161B22",
+        AppbarBackground = "#0D1117",
+        AppbarText = "#C9D1D9",
+        DrawerBackground = "#161B22",
+        DrawerText = "#E6EDF3",
+        DrawerIcon = "#C9D1D9",
+        TextPrimary = "#C9D1D9",
+        TextSecondary = "#8B949E",
+        TextDisabled = "#6E7681",
+        ActionDefault = "#C9D1D9",
+        ActionDisabled = "#484F58",
+        ActionDisabledBackground = "#21262D",
+        LinesDefault = "#30363D",
+        TableLines = "#30363D",
+        Divider = "#30363D",
+        OverlayLight = "rgba(255, 255, 255, 0.05)",
+        Info = "#58A6FF",
+        Success = "#3FB950",
+        Warning = "#D29922",
+        Error = "#F85149",
+        Black = "#000000",
+        White = "#ffffff"
+    };
+}
