@@ -1,53 +1,54 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using MudBlazor;
 using SecureVault.App.Services.Models.AuthModels;
+using SecureVault.App.Services.Resources;
 using SecureVault.App.Services.Service.Contracts;
 
 namespace SecureVault.App.Components.Pages.Auth
 {
     public partial class Login : ComponentBase
     {
-        MudForm? form;
+        private MudForm? form;
         private bool Submitting = false;
-        private LoginModel loginModel { get; set; } = new();
-        [Inject] private IAuthService AuthService { get; set; }
-        [Inject] private ISnackbar Snackbar { get; set; }
-        [Inject] private NavigationManager NavigationManager { get; set; }
-        protected override async Task OnInitializedAsync()
-        {
-            await base.OnInitializedAsync();
-        }
+        private readonly LoginModel loginModel = new();
+        [Inject] private IStringLocalizer<SharedResources> Localizer { get; set; } = null!;
+        [Inject] private IAuthService AuthService { get; set; } = null!;
+        [Inject] private ISnackbar Snackbar { get; set; } = null!;
+        [Inject] private NavigationManager NavigationManager { get; set; } = null!;
+        [Inject] private ILogger<Login> Logger { get; set; } = null!;
+
         private async Task Submit()
         {
-            if (!await ValidateFormAsync())
-                return;
+            if (form is null) return;
+            await form.Validate();
+            if (!form.IsValid) return;
+
+            Submitting = true;
 
             try
             {
-                Submitting = true;
-                await HandleLogin();
+                var result = await AuthService.LoginAsync(loginModel);
+
+                if (result.IsSuccess)
+                {
+                    NavigationManager.NavigateTo("/", true);
+                }
+                else
+                {
+                    Snackbar.Add(result.Error.Message, Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Login sayfasında beklenmedik bir hata oluştu.");
+                Snackbar.Add(Localizer[SharedResources.UnexpectedError], Severity.Error);
             }
             finally
             {
                 Submitting = false;
             }
-        }
-
-        private async Task<bool> ValidateFormAsync()
-        {
-            if (form is null) return false;
-
-            await form.Validate();
-            return form.IsValid;
-        }
-
-        private async Task HandleLogin()
-        {
-            var result = await AuthService.LoginAsync(loginModel);
-            if (result.IsSuccess)
-                NavigationManager.NavigateTo("/", true);
-            else
-                Snackbar.Add(result.Error.Message, Severity.Error);
         }
     }
 }

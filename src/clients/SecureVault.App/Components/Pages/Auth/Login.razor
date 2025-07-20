@@ -3,18 +3,18 @@
 
 
 <MudPaper class="login-container">
-    <MudGrid Justify="Justify.Center" AlignItems="AlignItems.Center" Style="width:100%; max-width: 1200px;">
+    <MudStack Row Justify="Justify.Center" AlignItems="AlignItems.Center" Style="width:100%; max-width: 1200px;">
+        @if (!Submitting)
+        {
+            <MudItem md="6" Class="branding-section hidden-sm-and-down">
+                <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Large" Style="font-size: 6rem; color: var(--mud-palette-primary);" />
+                <MudText Typo="Typo.h3" GutterBottom="true" Class="mt-4">SecureVault</MudText>
+                <MudText Typo="Typo.h6" Style="opacity: 0.8;">Verilerinizi güvenle yönetin.</MudText>
+            </MudItem>
 
-        <MudItem md="6" Class="branding-section hidden-sm-and-down">
-            <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Large" Style="font-size: 6rem; color: var(--mud-palette-primary);" />
-            <MudText Typo="Typo.h3" GutterBottom="true" Class="mt-4">SecureVault</MudText>
-            <MudText Typo="Typo.h6" Style="opacity: 0.8;">Verilerinizi güvenle yönetin.</MudText>
-        </MudItem>
+            <MudItem xs="12" sm="10" md="6">
+                <MudPaper Elevation="5" Class="login-form-paper">
 
-        <MudItem xs="12" sm="10" md="6">
-            <MudPaper Elevation="5" Class="login-form-paper">
-                @if (!Submitting)
-                {
                     <MudText Typo="Typo.h4" GutterBottom="true" Align="Align.Center">Giriş Yap</MudText>
                     <MudText Typo="Typo.body2" Color="Color.Inherit" Align="Align.Center" Class="mb-6">Hesabınıza erişmek için bilgilerinizi girin.</MudText>
 
@@ -62,12 +62,13 @@
                     <MudText Align="Align.Center">
                         Hesabınız yok mu? <MudLink Href="/register">Hemen Kayıt Olun</MudLink>
                     </MudText>
-                }
-                else
-                {
-                    <Loading LoadingText="Giriş yapılıyor..." />
-                }
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
+
+                </MudPaper>
+            </MudItem>
+        }
+        else
+        {
+            <Loading LoadingText="Giriş yapılıyor..." />
+        }
+    </MudStack>
 </MudPaper>

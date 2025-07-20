@@ -19,5 +19,11 @@
         {
             public const string ItemNotFound = "Vault_ItemNotFound";
         }
+
+        public static class Client
+        {
+            public const string NetworkError = "NetworkError";
+            public const string LoadFailed = "LoadFailed";
+        }
     }
 }

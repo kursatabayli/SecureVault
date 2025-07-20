@@ -1,4 +1,5 @@
-﻿using SecureVault.App.Services.Service.Contracts;
+﻿using SecureVault.App.Services.Constants;
+using SecureVault.App.Services.Service.Contracts;
 using System.Net;
 using System.Net.Http.Headers;
 
@@ -16,7 +17,7 @@ namespace SecureVault.App.Services.AuthHelpers
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            var accessToken = await SecureStorage.Default.GetAsync("AccessToken");
+            var accessToken = await SecureStorage.Default.GetAsync(StorageKeys.AccessToken);
             if (!string.IsNullOrEmpty(accessToken))
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
@@ -29,7 +30,7 @@ namespace SecureVault.App.Services.AuthHelpers
                 await _refreshTokenLock.WaitAsync(cancellationToken);
                 try
                 {
-                    var newAccessToken = await SecureStorage.Default.GetAsync("AccessToken");
+                    var newAccessToken = await SecureStorage.Default.GetAsync(StorageKeys.AccessToken);
                     if (accessToken != newAccessToken)
                     {
                         response = await ResendRequestWithNewToken(request, newAccessToken, cancellationToken);
@@ -39,7 +40,7 @@ namespace SecureVault.App.Services.AuthHelpers
                         var refreshResult = await _authService.RefreshTokenAsync();
                         if (refreshResult.IsSuccess)
                         {
-                            var refreshedAccessToken = await SecureStorage.Default.GetAsync("AccessToken");
+                            var refreshedAccessToken = await SecureStorage.Default.GetAsync(StorageKeys.AccessToken);
                             response = await ResendRequestWithNewToken(request, refreshedAccessToken, cancellationToken);
                         }
                         else
