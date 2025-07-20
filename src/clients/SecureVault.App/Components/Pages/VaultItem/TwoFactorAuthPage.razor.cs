@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
 using MudBlazor;
+using OtpNet;
 using SecureVault.App.Services.Models.VaultItemModels;
-using SecureVault.App.Services.Resources;
 using SecureVault.App.Services.Service.Contracts;
 
 namespace SecureVault.App.Components.Pages.VaultItem
@@ -13,8 +12,8 @@ namespace SecureVault.App.Components.Pages.VaultItem
         [Inject] private ITotpService TotpService { get; set; } = default!;
         [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
         [Inject] private ISnackbar Snackbar { get; set; } = default!;
-        [Inject] private IStringLocalizer<SharedResources> Localizer { get; set; } = null!;
 
+        // Veri artık doğrudan servisten okunuyor.
         private IReadOnlyList<TotpViewModel> DisplayItems => TotpService.Items;
 
         protected override async Task OnInitializedAsync()
@@ -30,10 +29,10 @@ namespace SecureVault.App.Components.Pages.VaultItem
 
         private async Task CopyCodeToClipboard(TotpViewModel item)
         {
-            if (item.IsCodeReady)
+            if (item.CurrentCode != "------" && item.CurrentCode != "HATA!")
             {
                 await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", item.CurrentCode);
-                Snackbar.Add(Localizer[SharedResources.Copied], Severity.Success, config => { config.VisibleStateDuration = 2000; });
+                Snackbar.Add($"'{item.Model.Issuer}' için kod panoya kopyalandı!", Severity.Success, config => { config.VisibleStateDuration = 2000; });
             }
         }
 

@@ -40,7 +40,7 @@ namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
                 if (vaultItem.UserId != request.UserId)
                 {
                     _logger.LogCritical("YETKİSİZ ERİŞİM DENEMESİ: Kullanıcı {UserId}, kendisine ait olmayan bir item'ı ({ItemId}) güncellemeye çalıştı.", request.UserId, request.Id);
-                    return Result.Failure(new Error(ErrorCodes.UnauthorizedAccess, _returnMessages[ErrorCodes.UnauthorizedAccess]));
+                    return Result.Failure(new Error(ErrorCodes.UnauthorizedAccess, _returnMessages[ErrorCodes.UnauthorizedAccess])));
                 }
 
                 vaultItem.UpdateData(request.EncryptedData);

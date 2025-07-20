@@ -26,7 +26,6 @@ namespace SecureVault.App
             builder.Services.RegisterServices();
             builder.Services.AuthServices();
             builder.Services.AddAuthorizationCore();
-            builder.Services.AddLocalization();
 
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();

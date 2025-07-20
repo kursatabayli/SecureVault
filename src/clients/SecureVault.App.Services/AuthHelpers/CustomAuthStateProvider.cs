@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
-using SecureVault.App.Services.Constants;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -11,7 +10,7 @@ namespace SecureVault.App.Services.AuthHelpers
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            var accessToken = await SecureStorage.Default.GetAsync(StorageKeys.AccessToken);
+            var accessToken = await SecureStorage.Default.GetAsync("AccessToken");
 
             if (string.IsNullOrEmpty(accessToken))
             {

@@ -1,23 +1,16 @@
 ﻿using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using MudBlazor;
 using SecureVault.App.Services.Models.VaultItemModels;
-using SecureVault.App.Services.Resources;
 using SecureVault.App.Services.Service.Contracts;
 
 namespace SecureVault.App.Components.Pages.VaultItem.Helpers
 {
     public partial class AddTwoFactorCodeManuel : ComponentBase
     {
-        private MudForm form; 
-        private bool _submitting = false;
-
+        private MudForm form;
         [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
         [Inject] private IVaultItemService<TwoFactorAuthModel> VaultItemService { get; set; }
         [Inject] private ISnackbar Snackbar { get; set; }
-        [Inject] private ILogger<AddTwoFactorCodeManuel> Logger { get; set; } = null!;
-        [Inject] private IStringLocalizer<SharedResources> Localizer { get; set; } = null!;
         private TwoFactorAuthModel _twoFactorAuthModel = new();
 
         protected override void OnInitialized()
@@ -26,38 +19,30 @@ namespace SecureVault.App.Components.Pages.VaultItem.Helpers
         }
         private async Task Submit()
         {
-            if (form is null) return;
-            await form.Validate();
-            if (!form.IsValid) return;
+            if (!await ValidateFormAsync())
+                return;
 
-            _submitting = true;
+            var result = await VaultItemService.CreateVaultItem(_twoFactorAuthModel, ItemType.TwoFactorAuth);
+            if (result)
+            {
+                MudDialog.Close(DialogResult.Ok(_twoFactorAuthModel));
+                Snackbar.Add("İki faktörlü kimlik doğrulama kodu başarıyla eklendi.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("İki faktörlü kimlik doğrulama kodu eklenemedi.", Severity.Error);
+            }
+            Cancel();
 
-            try
-            {
-                var result = await VaultItemService.CreateVaultItem(_twoFactorAuthModel, ItemType.TwoFactorAuth);
-
-                if (result.IsSuccess)
-                {
-                    Snackbar.Add(Localizer[SharedResources.TwoFactorAddedSuccessfully], Severity.Success);
-                    MudDialog.Close(DialogResult.Ok(_twoFactorAuthModel));
-                }
-                else
-                {
-                    Snackbar.Add(result.Error.Message, Severity.Error);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "2FA kodu ekleme dialogunda beklenmedik bir hata oluştu.");
-                Snackbar.Add(Localizer[SharedResources.UnexpectedError], Severity.Error);
-            }
-            finally
-            {
-                _submitting = false;
-            }
         }
-
+        private async Task<bool> ValidateFormAsync()
+        {
+            await form.Validate();
+            return form.IsValid;
+        }
         private void Cancel() => MudDialog.Cancel();
+
+
 
         private Task DialogStyles()
         {

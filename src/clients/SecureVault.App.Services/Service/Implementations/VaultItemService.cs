@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using SecureVault.App.Services.Constants;
+﻿using SecureVault.App.Services.Constants;
 using SecureVault.App.Services.Models.VaultItemModels;
 using SecureVault.App.Services.Service.Contracts;
 using SecureVault.Shared.Result;
@@ -9,57 +8,67 @@ namespace SecureVault.App.Services.Service.Implementations
 {
     public class VaultItemService<T> : IVaultItemService<T> where T : class, IVaultItemData, new()
     {
-        private readonly IApiClient _apiClient;
+        private readonly IHttpClientFactory _httpClientFactory;
         private readonly ICryptoService _cryptoService;
-        private readonly ILogger<VaultItemService<T>> _logger;
 
-        public VaultItemService(IApiClient apiClient, ICryptoService cryptoService, ILogger<VaultItemService<T>> logger)
+        public VaultItemService(IHttpClientFactory httpClientFactory, ICryptoService cryptoService)
         {
-            _apiClient = apiClient;
+            _httpClientFactory = httpClientFactory;
             _cryptoService = cryptoService;
-            _logger = logger;
         }
 
+        private HttpClient CreateClient(ClientTypes clientTypes = ClientTypes.AuthenticatedClient) => _httpClientFactory.CreateClient(clientTypes.ToString());
 
         public async Task<Result<IReadOnlyCollection<T>>> GetVaultItemsByItemTypeAsync(ItemType itemType)
         {
-            var apiResult = await _apiClient.GetAsync<IReadOnlyCollection<VaultItemModel>>(Endpoints.GetVaultItemsByItemTypeUrl + itemType, ClientTypes.AuthenticatedClient);
-            if (apiResult.IsFailure)
-                return apiResult.Error;
-
-            var encryptedItems = apiResult.Value;
-            var decryptedItems = new List<T>();
-
-            foreach (var item in encryptedItems)
+            try
             {
-                try
+                var client = CreateClient();
+                var response = await client.GetAsync(Endpoints.GetVaultItemsByItemTypeUrl + itemType);
+                if (response.IsSuccessStatusCode)
                 {
-                    var decryptedData = await _cryptoService.DecryptAsync<T>(item.EncryptedData);
-
-                    decryptedData.Id = item.Id.Value;
-                    decryptedData.CreatedAt = item.CreatedAt.Value;
-
-                    decryptedItems.Add(decryptedData);
+                    var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<VaultItemModel>>();
+                    var decryptedItems = new List<T>();
+                    foreach (var item in result)
+                    {
+                        try
+                        {
+                            var decryptedData = await _cryptoService.DecryptAsync<T>(item.EncryptedData);
+                            decryptedData.Id = item.Id.Value;
+                            decryptedData.CreatedAt = item.CreatedAt.Value;
+                            decryptedItems.Add(decryptedData);
+                        }
+                        catch (Exception ex)
+                        {
+                            return new Error("DecryptionFailed", $"Failed to decrypt item {item.Id}. Reason: {ex.Message}");
+                        }
+                    }
+                    return Result<IReadOnlyCollection<T>>.Success(decryptedItems);
                 }
-                catch (Exception ex)
+                else
                 {
-                    _logger.LogWarning(ex, "Bir vault item'ın şifresi çözülemedi. ItemId: {ItemId}", item.Id);
+                    return await response.Content.ReadFromJsonAsync<Error>();
                 }
             }
-
-            return decryptedItems;
+            catch (Exception ex)
+            {
+                Error error = new("ChallengeRequestFailed", $"An error occurred: {ex.Message}");
+                return error;
+            }
         }
 
-        public async Task<Result> CreateVaultItem(T data, ItemType itemType)
+        public async Task<bool> CreateVaultItem(T Data, ItemType itemType)
         {
-            var encryptedData = await _cryptoService.EncryptAsync(data);
-            VaultItemModel vaultItemPayload = new()
+            var client = CreateClient();
+            var encryptedData = await _cryptoService.EncryptAsync(Data);
+            VaultItemModel vaultItem = new()
             {
                 ItemType = itemType,
                 EncryptedData = encryptedData
             };
 
-            return await _apiClient.PostAsync(Endpoints.VaultItemBaseUrl, vaultItemPayload, ClientTypes.AuthenticatedClient);
+            var response = await client.PostAsJsonAsync(Endpoints.VaultItemBaseUrl, vaultItem);
+            return response.IsSuccessStatusCode;
         }
     }
 }

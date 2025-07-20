@@ -48,7 +48,6 @@
             IpAddress = ipAddress;
             ExpiresAt = expiresAt;
             LastUsedAt = DateTimeOffset.UtcNow;
-            IsRevoked = false;
             IsPersistent = isPersistent;
         }
         public void Revoke()

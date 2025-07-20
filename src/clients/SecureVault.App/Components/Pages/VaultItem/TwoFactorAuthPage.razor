@@ -2,54 +2,42 @@
 @using SecureVault.App.Components.Pages.VaultItem.Helpers
 @attribute [Authorize]
 
-
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
     <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="background-color: var(--mud-palette-surface);">
         <MudText Typo="Typo.h4" GutterBottom="true">Authenticator</MudText>
-        @if (TotpService.IsLoading)
+
+        @if (DisplayItems == null || !DisplayItems.Any())
         {
-            <Loading LoadingText="Kodlar yükleniyor..." />
-        }
-        else if (TotpService.InitializationError is not null)
-        {
-            <MudAlert Severity="Severity.Error">@TotpService.InitializationError.Message</MudAlert>
+            <MudAlert Severity="Severity.Info">Henüz eklenmiş bir hesap bulunmuyor. Başlamak için '+' butonuna tıklayın.</MudAlert>
         }
         else
         {
-            @if (DisplayItems == null || !DisplayItems.Any())
-            {
-                <MudAlert Severity="Severity.Info">Henüz eklenmiş bir hesap bulunmuyor. Başlamak için '+' butonuna tıklayın.</MudAlert>
-            }
-            else
-            {
-                <div class="d-flex flex-column" style="gap: 16px;">
-                    @foreach (var item in DisplayItems)
-                    {
-                        <MudPaper Outlined="true"
-                                  Class="pa-3 rounded-lg mud-clickable d-flex flex-column"
-                                  @onclick="@(() => CopyCodeToClipboard(item))" Style="cursor: pointer;">
+            <div class="d-flex flex-column" style="gap: 16px;">
+                @foreach (var item in DisplayItems)
+                {
+                    <MudPaper Outlined="true"
+                              Class="pa-3 rounded-lg mud-clickable d-flex flex-column"
+                              @onclick="@(() => CopyCodeToClipboard(item))" Style="cursor: pointer;">
 
-                            <MudStack Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Row>
-                                <MudItem xs="9" sm="9">
-                                    <MudText Typo="Typo.body1" Class="font-weight-medium">@item.Model.Issuer</MudText>
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Model.AccountName</MudText>
-                                    <MudText Typo="Typo.h5" Class="mt-2" Style="letter-spacing: 0.2em; font-family: monospace;">@FormatCode(item.CurrentCode)</MudText>
-                                </MudItem>
+                        <MudStack Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Row>
+                            <MudItem xs="9" sm="9">
+                                <MudText Typo="Typo.body1" Class="font-weight-medium">@item.Model.Issuer</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Model.AccountName</MudText>
+                                <MudText Typo="Typo.h5" Class="mt-2" Style="letter-spacing: 0.2em; font-family: monospace;">@FormatCode(item.CurrentCode)</MudText>
+                            </MudItem>
 
-                                <MudItem xs="3" sm="3" Class="d-flex justify-end">
-                                    <MudIconButton Icon="@Icons.Material.Filled.MoreVert"
-                                                   Size="Size.Large"
-                                                   Disabled="true" />
-                                </MudItem>
-                            </MudStack>
+                            <MudItem xs="3" sm="3" Class="d-flex justify-end">
+                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert"
+                                               Size="Size.Large"
+                                               Disabled="true" />
+                            </MudItem>
+                        </MudStack>
 
-                            <MudProgressLinear Color="GetProgressColor(item.TimeLeft)" Value="item.ProgressValue" Class="mt-3" />
-                        </MudPaper>
-                    }
-                </div>
-            }
+                        <MudProgressLinear Color="GetProgressColor(item.TimeLeft)" Value="item.ProgressValue" Class="mt-3" />
+                    </MudPaper>
+                }
+            </div>
         }
-
     </MudPaper>
 </MudContainer>
 
