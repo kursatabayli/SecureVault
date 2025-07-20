@@ -1,28 +1,55 @@
-﻿using OtpNet;
+﻿using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
+using OtpNet;
 using SecureVault.App.Services.Models.VaultItemModels;
+using SecureVault.App.Services.Resources;
 using SecureVault.App.Services.Service.Contracts;
+using SecureVault.Shared.Result;
 
 namespace SecureVault.App.Services.Service.Implementations
 {
     public class TotpService : ITotpService
     {
         private readonly IVaultItemService<TwoFactorAuthModel> _vaultItemService;
+        private readonly IStringLocalizer<SharedResources> _localizer;
+        private readonly ILogger<TotpService> _logger;
         private readonly List<TotpViewModel> _displayItems = [];
         private readonly CancellationTokenSource _cts = new();
-
+        public bool IsLoading { get; private set; } = true;
+        public Error? InitializationError { get; private set; }
         public event Action? OnTick;
         public IReadOnlyList<TotpViewModel> Items => _displayItems.AsReadOnly();
 
-        public TotpService(IVaultItemService<TwoFactorAuthModel> vaultItemService)
+        public TotpService(IVaultItemService<TwoFactorAuthModel> vaultItemService, IStringLocalizer<SharedResources> localizer, ILogger<TotpService> logger)
         {
             _vaultItemService = vaultItemService;
+            _localizer = localizer;
+            _logger = logger;
         }
 
         public async Task InitializeAsync()
         {
             if (_displayItems.Any()) return;
 
-            await LoadDataAndGenerateInitialCodes();
+            IsLoading = true;
+            InitializationError = null;
+            OnTick?.Invoke();
+
+            try
+            {
+                await LoadDataAndGenerateInitialCodes();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "TOTP verileri yüklenirken beklenmedik bir hata oluştu.");
+                InitializationError = new Error(ErrorCodes.Client.LoadFailed, _localizer[ErrorCodes.Client.LoadFailed]);
+            }
+            finally
+            {
+                IsLoading = false;
+                OnTick?.Invoke();
+            }
+
             _ = StartUiUpdateLoop();
         }
 
@@ -36,7 +63,7 @@ namespace SecureVault.App.Services.Service.Implementations
             var result = await _vaultItemService.GetVaultItemsByItemTypeAsync(ItemType.TwoFactorAuth);
             if (!result.IsSuccess)
             {
-                Console.WriteLine(result.Error.Message);
+                InitializationError = result.Error;
                 return;
             }
 
@@ -54,22 +81,29 @@ namespace SecureVault.App.Services.Service.Implementations
         {
             while (!_cts.IsCancellationRequested)
             {
-                await Task.Delay(1000, _cts.Token);
-
-                if (_displayItems.Count == 0) continue;
-
-                foreach (var item in _displayItems)
+                try
                 {
-                    int previousTimeLeft = item.TimeLeft;
-                    UpdateTimeLeft(item);
+                    await Task.Delay(1000, _cts.Token);
 
-                    if (item.TimeLeft > previousTimeLeft)
+                    if (_displayItems.Count == 0) continue;
+
+                    foreach (var item in _displayItems)
                     {
-                        GenerateNewCode(item);
-                    }
-                }
+                        int previousTimeLeft = item.TimeLeft;
+                        UpdateTimeLeft(item);
 
-                OnTick?.Invoke();
+                        if (item.TimeLeft > previousTimeLeft)
+                        {
+                            GenerateNewCode(item);
+                        }
+                    }
+
+                    OnTick?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "TOTP UI update loop failed.");
+                }
             }
         }
         private void UpdateTimeLeft(TotpViewModel item)
@@ -83,9 +117,11 @@ namespace SecureVault.App.Services.Service.Implementations
         {
             if (item.TotpGenerator == null)
             {
-                item.CurrentCode = "HATA!";
+                item.CurrentCode = _localizer[SharedResources.Text_Error_General];
+                item.HasError = true;
                 return;
             }
+            item.HasError = false;
             item.CurrentCode = item.TotpGenerator.ComputeTotp();
         }
         private Totp CreateTotp(TwoFactorAuthModel model)

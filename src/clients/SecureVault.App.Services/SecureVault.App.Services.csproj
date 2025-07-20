@@ -1,28 +1,42 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
 
-  <ItemGroup>
-	  <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.3.0" />
-	  <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.5" />
-	  <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.5" />
-	  <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="9.0.5" />
-	  <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.5" PrivateAssets="all" />
-	  <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="9.0.5" />
-	  <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.5" />
-	  <PackageReference Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
-	  <PackageReference Include="Otp.NET" Version="1.4.0" />
-	  <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
-	  <PackageReference Include="PasswordGenerator" Version="2.1.0" />
-	  <PackageReference Include="Microsoft.Maui.Controls" Version="9.0.81" />
-	  <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.6" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\shared\SecureVault.Shared.Result\SecureVault.Shared.Result.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.3.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.5" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.5" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="9.0.5" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.5" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="9.0.5" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.5" />
+		<PackageReference Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
+		<PackageReference Include="Otp.NET" Version="1.4.0" />
+		<PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
+		<PackageReference Include="PasswordGenerator" Version="2.1.0" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.81" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.6" />
+		<PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="9.0.6" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\shared\SecureVault.Shared.Result\SecureVault.Shared.Result.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Compile Update="Resources\SharedResources.Designer.cs">
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>SharedResources.resx</DependentUpon>
+	  </Compile>
+	</ItemGroup>
+	<ItemGroup>
+	  <EmbeddedResource Update="Resources\SharedResources.resx">
+	    <Generator>PublicResXFileCodeGenerator</Generator>
+	    <LastGenOutput>SharedResources.Designer.cs</LastGenOutput>
+	  </EmbeddedResource>
+	</ItemGroup>
 
 </Project>
