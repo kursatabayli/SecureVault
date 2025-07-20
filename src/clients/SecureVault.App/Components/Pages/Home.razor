@@ -1,5 +1,15 @@
 ﻿@page "/"
+@using SecureVault.App.Services.Service.Contracts
+@attribute [Authorize]
 
-<h1>Hello, world!</h1>
 
-Welcome to your new app.
+<AuthorizeView>
+    <Authorized>
+        <h1>Welcome to SecureVault!</h1>
+        <p>You are logged in.</p>
+    </Authorized>
+    <NotAuthorized>
+        <h1>Welcome to SecureVault!</h1>
+        <p>You are not logged in. Please log in or register to continue.</p>
+    </NotAuthorized>
+</AuthorizeView>

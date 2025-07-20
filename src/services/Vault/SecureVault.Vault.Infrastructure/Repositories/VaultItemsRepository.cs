@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using SecureVault.Vault.Application.Contracts.RepositoryContracts;
+using SecureVault.Vault.Application.Contracts.Repositories;
 using SecureVault.Vault.Domain.Entities;
 using SecureVault.Vault.Domain.Enums;
 using SecureVault.Vault.Infrastructure.Context;

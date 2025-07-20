@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using SecureVault.Vault.Application.Contracts.ServicesContracts;
+using SecureVault.Vault.Application.Contracts.Services;
 using SecureVault.Vault.Infrastructure.Context;
 
 namespace SecureVault.Vault.Infrastructure.Services

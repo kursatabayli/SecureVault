@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using SecureVault.Vault.Application.Contracts.RepositoryContracts;
+using SecureVault.Vault.Application.Contracts.Repositories;
 using SecureVault.Vault.Infrastructure.Context;
 using System.Linq.Expressions;
 

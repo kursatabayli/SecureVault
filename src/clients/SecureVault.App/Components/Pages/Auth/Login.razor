@@ -1,0 +1,73 @@
+﻿@page "/login"
+@attribute [AllowAnonymous]
+
+
+<MudPaper class="login-container">
+    <MudGrid Justify="Justify.Center" AlignItems="AlignItems.Center" Style="width:100%; max-width: 1200px;">
+
+        <MudItem md="6" Class="branding-section hidden-sm-and-down">
+            <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Large" Style="font-size: 6rem; color: var(--mud-palette-primary);" />
+            <MudText Typo="Typo.h3" GutterBottom="true" Class="mt-4">SecureVault</MudText>
+            <MudText Typo="Typo.h6" Style="opacity: 0.8;">Verilerinizi güvenle yönetin.</MudText>
+        </MudItem>
+
+        <MudItem xs="12" sm="10" md="6">
+            <MudPaper Elevation="5" Class="login-form-paper">
+                @if (!Submitting)
+                {
+                    <MudText Typo="Typo.h4" GutterBottom="true" Align="Align.Center">Giriş Yap</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Inherit" Align="Align.Center" Class="mb-6">Hesabınıza erişmek için bilgilerinizi girin.</MudText>
+
+                    <MudForm Model="loginModel" @ref="form" ValidationDelay="0">
+                        <MudTextField @bind-Value="loginModel.Email"
+                                      Label="E-posta"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      InputType="InputType.Email"
+                                      For="@(() => loginModel.Email)"
+                                      Clearable="true"
+                                      Class="mb-4" />
+
+                        <PasswordField Label="Şifre"
+                                       @bind-Password="loginModel.Password"
+                                       ValidationExpression="@(() => loginModel.Password)" />
+
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mt-4">
+                            <MudCheckBox @bind-Value="loginModel.RememberMe" Label="Beni Hatırla" Color="Color.Primary" Dense="true"></MudCheckBox>
+                            <MudLink Href="/forgot-password">Şifrenizi mi unuttunuz?</MudLink>
+                        </MudStack>
+
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   OnClick="Submit"
+                                   Disabled="@Submitting"
+                                   StartIcon="@Icons.Material.Filled.Login"
+                                   Size="Size.Large"
+                                   FullWidth="true"
+                                   Class="mt-6">
+                            @if (!Submitting)
+                            {
+                                <MudText>Giriş Yap</MudText>
+                            }
+                            else
+                            {
+                                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                <MudText Class="ms-2">Giriş yapılıyor...</MudText>
+                            }
+                        </MudButton>
+                    </MudForm>
+
+                    <MudDivider Class="my-6" />
+                    <MudText Align="Align.Center">
+                        Hesabınız yok mu? <MudLink Href="/register">Hemen Kayıt Olun</MudLink>
+                    </MudText>
+                }
+                else
+                {
+                    <Loading LoadingText="Giriş yapılıyor..." />
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudPaper>

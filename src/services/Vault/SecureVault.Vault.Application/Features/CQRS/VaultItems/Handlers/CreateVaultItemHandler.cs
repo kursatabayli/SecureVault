@@ -3,12 +3,11 @@ using MediatR;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SecureVault.Shared.Result;
-using SecureVault.Vault.Application.Contracts.RepositoryContracts;
-using SecureVault.Vault.Application.Contracts.ServicesContracts;
+using SecureVault.Vault.Application.Contracts.Repositories;
+using SecureVault.Vault.Application.Contracts.Services;
 using SecureVault.Vault.Application.Features.CQRS.VaultItems.Commands;
 using SecureVault.Vault.Application.Messages;
 using SecureVault.Vault.Domain.Entities;
-using SecureVault.Vault.Domain.Enums;
 
 namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
 {
@@ -43,19 +42,8 @@ namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
             }
             catch (Exception ex)
             {
-                string itemType = request.ItemType switch
-                {
-                    ItemType.Password => _returnMessages[ReturnMessages.ItemType_Password],
-                    ItemType.TwoFactorAuth => _returnMessages[ReturnMessages.ItemType_TwoFactorAuth],
-                    ItemType.CreditCard => _returnMessages[ReturnMessages.ItemType_CreditCard],
-                    _ => throw new NotImplementedException(),
-                };
-                string errorMessage = _returnMessages[ReturnMessages.Error_Operation_Create, itemType];
-
-                _logger.LogError(ex, errorMessage);
-                var error = new Error(nameof(ErrorCode.VaultCreateFailure), errorMessage);
-                return Result.Failure(error);
-
+                _logger.LogError(ex, "Vault item oluşturulurken beklenmedik bir hata oluştu. UserId: {UserId}", request.UserId);
+                return Result.Failure(new Error(ErrorCodes.InternalServerError, _returnMessages[ErrorCodes.InternalServerError]));
             }
         }
     }

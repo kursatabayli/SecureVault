@@ -1,0 +1,17 @@
+﻿<MudStack class="fab-container">
+    <MudFab Color="Color.Secondary"
+            StartIcon="@Icons.Material.Filled.Keyboard"
+            Size="Size.Medium"
+            OnClick="ManualEntry"
+            Class="@($"fab-sub-item {(isFabMenuOpen ? "visible" : "")}")" />
+
+    <MudFab Color="Color.Secondary"
+            StartIcon="@Icons.Material.Filled.QrCodeScanner"
+            Size="Size.Medium"
+            OnClick="ScanQrCode"
+            Class="@($"fab-sub-item {(isFabMenuOpen ? "visible" : "")}")" />
+
+    <MudFab Color="Color.Primary"
+            StartIcon="@(isFabMenuOpen ? Icons.Material.Filled.Close : Icons.Material.Filled.Add)"
+            OnClick="ToggleFabMenu" />
+</MudStack>

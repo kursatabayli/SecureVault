@@ -1,0 +1,24 @@
+﻿@page "/logout"
+@attribute [Authorize]
+@using SecureVault.App.Services.Service.Contracts
+
+@code{
+    [Inject] private IAuthService AuthService { get; set; }
+    [Inject] private NavigationManager NavigationManager { get; set; }
+    [Inject] private ISnackbar Snackbar { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await AuthService.LogoutAsync();
+        if (result.IsSuccess)
+        {
+            Snackbar.Add("You have been logged out successfully.", Severity.Success);
+            NavigationManager.NavigateTo("/login");
+        }
+        else
+        {
+            Snackbar.Add("Logout failed. Please try again.", Severity.Error);
+            NavigationManager.NavigateTo("/");
+        }
+    }
+}

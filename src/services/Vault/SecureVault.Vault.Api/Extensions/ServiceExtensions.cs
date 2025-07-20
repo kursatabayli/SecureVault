@@ -1,5 +1,5 @@
-﻿using SecureVault.Vault.Application.Contracts.RepositoryContracts;
-using SecureVault.Vault.Application.Contracts.ServicesContracts;
+﻿using SecureVault.Vault.Application.Contracts.Repositories;
+using SecureVault.Vault.Application.Contracts.Services;
 using SecureVault.Vault.Infrastructure.Repositories;
 using SecureVault.Vault.Infrastructure.Services;
 

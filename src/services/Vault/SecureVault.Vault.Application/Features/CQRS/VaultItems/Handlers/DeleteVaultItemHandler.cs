@@ -2,11 +2,10 @@
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SecureVault.Shared.Result;
-using SecureVault.Vault.Application.Contracts.RepositoryContracts;
-using SecureVault.Vault.Application.Contracts.ServicesContracts;
+using SecureVault.Vault.Application.Contracts.Repositories;
+using SecureVault.Vault.Application.Contracts.Services;
 using SecureVault.Vault.Application.Features.CQRS.VaultItems.Commands;
 using SecureVault.Vault.Application.Messages;
-using SecureVault.Vault.Domain.Enums;
 
 namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
 {
@@ -30,29 +29,31 @@ namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
             try
             {
                 var vaultItem = await _repository.GetByIdAsync(request.Id);
-                if (vaultItem == null)
+
+                if (vaultItem is null)
                 {
-                    Error error = new(nameof(ErrorCode.VaultItemNotFound), _returnMessages[ReturnMessages.Error_ItemNotFound]);
-                    _logger.LogWarning(error.Message);
-                    return Result.Failure(error);
+                    _logger.LogWarning("Var olmayan bir vault item silinmeye çalışıldı. ItemId: {ItemId}", request.Id);
+                    return Result.Failure(new Error(ErrorCodes.Vault.ItemNotFound, _returnMessages[ErrorCodes.Vault.ItemNotFound]));
                 }
 
                 if (vaultItem.UserId != request.UserId)
                 {
-                    Error error = new(nameof(ErrorCode.AuthorizationFailure), _returnMessages[ReturnMessages.Error_Unauthorized]);
-                    _logger.LogWarning(error.Message);
-                    return Result.Failure(error);
+                    _logger.LogCritical("YETKİSİZ ERİŞİM DENEMESİ: Kullanıcı {UserId}, kendisine ait olmayan bir item'ı ({ItemId}) silmeye çalıştı.", request.UserId, request.Id);
+                    return Result.Failure(new Error(ErrorCodes.UnauthorizedAccess, _returnMessages[ErrorCodes.UnauthorizedAccess]));
                 }
 
                 vaultItem.Delete();
                 await _unitOfWork.SaveChangesAsync();
+
+                _logger.LogInformation("Vault item başarıyla silindi. ItemId: {ItemId}, UserId: {UserId}", request.Id, request.UserId);
+
                 return Result.Success();
             }
             catch (Exception ex)
             {
-                Error error = new(nameof(ErrorCode.VaultDeleteFailure), _returnMessages[ReturnMessages.Error_Operation_Delete]);
-                _logger.LogError(ex, error.Message);
-                return Result.Failure(error);
+                // Beklenmedik sistem hatası
+                _logger.LogError(ex, "Vault item silinirken beklenmedik bir hata oluştu. ItemId: {ItemId}", request.Id);
+                return Result.Failure(new Error(ErrorCodes.InternalServerError, _returnMessages[ErrorCodes.InternalServerError]));
             }
         }
     }

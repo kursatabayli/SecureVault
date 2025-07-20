@@ -1,0 +1,37 @@
+﻿<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Keyboard" Class="mr-2" />
+            Yeni Hesap Ekle
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm Model="_twoFactorAuthModel" @ref="form" Class="mt-4">
+            <MudTextField Label="Servis Sağlayıcı (Örn: Google, GitHub)"
+                          @bind-Value="_twoFactorAuthModel.Issuer"
+                          For="@(() => _twoFactorAuthModel.Issuer)"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true" />
+
+            <MudTextField Label="Hesap Adı (Örn: kullanici@mail.com)"
+                          @bind-Value="_twoFactorAuthModel.AccountName"
+                          For="@(() => _twoFactorAuthModel.AccountName)"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mt-3" />
+
+            <MudTextField Label="Gizli Anahtar"
+                          @bind-Value="_twoFactorAuthModel.SecretKey"
+                          For="@(() => _twoFactorAuthModel.SecretKey)"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mt-3"
+                          HelperText="Authenticator uygulamasından aldığınız anahtarı buraya yapıştırın." />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">İptal</MudButton>
+        <MudButton OnClick="Submit" Color="Color.Primary" Variant="Variant.Filled">Kaydet</MudButton>
+    </DialogActions>
+</MudDialog>

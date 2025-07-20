@@ -13,6 +13,11 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["src/services/Identity/SecureVault.Identity.Api/SecureVault.Identity.Api.csproj", "src/services/Identity/SecureVault.Identity.Api/"]
+COPY ["src/services/Identity/SecureVault.Identity.Infrastructure/SecureVault.Identity.Infrastructure.csproj", "src/services/Identity/SecureVault.Identity.Infrastructure/"]
+COPY ["src/services/Identity/SecureVault.Identity.Application/SecureVault.Identity.Application.csproj", "src/services/Identity/SecureVault.Identity.Application/"]
+COPY ["src/shared/SecureVault.Shared.Dto/SecureVault.Shared.Dto.csproj", "src/shared/SecureVault.Shared.Dto/"]
+COPY ["src/shared/SecureVault.Shared.Result/SecureVault.Shared.Result.csproj", "src/shared/SecureVault.Shared.Result/"]
+COPY ["src/services/Identity/SecureVault.Identity.Domain/SecureVault.Identity.Domain.csproj", "src/services/Identity/SecureVault.Identity.Domain/"]
 RUN dotnet restore "./src/services/Identity/SecureVault.Identity.Api/SecureVault.Identity.Api.csproj"
 COPY . .
 WORKDIR "/src/src/services/Identity/SecureVault.Identity.Api"

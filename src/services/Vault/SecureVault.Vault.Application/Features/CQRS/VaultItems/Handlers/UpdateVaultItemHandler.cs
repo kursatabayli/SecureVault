@@ -3,11 +3,10 @@ using MediatR;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SecureVault.Shared.Result;
-using SecureVault.Vault.Application.Contracts.RepositoryContracts;
-using SecureVault.Vault.Application.Contracts.ServicesContracts;
+using SecureVault.Vault.Application.Contracts.Repositories;
+using SecureVault.Vault.Application.Contracts.Services;
 using SecureVault.Vault.Application.Features.CQRS.VaultItems.Commands;
 using SecureVault.Vault.Application.Messages;
-using SecureVault.Vault.Domain.Enums;
 
 namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
 {
@@ -32,36 +31,27 @@ namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
             {
                 var vaultItem = await _repository.GetByIdAsync(request.Id);
 
-                string itemType = request.ItemType switch
+                if (vaultItem is null)
                 {
-                    ItemType.Password => _returnMessages[ReturnMessages.ItemType_Password],
-                    ItemType.TwoFactorAuth => _returnMessages[ReturnMessages.ItemType_TwoFactorAuth],
-                    ItemType.CreditCard => _returnMessages[ReturnMessages.ItemType_CreditCard],
-                    _ => throw new NotImplementedException(),
-                };
-
-                if (vaultItem == null)
-                {
-                    Error error = new(nameof(ErrorCode.VaultItemNotFound), _returnMessages[ReturnMessages.Error_ItemNotFound, itemType]);
-                    _logger.LogWarning(error.Message);
-                    return Result.Failure(error);
+                    _logger.LogWarning("Var olmayan bir vault item güncellenmeye çalışıldı. ItemId: {ItemId}", request.Id);
+                    return Result.Failure(new Error(ErrorCodes.Vault.ItemNotFound, _returnMessages[ErrorCodes.Vault.ItemNotFound]));
                 }
 
                 if (vaultItem.UserId != request.UserId)
                 {
-                    Error error = new(nameof(ErrorCode.AuthorizationFailure), _returnMessages[ReturnMessages.Error_Unauthorized]);
-                    _logger.LogWarning(error.Message);
-                    return Result.Failure(error);
+                    _logger.LogCritical("YETKİSİZ ERİŞİM DENEMESİ: Kullanıcı {UserId}, kendisine ait olmayan bir item'ı ({ItemId}) güncellemeye çalıştı.", request.UserId, request.Id);
+                    return Result.Failure(new Error(ErrorCodes.UnauthorizedAccess, _returnMessages[ErrorCodes.UnauthorizedAccess])));
                 }
 
                 vaultItem.UpdateData(request.EncryptedData);
                 await _unitOfWork.SaveChangesAsync();
+
                 return Result.Success();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "VaultItem güncellenirken bir hata oluştu. Id: {VaultItemId}", request.Id);
-                return Result.Failure(new Error("InternalError", "Güncelleme sırasında bir hata oluştu."));
+                _logger.LogError(ex, "Vault item güncellenirken beklenmedik bir hata oluştu. ItemId: {ItemId}", request.Id);
+                return Result.Failure(new Error(ErrorCodes.InternalServerError, _returnMessages[ErrorCodes.InternalServerError]));
             }
         }
     }

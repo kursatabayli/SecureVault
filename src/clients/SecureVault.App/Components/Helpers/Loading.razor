@@ -1,0 +1,21 @@
+﻿<MudGrid Justify="Justify.Center">
+    <MudItem Class="d-flex flex-column align-center ma-16">
+
+        <MudItem>
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+        </MudItem>
+
+        <MudItem Class="mt-4">
+            <MudText Typo="Typo.h6" Color="Color.Primary">
+                @LoadingText
+            </MudText>
+        </MudItem>
+
+    </MudItem>
+</MudGrid>
+
+@code {
+
+    [Parameter]
+    public string LoadingText { get; set; } = "Yükleniyor...";
+}

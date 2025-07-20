@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.AspNetCore.Components.WebView.Maui;
+using Microsoft.Extensions.Logging;
+using MudBlazor.Services;
+using SecureVault.App.Services.Extensions;
 
 namespace SecureVault.App
 {
@@ -7,6 +10,8 @@ namespace SecureVault.App
         public static MauiApp CreateMauiApp()
         {
             var builder = MauiApp.CreateBuilder();
+
+
             builder
                 .UseMauiApp<App>()
                 .ConfigureFonts(fonts =>
@@ -16,9 +21,24 @@ namespace SecureVault.App
 
             builder.Services.AddMauiBlazorWebView();
 
+            builder.Services.AddLocalization();
+            builder.Services.AddMudServices();
+            builder.Services.RegisterServices();
+            builder.Services.AuthServices();
+            builder.Services.AddAuthorizationCore();
+
 #if DEBUG
-    		builder.Services.AddBlazorWebViewDeveloperTools();
-    		builder.Logging.AddDebug();
+            builder.Services.AddBlazorWebViewDeveloperTools();
+#if ANDROID
+            BlazorWebViewHandler.BlazorWebViewMapper.AppendToMapping("EnableDebugging", (handler, view) =>
+            {
+                if (handler.PlatformView is Android.Webkit.WebView)
+                {
+                    Android.Webkit.WebView.SetWebContentsDebuggingEnabled(true);
+                }
+            });
+#endif
+            builder.Logging.AddDebug();
 #endif
 
             return builder.Build();

@@ -61,101 +61,29 @@ namespace SecureVault.Vault.Application.Messages {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0} not found..
+        ///   Looks up a localized string similar to An unexpected error occurred. Please try again later..
         /// </summary>
-        public static string Error_ItemNotFound {
+        public static string InternalServerError {
             get {
-                return ResourceManager.GetString("Error_ItemNotFound", resourceCulture);
+                return ResourceManager.GetString("InternalServerError", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to A server-side error occurred while saving {0}..
+        ///   Looks up a localized string similar to You are not authorized to perform this action..
         /// </summary>
-        public static string Error_Operation_Create {
+        public static string UnauthorizedAccess {
             get {
-                return ResourceManager.GetString("Error_Operation_Create", resourceCulture);
+                return ResourceManager.GetString("UnauthorizedAccess", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to An error occurred on the server side during the delete operation..
+        ///   Looks up a localized string similar to The requested item was not found..
         /// </summary>
-        public static string Error_Operation_Delete {
+        public static string Vault_ItemNotFound {
             get {
-                return ResourceManager.GetString("Error_Operation_Delete", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to An error occurred on the server side while listing {0}..
-        /// </summary>
-        public static string Error_Operation_List {
-            get {
-                return ResourceManager.GetString("Error_Operation_List", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Unauthorized Access.
-        /// </summary>
-        public static string Error_Unauthorized {
-            get {
-                return ResourceManager.GetString("Error_Unauthorized", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Credit Card.
-        /// </summary>
-        public static string ItemType_CreditCard {
-            get {
-                return ResourceManager.GetString("ItemType_CreditCard", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Credit Cards.
-        /// </summary>
-        public static string ItemType_CreditCard_Plural {
-            get {
-                return ResourceManager.GetString("ItemType_CreditCard_Plural", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Password.
-        /// </summary>
-        public static string ItemType_Password {
-            get {
-                return ResourceManager.GetString("ItemType_Password", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Passwords.
-        /// </summary>
-        public static string ItemType_Password_Plural {
-            get {
-                return ResourceManager.GetString("ItemType_Password_Plural", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Two Factor Authentication Code.
-        /// </summary>
-        public static string ItemType_TwoFactorAuth {
-            get {
-                return ResourceManager.GetString("ItemType_TwoFactorAuth", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Two Factor Authentication Codes.
-        /// </summary>
-        public static string ItemType_TwoFactorAuth_Plural {
-            get {
-                return ResourceManager.GetString("ItemType_TwoFactorAuth_Plural", resourceCulture);
+                return ResourceManager.GetString("Vault_ItemNotFound", resourceCulture);
             }
         }
     }
