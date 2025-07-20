@@ -15,7 +15,7 @@ namespace SecureVault.App.Services.Extensions
             services.AddScoped(typeof(IVaultItemService<>), typeof(VaultItemService<>));
             services.AddSingleton<ICryptoService, AesGcmCryptoService>();
             services.AddScoped<IBouncyCastleCryptoService, BouncyCastleCryptoService>();
-
+            services.AddScoped<IApiClient, ApiClient>();
             services.AddSingleton<ITotpService, TotpService>();
 
             return services;

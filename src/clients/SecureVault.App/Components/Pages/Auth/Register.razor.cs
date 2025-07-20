@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using MudBlazor;
 using SecureVault.App.Services.Models.RegisterModels;
+using SecureVault.App.Services.Resources;
 using SecureVault.App.Services.Service.Contracts;
 
 namespace SecureVault.App.Components.Pages.Auth
@@ -17,36 +20,20 @@ namespace SecureVault.App.Components.Pages.Auth
             UserInfo = new()
         };
         [Inject] private IBouncyCastleCryptoService CryptoService { get; set; }
+        [Inject] private IStringLocalizer<SharedResources> Localizer { get; set; } = null!;
         [Inject] private IAuthService AuthService { get; set; } = null!;
-        [Inject] private ISnackbar Snackbar { get; set; } = null!;
+        [Inject] private ISnackbar Snackbar { get; set; } = null!; 
+        [Inject] private ILogger<Register> Logger { get; set; } = null!;
         [Inject] private NavigationManager NavigationManager { get; set; } = null!;
 
         private async Task Submit()
         {
-            if (!await ValidateFormAsync())
-                return;
-
-            try
-            {
-                Submitting = true;
-                await HandleRegistration();
-            }
-            finally
-            {
-                Submitting = false;
-            }
-        }
-
-        private async Task<bool> ValidateFormAsync()
-        {
-            if (form is null) return false;
-
+            if (form is null) return;
             await form.Validate();
-            return form.IsValid;
-        }
+            if (!form.IsValid) return;
 
-        private async Task HandleRegistration()
-        {
+            Submitting = true;
+
             try
             {
                 var (salt, publicKey) = CryptoService.GenerateValidKeyPair(Password);
@@ -54,10 +41,11 @@ namespace SecureVault.App.Components.Pages.Auth
                 registerModel.PublicKey = publicKey;
 
                 var result = await AuthService.RegisterAsync(registerModel);
+
                 if (result.IsSuccess)
                 {
+                    Snackbar.Add(Localizer[SharedResources.RegistrationSuccessful], Severity.Success);
                     NavigationManager.NavigateTo("/", true);
-                    Snackbar.Add("başarılı", Severity.Success);
                 }
                 else
                 {
@@ -66,9 +54,13 @@ namespace SecureVault.App.Components.Pages.Auth
             }
             catch (Exception ex)
             {
-                Snackbar.Add($"Kayıt işlemi sırasında bir hata oluştu: {ex.InnerException.StackTrace}", Severity.Error);
+                Logger.LogError(ex, "Register sayfasında beklenmedik bir UI hatası oluştu.");
+                Snackbar.Add(Localizer[SharedResources.UnexpectedError], Severity.Error);
             }
-
+            finally
+            {
+                Submitting = false;
+            }
         }
     }
 }

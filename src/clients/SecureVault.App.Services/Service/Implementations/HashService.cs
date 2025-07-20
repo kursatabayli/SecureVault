@@ -57,24 +57,6 @@ namespace SecureVault.App.Services.Service.Implementations
             );
         }
 
-        //public bool VerifyHash(string requestItem, string storedHash, string storedSalt)
-        //{
-        //    byte[] storedHashBytes = Convert.FromBase64String(storedHash);
-        //    byte[] saltBytes = Convert.FromBase64String(storedSalt);
-
-        //    using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(requestItem))
-        //    {
-        //        Salt = saltBytes,
-        //        DegreeOfParallelism = Parallelism,
-        //        Iterations = Iterations,
-        //        MemorySize = MemorySize
-        //    };
-
-        //    byte[] computedHashBytes = argon2.GetBytes(64);
-
-        //    return computedHashBytes.SequenceEqual(storedHashBytes);
-        //}
-
         public string GeneratePassword()
         {
             var pwdGen = new Password();
