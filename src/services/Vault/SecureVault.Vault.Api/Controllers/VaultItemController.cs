@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SecureVault.Vault.Application.Contracts.DTOs.VaultItemDto;
 using SecureVault.Vault.Application.Features.CQRS.VaultItems.Commands;
 using SecureVault.Vault.Application.Features.CQRS.VaultItems.Queries;
 using SecureVault.Vault.Domain.Enums;
@@ -41,13 +42,13 @@ namespace SecureVault.Vault.Api.Controllers
                 return BadRequest(result.Error);
         }
 
-        [HttpPut]
-        public async Task<IActionResult> Update([FromBody] UpdateVaultItemCommand command)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateVaultItemDto request)
         {
-            var finalCommand = command with { UserId = CurrentUserId };
-            var result = await _mediator.Send(finalCommand);
+            var command = new UpdateVaultItemCommand(id, CurrentUserId, request.EncryptedData);
+            var result = await _mediator.Send(command);
             if (result.IsSuccess)
-                return Ok();
+                return Ok(result);
             else
                 return BadRequest(result.Error);
         }

@@ -1,17 +1,17 @@
 ﻿using SecureVault.App.Services.Models.VaultItemModels;
 using SecureVault.Shared.Result;
 
-namespace SecureVault.App.Services.Service.Contracts
+namespace SecureVault.App.Services.Service
 {
-    public interface ITotpService : IDisposable
+    public interface IOtpService : IDisposable
     {
         event Action? OnTick;
         bool IsLoading { get; }
         Error? InitializationError { get; }
-        IReadOnlyList<TotpViewModel> Items { get; }
-
+        IReadOnlyList<OtpViewModel> Items { get; }
+        Task GenerateHotpCodeAsync(Guid itemId);
         Task InitializeAsync();
 
-        TotpViewModel? GetItem(Guid id);
+        OtpViewModel? GetItem(Guid id);
     }
 }

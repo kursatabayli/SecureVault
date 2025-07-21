@@ -1,8 +1,9 @@
-﻿using SecureVault.App.Services.Service.Contracts;
+﻿using SecureVault.App.Services.Service;
+using SecureVault.App.Services.Service.Contracts;
 using SecureVault.App.Services.Service.Implementations;
 
 
-namespace SecureVault.App.Services.Extensions
+namespace SecureVault.App.Extensions
 {
     public static class ServiceExtensions
     {
@@ -16,7 +17,7 @@ namespace SecureVault.App.Services.Extensions
             services.AddSingleton<ICryptoService, AesGcmCryptoService>();
             services.AddScoped<IBouncyCastleCryptoService, BouncyCastleCryptoService>();
             services.AddScoped<IApiClient, ApiClient>();
-            services.AddSingleton<ITotpService, TotpService>();
+            services.AddSingleton<IOtpService, OtpService>();
 
             return services;
         }

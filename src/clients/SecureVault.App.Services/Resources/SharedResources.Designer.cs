@@ -97,6 +97,15 @@ namespace SecureVault.App.Services.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Generate Code.
+        /// </summary>
+        public static string Text_ClickToGenerate {
+            get {
+                return ResourceManager.GetString("Text_ClickToGenerate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to ERROR!.
         /// </summary>
         public static string Text_Error_General {
