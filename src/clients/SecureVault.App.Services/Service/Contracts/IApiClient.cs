@@ -12,5 +12,6 @@ namespace SecureVault.App.Services.Service.Contracts
             TRequest payload, 
             ClientTypes clientType = ClientTypes.PublicClient,
             Func<HttpRequestMessage, Task>? configureRequestAsync = null);
+        Task<Result> PutAsync<TRequest>(string endpoint, TRequest payload, ClientTypes clientType = ClientTypes.PublicClient);
     }
 }

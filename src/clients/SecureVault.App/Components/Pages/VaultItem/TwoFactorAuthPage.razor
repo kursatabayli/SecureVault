@@ -1,63 +1,115 @@
 ﻿@page "/two-factor"
 @using SecureVault.App.Components.Pages.VaultItem.Helpers
+@using SecureVault.App.Services.Models.VaultItemModels
 @attribute [Authorize]
 
-
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
-    <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="background-color: var(--mud-palette-surface);">
-        <MudText Typo="Typo.h4" GutterBottom="true">Authenticator</MudText>
-        @if (TotpService.IsLoading)
+    <MudPaper Elevation="0" Class="rounded-lg" Style="background-color: var(--mud-palette-surface);">
+        <MudText Typo="Typo.h4" GutterBottom="true" Class="pa-4">Authenticator</MudText>
+
+        @if (OtpService.IsLoading)
         {
-            <Loading LoadingText="Kodlar yükleniyor..." />
+            <div class="pa-4">
+                <Loading LoadingText="Kodlar yükleniyor..." />
+            </div>
         }
-        else if (TotpService.InitializationError is not null)
+        else if (OtpService.InitializationError is not null)
         {
-            <MudAlert Severity="Severity.Error">@TotpService.InitializationError.Message</MudAlert>
+            <div class="pa-4">
+                <MudAlert Severity="Severity.Error">@OtpService.InitializationError.Message</MudAlert>
+            </div>
         }
         else
         {
-            @if (DisplayItems == null || !DisplayItems.Any())
-            {
-                <MudAlert Severity="Severity.Info">Henüz eklenmiş bir hesap bulunmuyor. Başlamak için '+' butonuna tıklayın.</MudAlert>
-            }
-            else
-            {
-                <div class="d-flex flex-column" style="gap: 16px;">
-                    @foreach (var item in DisplayItems)
-                    {
-                        <MudPaper Outlined="true"
-                                  Class="pa-3 rounded-lg mud-clickable d-flex flex-column"
-                                  @onclick="@(() => CopyCodeToClipboard(item))" Style="cursor: pointer;">
+            <MudTabs Elevation="2" Rounded="true" PanelClass="pa-0">
 
-                            <MudStack Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Row>
-                                <MudItem xs="9" sm="9">
-                                    <MudText Typo="Typo.body1" Class="font-weight-medium">@item.Model.Issuer</MudText>
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Model.AccountName</MudText>
-                                    <MudText Typo="Typo.h5" Class="mt-2" Style="letter-spacing: 0.2em; font-family: monospace;">@FormatCode(item.CurrentCode)</MudText>
-                                </MudItem>
+                @* ********************************** *@
+                @* ***** ZAMAN BAZLI (TOTP) SEKME ***** *@
+                @* ********************************** *@
+                <MudTabPanel Text="Zaman Bazlı (TOTP)">
+                    <div class="pa-4">
+                        @if (DisplayItems is not null && DisplayItems.Any(x => x.Model.Type == OtpType.TOTP))
+                        {
+                            <MudStack class="d-flex flex-column" style="gap: 16px;">
+                                @foreach (var item in DisplayItems.Where(x => x.Model.Type == OtpType.TOTP))
+                                {
+                                    <MudPaper Outlined="true"
+                                              Class="pa-3 rounded-lg mud-clickable d-flex flex-column"
+                                              @onclick="@(() => HandleItemClick(item))" Style="cursor: pointer;">
 
-                                <MudItem xs="3" sm="3" Class="d-flex justify-end">
-                                    <MudIconButton Icon="@Icons.Material.Filled.MoreVert"
-                                                   Size="Size.Large"
-                                                   Disabled="true" />
-                                </MudItem>
+                                        <MudStack Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Row>
+                                            <MudItem xs="9" sm="9">
+                                                <MudText Typo="Typo.body1" Class="font-weight-medium">@item.Model.Issuer</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Model.AccountName</MudText>
+                                                <MudText Typo="Typo.h5" Class="mt-2" Style="letter-spacing: 0.2em; font-family: monospace;">@FormatCode(item.CurrentCode)</MudText>
+                                            </MudItem>
+                                            <MudItem xs="3" sm="3" Class="d-flex justify-end">
+                                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Large" Disabled="true" />
+                                            </MudItem>
+                                        </MudStack>
+
+                                        <MudProgressLinear Color="GetProgressColor(item.TimeLeft)" Value="item.ProgressValue" Class="mt-3" />
+                                    </MudPaper>
+                                }
                             </MudStack>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info">Henüz eklenmiş zaman bazlı bir hesap bulunmuyor.</MudAlert>
+                        }
+                    </div>
+                </MudTabPanel>
 
-                            <MudProgressLinear Color="GetProgressColor(item.TimeLeft)" Value="item.ProgressValue" Class="mt-3" />
-                        </MudPaper>
-                    }
-                </div>
-            }
+                @* ********************************** *@
+                @* ***** SAYAÇ BAZLI (HOTP) SEKME ***** *@
+                @* ********************************** *@
+                <MudTabPanel Text="Sayaç Bazlı (HOTP)">
+                    <div class="pa-4">
+                        @if (DisplayItems is not null && DisplayItems.Any(x => x.Model.Type == OtpType.HOTP))
+                        {
+                            <MudStack class="d-flex flex-column" style="gap: 16px;">
+                                @foreach (var item in DisplayItems.Where(x => x.Model.Type == OtpType.HOTP))
+                                {
+                                    <MudPaper Outlined="true" Class="pa-3 rounded-lg d-flex flex-column">
+                                        <MudStack Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Row>
+                                            <MudItem xs="9" sm="9" @onclick="@(() => HandleItemClick(item))" Style="cursor: pointer;">
+                                                <MudText Typo="Typo.body1" Class="font-weight-medium">@item.Model.Issuer</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Model.AccountName</MudText>
+                                                <MudText Typo="Typo.h5" Class="mt-2" Style="letter-spacing: 0.2em; font-family: monospace;">@FormatCode(item.CurrentCode)</MudText>
+                                            </MudItem>
+                                            <MudItem xs="3" sm="3" Class="d-flex justify-end align-center">
+                                                @if (item.IsCodeReady)
+                                                {
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Edge="Edge.End" OnClick="@((e) => HandleItemClick(item))" Title="Yeni kod üret" />
+                                                }
+                                                else
+                                                {
+                                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@((e) => HandleItemClick(item))">Üret</MudButton>
+                                                }
+                                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Large" Disabled="true" />
+                                            </MudItem>
+                                        </MudStack>
+                                    </MudPaper>
+                                }
+                            </MudStack>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info">Henüz eklenmiş sayaç bazlı bir hesap bulunmuyor.</MudAlert>
+                        }
+                    </div>
+                </MudTabPanel>
+            </MudTabs>
         }
-
     </MudPaper>
 </MudContainer>
 
-
 <AddTwoFactorAuthFabMenu />
 
-
 @code {
+    // Mevcut C# kodunuzda herhangi bir değişiklik yapmaya gerek yok.
+    // FormatCode ve GetProgressColor metotları olduğu gibi kalabilir.
+
     private string FormatCode(string code)
     {
         if (string.IsNullOrEmpty(code) || code.Length != 6)
@@ -70,4 +122,11 @@
     {
         return timeLeft <= 5 ? Color.Error : Color.Primary;
     }
+
+    // HandleItemClick metodunuzu da buraya eklemelisiniz.
+    // Örnek:
+    // private async Task HandleItemClick(TwoFactorDisplayItem item)
+    // {
+    //     ... mevcut kodunuz ...
+    // }
 }

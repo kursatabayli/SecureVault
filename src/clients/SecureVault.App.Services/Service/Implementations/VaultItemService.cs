@@ -61,5 +61,24 @@ namespace SecureVault.App.Services.Service.Implementations
 
             return await _apiClient.PostAsync(Endpoints.VaultItemBaseUrl, vaultItemPayload, ClientTypes.AuthenticatedClient);
         }
+
+        public async Task<Result> UpdateVaultItem(T data)
+        {
+            try
+            {
+                var encryptedData = await _cryptoService.EncryptAsync(data);
+
+                var payload = new { EncryptedData = encryptedData };
+
+                var endpoint = Endpoints.VaultItemBaseUrl + data.Id;
+
+                return await _apiClient.PutAsync(endpoint, payload, ClientTypes.AuthenticatedClient);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Vault item güncellenirken bir hata oluştu. ItemId: {ItemId}", data.Id);
+                return Result.Failure(new Error("Client.UpdateFailed", "Öğe güncellenemedi."));
+            }
+        }
     }
 }

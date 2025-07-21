@@ -129,6 +129,9 @@
   <data name="RegistrationSuccessful" xml:space="preserve">
     <value>Kaydınız başarıyla oluşturuldu!</value>
   </data>
+  <data name="Text_ClickToGenerate" xml:space="preserve">
+    <value>Kod Üret</value>
+  </data>
   <data name="Text_Error_General" xml:space="preserve">
     <value>HATA!</value>
   </data>

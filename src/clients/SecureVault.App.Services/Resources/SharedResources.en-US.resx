@@ -129,6 +129,9 @@
   <data name="RegistrationSuccessful" xml:space="preserve">
     <value>Your registration was successful!</value>
   </data>
+  <data name="Text_ClickToGenerate" xml:space="preserve">
+    <value>Generate Code</value>
+  </data>
   <data name="Text_Error_General" xml:space="preserve">
     <value>ERROR!</value>
   </data>

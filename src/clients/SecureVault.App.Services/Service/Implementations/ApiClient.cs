@@ -85,5 +85,24 @@ namespace SecureVault.App.Services.Service.Implementations
                 return new Error(ErrorCodes.Client.NetworkError, _localizer[ErrorCodes.Client.NetworkError]);
             }
         }
+
+        public async Task<Result> PutAsync<TRequest>(string endpoint, TRequest payload, ClientTypes clientType)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient(clientType.ToString());
+                var response = await client.PutAsJsonAsync(endpoint, payload);
+
+                if (response.IsSuccessStatusCode)
+                    return Result.Success();
+                else
+                    return Result.Failure(await response.Content.ReadFromJsonAsync<Error>());
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"API Request Failed: {ex.Message}");
+                return Result.Failure(new Error(ErrorCodes.Client.NetworkError, _localizer[ErrorCodes.Client.NetworkError]));
+            }
+        }
     }
 }

@@ -7,5 +7,6 @@ namespace SecureVault.App.Services.Service.Contracts
     {
         Task<Result<IReadOnlyCollection<T>>> GetVaultItemsByItemTypeAsync(ItemType itemType);
         Task<Result> CreateVaultItem(T Data, ItemType itemType);
+        Task<Result> UpdateVaultItem(T Data);
     }
 }

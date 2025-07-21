@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using MudBlazor.Services;
 using SecureVault.App.Services.Extensions;
+using SecureVault.App.Extensions;
 
 namespace SecureVault.App
 {
