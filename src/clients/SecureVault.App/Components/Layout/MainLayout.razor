@@ -27,13 +27,13 @@
             </MudHidden>
         </AuthorizeView>
 
-            <MudMainContent>
-                <MudOverlay Visible="_drawerOpen" OnClick='() => _drawerOpen = false' DarkBackground="false" ZIndex="1100" />
-                <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-8">
-                    @Body
-                </MudContainer>
-            </MudMainContent>
-            <BottomNav />
+        <MudMainContent>
+            <MudOverlay Visible="_drawerOpen" OnClick='() => _drawerOpen = false' DarkBackground="false" ZIndex="1100" />
+            <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-8 pb-16">
+                @Body
+            </MudContainer>
+        </MudMainContent>
+        <BottomNav />
     }
 
 </MudLayout>

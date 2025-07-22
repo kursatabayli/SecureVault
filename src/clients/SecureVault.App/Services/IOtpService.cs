@@ -1,7 +1,7 @@
 ﻿using SecureVault.App.Services.Models.VaultItemModels;
 using SecureVault.Shared.Result;
 
-namespace SecureVault.App.Services.Service
+namespace SecureVault.App.Services
 {
     public interface IOtpService : IDisposable
     {

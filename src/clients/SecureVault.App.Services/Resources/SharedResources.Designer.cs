@@ -97,7 +97,7 @@ namespace SecureVault.App.Services.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Generate Code.
+        ///   Looks up a localized string similar to ___ ___.
         /// </summary>
         public static string Text_ClickToGenerate {
             get {

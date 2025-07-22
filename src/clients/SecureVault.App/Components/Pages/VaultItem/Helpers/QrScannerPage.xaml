@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.Maui.Controls"
+             xmlns:zxingcore="clr-namespace:ZXing.Net.Maui;assembly=ZXing.Net.Maui"
+             x:Class="SecureVault.App.Components.Pages.VaultItem.Helpers.QrScannerPage"
+             Title="QR Kod Okuyucu">
+    <Grid>
+        <zxing:CameraBarcodeReaderView
+            x:Name="barcodeReader"
+            BarcodesDetected="BarcodesDetected_Handler">
+
+            <zxing:CameraBarcodeReaderView.Options>
+                <zxingcore:BarcodeReaderOptions 
+                    Formats="QrCode" />
+            </zxing:CameraBarcodeReaderView.Options>
+
+        </zxing:CameraBarcodeReaderView>
+
+        <Label Text="QR Kodu Kameraya Gösterin"
+               VerticalOptions="Center"
+               HorizontalOptions="Center"
+               TextColor="White"
+               FontSize="20"
+               FontAttributes="Bold"
+               Margin="0, -150, 0, 0"/>
+    </Grid>
+</ContentPage>

@@ -23,9 +23,6 @@
         {
             <MudTabs Elevation="2" Rounded="true" PanelClass="pa-0">
 
-                @* ********************************** *@
-                @* ***** ZAMAN BAZLI (TOTP) SEKME ***** *@
-                @* ********************************** *@
                 <MudTabPanel Text="Zaman Bazlı (TOTP)">
                     <div class="pa-4">
                         @if (DisplayItems is not null && DisplayItems.Any(x => x.Model.Type == OtpType.TOTP))
@@ -35,7 +32,7 @@
                                 {
                                     <MudPaper Outlined="true"
                                               Class="pa-3 rounded-lg mud-clickable d-flex flex-column"
-                                              @onclick="@(() => HandleItemClick(item))" Style="cursor: pointer;">
+                                              @onclick="@(() => CopyCodeToClipboard(item))" Style="cursor: pointer;">
 
                                         <MudStack Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Row>
                                             <MudItem xs="9" sm="9">
@@ -60,9 +57,6 @@
                     </div>
                 </MudTabPanel>
 
-                @* ********************************** *@
-                @* ***** SAYAÇ BAZLI (HOTP) SEKME ***** *@
-                @* ********************************** *@
                 <MudTabPanel Text="Sayaç Bazlı (HOTP)">
                     <div class="pa-4">
                         @if (DisplayItems is not null && DisplayItems.Any(x => x.Model.Type == OtpType.HOTP))
@@ -72,20 +66,13 @@
                                 {
                                     <MudPaper Outlined="true" Class="pa-3 rounded-lg d-flex flex-column">
                                         <MudStack Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Row>
-                                            <MudItem xs="9" sm="9" @onclick="@(() => HandleItemClick(item))" Style="cursor: pointer;">
+                                            <MudItem xs="9" sm="9" @onclick="@(() => CopyCodeToClipboard(item))" Style="cursor: pointer;">
                                                 <MudText Typo="Typo.body1" Class="font-weight-medium">@item.Model.Issuer</MudText>
                                                 <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Model.AccountName</MudText>
                                                 <MudText Typo="Typo.h5" Class="mt-2" Style="letter-spacing: 0.2em; font-family: monospace;">@FormatCode(item.CurrentCode)</MudText>
                                             </MudItem>
                                             <MudItem xs="3" sm="3" Class="d-flex justify-end align-center">
-                                                @if (item.IsCodeReady)
-                                                {
-                                                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Edge="Edge.End" OnClick="@((e) => HandleItemClick(item))" Title="Yeni kod üret" />
-                                                }
-                                                else
-                                                {
-                                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@((e) => HandleItemClick(item))">Üret</MudButton>
-                                                }
+                                                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Edge="Edge.End" OnClick="@((e) => HandleItemClick(item))" Title="Yeni kod üret" />
                                                 <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Large" Disabled="true" />
                                             </MudItem>
                                         </MudStack>
@@ -104,12 +91,9 @@
     </MudPaper>
 </MudContainer>
 
-<AddTwoFactorAuthFabMenu />
+<AddTwoFactorAuthFabMenu OnItemAdded="HandleItemAdded" />
 
 @code {
-    // Mevcut C# kodunuzda herhangi bir değişiklik yapmaya gerek yok.
-    // FormatCode ve GetProgressColor metotları olduğu gibi kalabilir.
-
     private string FormatCode(string code)
     {
         if (string.IsNullOrEmpty(code) || code.Length != 6)
@@ -122,11 +106,4 @@
     {
         return timeLeft <= 5 ? Color.Error : Color.Primary;
     }
-
-    // HandleItemClick metodunuzu da buraya eklemelisiniz.
-    // Örnek:
-    // private async Task HandleItemClick(TwoFactorDisplayItem item)
-    // {
-    //     ... mevcut kodunuz ...
-    // }
 }
