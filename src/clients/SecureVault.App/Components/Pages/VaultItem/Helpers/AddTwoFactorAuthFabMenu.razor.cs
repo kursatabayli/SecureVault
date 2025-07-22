@@ -5,24 +5,29 @@ namespace SecureVault.App.Components.Pages.VaultItem.Helpers
 {
     public partial class AddTwoFactorAuthFabMenu : ComponentBase
     {
-        [Inject] private ISnackbar Snackbar { get; set; } = default!;
+        [Parameter] public EventCallback OnItemAdded { get; set; }
         [Inject] private IDialogService DialogService { get; set; }
         private bool isFabMenuOpen = false;
         private void ToggleFabMenu()
         {
             isFabMenuOpen = !isFabMenuOpen;
         }
-        private void ScanQrCode()
+        private async Task ScanQrCode()
         {
-            Snackbar.Add("QR Kod okuyucu burada açılacak.", Severity.Info);
+            var dialog = await DialogService.ShowAsync<AddTwoFactorCodeWithQr>();
+            var result = await dialog.Result;
+            if (!result.Canceled)
+                await OnItemAdded.InvokeAsync();
+
             isFabMenuOpen = false;
         }
         private async Task ManualEntry()
         {
-            var parameters = new DialogParameters<AddTwoFactorCodeManuel>();
-            var dialog = await DialogService.ShowAsync<AddTwoFactorCodeManuel>(null, parameters);
+            var dialog = await DialogService.ShowAsync<AddTwoFactorCodeManuel>();
             var result = await dialog.Result;
-            await OnInitializedAsync();
+            if (!result.Canceled)
+                await OnItemAdded.InvokeAsync();
+
             isFabMenuOpen = false;
         }
     }

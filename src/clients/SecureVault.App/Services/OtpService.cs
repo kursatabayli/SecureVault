@@ -7,7 +7,7 @@ using SecureVault.App.Services.Service.Contracts;
 using SecureVault.Shared.Result;
 using OtpType = SecureVault.App.Services.Models.VaultItemModels.OtpType;
 
-namespace SecureVault.App.Services.Service
+namespace SecureVault.App.Services
 {
     public class OtpService : IOtpService
     {
@@ -20,6 +20,7 @@ namespace SecureVault.App.Services.Service
         public Error? InitializationError { get; private set; }
         public event Action? OnTick;
         public IReadOnlyList<OtpViewModel> Items => _displayItems.AsReadOnly();
+        private bool _isLoopStarted = false;
 
         public OtpService(IVaultItemService<TwoFactorAuthModel> vaultItemService, IStringLocalizer<SharedResources> localizer, ILogger<OtpService> logger)
         {
@@ -30,8 +31,6 @@ namespace SecureVault.App.Services.Service
 
         public async Task InitializeAsync()
         {
-            if (_displayItems.Any()) return;
-
             IsLoading = true;
             InitializationError = null;
             OnTick?.Invoke();
@@ -51,7 +50,11 @@ namespace SecureVault.App.Services.Service
                 OnTick?.Invoke();
             }
 
-            _ = StartUiUpdateLoop();
+            if (!_isLoopStarted)
+            {
+                _ = StartUiUpdateLoop();
+                _isLoopStarted = true;
+            }
         }
 
         public OtpViewModel? GetItem(Guid id)
@@ -67,7 +70,7 @@ namespace SecureVault.App.Services.Service
                 InitializationError = result.Error;
                 return;
             }
-
+            _displayItems.Clear();
             _displayItems.AddRange(result.Value.Select(model => new OtpViewModel { Model = model }));
 
             foreach (var item in _displayItems)

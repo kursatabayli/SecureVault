@@ -14,14 +14,14 @@
         else
         {
             <MudForm Model="_twoFactorAuthModel" @ref="form" Class="mt-4">
-                <MudTextField Label="Servis Sağlayıcı (Örn: Google, GitHub)"
+                <MudTextField Label="Servis Sağlayıcı"
                               @bind-Value="_twoFactorAuthModel.Issuer"
                               For="@(() => _twoFactorAuthModel.Issuer)"
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               Immediate="true" />
 
-                <MudTextField Label="Hesap Adı (Örn: kullanici@mail.com)"
+                <MudTextField Label="Hesap Adı"
                               @bind-Value="_twoFactorAuthModel.AccountName"
                               For="@(() => _twoFactorAuthModel.AccountName)"
                               Variant="Variant.Outlined"
@@ -34,7 +34,7 @@
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               Class="mt-3"
-                              HelperText="Authenticator uygulamasından aldığınız anahtarı buraya yapıştırın." />
+                              HelperText="Sağlayıcınızdan aldığınız anahtarı buraya yapıştırın." />
 
                 <MudSelect Label="Kod Türü"
                            @bind-Value="_twoFactorAuthModel.Type"

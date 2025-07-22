@@ -1,0 +1,27 @@
+﻿@page "/qr-scanner"
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.QrCodeScanner" Class="mr-2" />
+            QR Kod ile Hesap Ekle
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <div class="d-flex flex-column align-center justify-center my-4 pa-4" style="min-height: 150px;">
+            @if (_isSubmitting)
+            {
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <MudText Class="mt-3">Hesap kaydediliyor...</MudText>
+            }
+            else
+            {
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <MudText Class="mt-3">Kamera açılıyor, lütfen QR kodu okutun...</MudText>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">İptal</MudButton>
+    </DialogActions>
+</MudDialog>

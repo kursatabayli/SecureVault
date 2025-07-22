@@ -1,4 +1,5 @@
-﻿using SecureVault.App.Services.Service;
+﻿using SecureVault.App.Services;
+using SecureVault.App.Services.Service;
 using SecureVault.App.Services.Service.Contracts;
 using SecureVault.App.Services.Service.Implementations;
 
@@ -18,6 +19,7 @@ namespace SecureVault.App.Extensions
             services.AddScoped<IBouncyCastleCryptoService, BouncyCastleCryptoService>();
             services.AddScoped<IApiClient, ApiClient>();
             services.AddSingleton<IOtpService, OtpService>();
+            services.AddScoped<IQrCodeScannerService, QrCodeScannerService>();
 
             return services;
         }

@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Components.WebView.Maui;
 using Microsoft.Extensions.Logging;
 using MudBlazor.Services;
-using SecureVault.App.Services.Extensions;
 using SecureVault.App.Extensions;
+using SecureVault.App.Services;
+using SecureVault.App.Services.Extensions;
+using ZXing.Net.Maui.Controls;
 
 namespace SecureVault.App
 {
@@ -15,6 +17,7 @@ namespace SecureVault.App
 
             builder
                 .UseMauiApp<App>()
+                .UseBarcodeReader()
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -28,7 +31,6 @@ namespace SecureVault.App
             builder.Services.AuthServices();
             builder.Services.AddAuthorizationCore();
             builder.Services.AddLocalization();
-
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();
 #if ANDROID
@@ -42,6 +44,7 @@ namespace SecureVault.App
 #endif
             builder.Logging.AddDebug();
 #endif
+
 
             return builder.Build();
         }

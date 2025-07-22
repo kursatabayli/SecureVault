@@ -4,7 +4,7 @@ using Microsoft.JSInterop;
 using MudBlazor;
 using SecureVault.App.Services.Models.VaultItemModels;
 using SecureVault.App.Services.Resources;
-using SecureVault.App.Services.Service;
+using SecureVault.App.Services;
 
 namespace SecureVault.App.Components.Pages.VaultItem
 {
@@ -29,18 +29,7 @@ namespace SecureVault.App.Components.Pages.VaultItem
         }
         private async Task HandleItemClick(OtpViewModel item)
         {
-            if (item.Model.Type == OtpType.HOTP && !item.IsCodeReady)
-            {
-                await OtpService.GenerateHotpCodeAsync(item.Model.Id);
-            }
-            else if (item.Model.Type == OtpType.HOTP && item.IsCodeReady)
-            {
-                await OtpService.GenerateHotpCodeAsync(item.Model.Id);
-            }
-            else if (item.Model.Type == OtpType.TOTP && item.IsCodeReady)
-            {
-                await CopyCodeToClipboard(item);
-            }
+            await OtpService.GenerateHotpCodeAsync(item.Model.Id);
         }
         private async Task CopyCodeToClipboard(OtpViewModel item)
         {
@@ -50,7 +39,10 @@ namespace SecureVault.App.Components.Pages.VaultItem
                 Snackbar.Add(Localizer[SharedResources.Copied], Severity.Success, config => { config.VisibleStateDuration = 2000; });
             }
         }
-
+        private async Task HandleItemAdded()
+        {
+            await OtpService.InitializeAsync();
+        }
         public void Dispose()
         {
             OtpService.OnTick -= OnTotpTick;
