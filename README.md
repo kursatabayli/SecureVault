@@ -22,6 +22,10 @@
   <img src="https://img.shields.io/badge/Architecture-Microservices-orange?style=for-the-badge" alt="Microservices Architecture">
 </p>
 
+> **⚠️ Project Status: In Development**
+>
+> This project is currently under active development and is intended for demonstration and educational purposes. The software is provided "as is" without warranty of any kind. It is **not yet considered production-ready**. Please do not use this application to store real, sensitive credentials at this stage.
+
 This project is an implementation of a modern password and 2FA code manager with a strong focus on security and privacy. It is designed based on a **Zero-Knowledge** architecture, meaning the server has no knowledge of the user's master password or the data stored in the vault. All encryption and decryption operations are performed client-side.
 
 ---
