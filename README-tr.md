@@ -7,7 +7,7 @@
 <div align="center">
 
   <!-- Proje Logosu -->
-  <!-- <img src="docs/logo.png" alt="SecureVault Logo" width="150"/> -->
+  <!-- <img src="#" alt="SecureVault Logo" width="150"/> -->
   
   <h1 style="border-bottom: none;">SecureVault</h1>
   
