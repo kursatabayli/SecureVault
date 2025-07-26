@@ -22,6 +22,10 @@
   <img src="https://img.shields.io/badge/Architecture-Microservices-orange?style=for-the-badge" alt="Mikroservis Mimarisi">
 </p>
 
+> **⚠️ Proje Durumu: Geliştirme Aşamasında**
+>
+> Bu proje aktif olarak geliştirilme aşamasındadır ve öncelikli amacı teknik konseptleri sergilemektir. Yazılım, herhangi bir garanti olmaksızın "olduğu gibi" sunulmaktadır. Henüz **production (canlı) kullanım için kararlı kabul edilmemektedir**. Lütfen bu aşamada gerçek ve hassas kimlik bilgilerinizi saklamak için kullanmayınız.
+
 Bu proje, güvenlik ve gizlilik odaklı modern bir parola ve 2FA kod yöneticisi uygulamasıdır. Proje, **Sıfır Bilgi (Zero-Knowledge)** mimarisi temel alınarak tasarlanmıştır. Bu, sunucunun kullanıcının ana parolasından veya kasada saklanan verilerden hiçbir şekilde haberdar olmaması anlamına gelir. Tüm şifreleme ve şifre çözme işlemleri istemci tarafında gerçekleştirilir.
 
 ---
