@@ -16,7 +16,7 @@
 </div>
 
 <p align="center">
-  <a href="https://github.com/kursatabayli/securevault/blob/develop/LICENSE"><img src="https://img.shields.io/github/license/kursatabayli/securevault?style=for-the-badge&color=blue" alt="Lisans"></a>
+<a href="https://github.com/kursatabayli/SecureVault/blob/master/LICENSE"><img src="https://img.shields.io/github/license/kursatabayli/SecureVault?style=for-the-badge&color=blue" alt="Lisans"></a>
   <img src="https://img.shields.io/badge/.NET-9-512BD4?style=for-the-badge&logo=dotnet" alt=".NET 9">
   <img src="https://img.shields.io/badge/MAUI-Multi--Platform-5C2D91?style=for-the-badge&logo=c-sharp" alt="MAUI">
   <img src="https://img.shields.io/badge/Architecture-Microservices-orange?style=for-the-badge" alt="Mikroservis Mimarisi">
@@ -152,3 +152,7 @@ Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin.
     * **MAUI Client:** `src/clients/SecureVault.App` projesini Visual Studio'da açıp istediğiniz platform (Windows veya Android) için çalıştırın.
 
 ---
+
+### 📄 Lisans
+
+Bu proje, [MIT Lisansı](https://github.com/kursatabayli/SecureVault/blob/master/LICENSE) altında lisanslanmıştır.
