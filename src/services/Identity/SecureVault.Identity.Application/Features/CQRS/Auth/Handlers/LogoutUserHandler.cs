@@ -1,14 +1,9 @@
 ﻿using MediatR;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.JsonWebTokens;
-using SecureVault.Identity.Application.Contracts.Repositories;
 using SecureVault.Identity.Application.Contracts.Services;
 using SecureVault.Identity.Application.Features.CQRS.Auth.Commands;
-using SecureVault.Identity.Application.Messages;
 using SecureVault.Identity.Application.Services;
 using SecureVault.Shared.Result;
-using System.Security.Claims;
 
 namespace SecureVault.Identity.Application.Features.CQRS.Auth.Handlers
 {
@@ -27,7 +22,7 @@ namespace SecureVault.Identity.Application.Features.CQRS.Auth.Handlers
 
         public async Task<Result> Handle(LogoutUserCommand request, CancellationToken cancellationToken)
         {
-            var validationResult = await _tokenValidationService.ValidateRefreshTokenAndGetSessionAsync(request.RefreshToken);
+            var validationResult = await _tokenValidationService.ValidateAndGetSessionAsync(request.AccessToken, request.RefreshToken);
 
             if (validationResult.IsFailure)
             {
@@ -35,7 +30,7 @@ namespace SecureVault.Identity.Application.Features.CQRS.Auth.Handlers
                 return Result.Success();
             }
 
-            var session = validationResult.Value.session;
+            var session = validationResult.Value;
 
             try
             {
@@ -46,7 +41,7 @@ namespace SecureVault.Identity.Application.Features.CQRS.Auth.Handlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Logout sırasında oturum iptal edilirken beklenmedik bir hata oluştu. UserId: {UserId}", validationResult.Value.userId);
+                _logger.LogError(ex, "Logout sırasında oturum iptal edilirken beklenmedik bir hata oluştu. UserId: {UserId}", validationResult.Value);
                 return Result.Success();
             }
         }

@@ -17,14 +17,11 @@ namespace SecureVault.Identity.Infrastructure.Repositories
 
         public async Task AddAsync(UserSession userSession) => await _dbSet.AddAsync(userSession);
 
-        public async Task<UserSession?> GetByIdAsync(Guid sessionId)
-        {
-            throw new NotImplementedException();
-        }
+        public async Task<UserSession?> GetByIdAsync(Guid id) => await _dbSet.FindAsync(id);
 
         public async Task<UserSession?> GetSessionByJtiAsync(string jti)
             => await _dbSet.Where(session =>
-                    session.TokenIdentifier == jti &&
+                    session.RefreshTokenJti == jti &&
                     !session.IsRevoked &&
                     session.ExpiresAt > DateTimeOffset.UtcNow)
                 .Include(x => x.DeviceDetails)

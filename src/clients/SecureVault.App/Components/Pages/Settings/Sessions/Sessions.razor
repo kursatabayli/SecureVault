@@ -1,0 +1,107 @@
+﻿@page "/sessions"
+@using SecureVault.App.Services.Models.SessionModels
+@attribute [Authorize]
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudPaper Elevation="0" Class="pa-4 rounded-lg">
+        <MudText Typo="Typo.h4" GutterBottom="true">Oturum Yönetimi</MudText>
+        <MudText Color="Color.Secondary" Class="mb-6">Aktif oturumlarınızı buradan görüntüleyebilir ve sonlandırabilirsiniz.</MudText>
+
+        @if (_isLoading)
+        {
+            <div class="d-flex justify-center my-8">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(_loadError))
+        {
+            <MudAlert Severity="Severity.Error">@_loadError</MudAlert>
+        }
+        else
+        {
+            <MudGrid Spacing="3">
+                @foreach (var session in _sessions)
+                {
+                    <MudItem xs="12" sm="12" md="6" lg="4">
+                        <MudCard Elevation="25" Class="d-flex flex-column" Style="height: 100%;">
+                            <MudCardHeader>
+                                <CardHeaderAvatar>
+                                    <MudAvatar Color="Color.Primary">
+                                        <MudIcon Icon="@GetDeviceIcon(session.DeviceDetails)" />
+                                    </MudAvatar>
+                                </CardHeaderAvatar>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.body1" Class="d-flex align-center">
+                                        @if (IsCurrentSession(session) || IsRecentlyActive(session))
+                                        {
+                                            <span class="active-indicator"></span>
+                                        }
+                                        @FormatDeviceName(session.DeviceDetails)
+                                    </MudText>                                    
+                                    <MudText Typo="Typo.body2">@session.DeviceDetails.OperatingSystem</MudText>
+                                </CardHeaderContent>
+                                <CardHeaderActions >
+                                    <MudHidden Breakpoint="Breakpoint.Xs" Invert="false">
+                                        @DisplayStatusChip(session)
+                                    </MudHidden>
+                                </CardHeaderActions>
+                            </MudCardHeader>
+
+                            <MudCardContent Class="flex-grow-1">
+                                <MudHidden Breakpoint="Breakpoint.SmAndUp" Invert="false">
+                                    @DisplayStatusChip(session)
+                                </MudHidden>
+                                <MudText><b>IP Adresi:</b> @session.IpAddress</MudText>
+                                <MudText><b>Son Kullanım:</b> @FormatLastUsed(session.LastUsedAt)</MudText>
+                            </MudCardContent>
+                            <MudCardActions>
+                                @if (session.ExpiresAt < DateTimeOffset.UtcNow)
+                                {
+                                    <MudChip T="string" Icon="@Icons.Material.Filled.TimerOff" Label="true" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">Süresi Doldu</MudChip>
+                                }
+                                else if (session.IsRevoked)
+                                {
+                                    <MudChip T="string" Icon="@Icons.Material.Filled.Check" Label="true" Color="Color.Warning" Size="Size.Small" Variant="Variant.Outlined">Sonlandırıldı</MudChip>
+                                }
+                                else if (!IsCurrentSession(session))
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Error"
+                                               Size="Size.Small"
+                                               OnClick="@(() => ShowRevokeConfirmation(session))"
+                                               Disabled="@(_revokingSessionId == session.Id)">
+                                        @if (_revokingSessionId == session.Id)
+                                        {
+                                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                            <MudText Class="ms-2">Kapatılıyor...</MudText>
+                                        }
+                                        else
+                                        {
+                                            <text>Oturumu Kapat</text>
+                                        }
+                                    </MudButton>
+                                }
+                            </MudCardActions>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    </MudPaper>
+</MudContainer>
+
+
+@code {
+
+    private RenderFragment DisplayStatusChip(UserSessionsModel session) => 
+    @<MudItem class="mb-2">
+        @if (IsCurrentSession(session))
+        {
+            <MudChip T="string" Label="true" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">Mevcut</MudChip>
+        }
+        else if (IsRecentlyActive(session))
+        {
+            <MudChip T="string" Label="true" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">Şu anda aktif</MudChip>
+        }
+    </MudItem>;
+}

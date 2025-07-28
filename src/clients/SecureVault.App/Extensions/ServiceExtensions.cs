@@ -1,5 +1,6 @@
-﻿using SecureVault.App.Services;
-using SecureVault.App.Services.Service;
+﻿using Nager.PublicSuffix;
+using Nager.PublicSuffix.RuleProviders;
+using SecureVault.App.Services;
 using SecureVault.App.Services.Service.Contracts;
 using SecureVault.App.Services.Service.Implementations;
 
@@ -18,8 +19,18 @@ namespace SecureVault.App.Extensions
             services.AddSingleton<ICryptoService, AesGcmCryptoService>();
             services.AddScoped<IBouncyCastleCryptoService, BouncyCastleCryptoService>();
             services.AddScoped<IApiClient, ApiClient>();
+            services.AddScoped<IUserSessionService, UserSessionService>();
             services.AddSingleton<IOtpService, OtpService>();
             services.AddScoped<IQrCodeScannerService, QrCodeScannerService>();
+
+            services.AddSingleton<IDomainParser>(serviceProvider =>
+            {
+                var ruleProvider = new LocalFileRuleProvider("public_suffix_list.dat");
+                ruleProvider.BuildAsync().GetAwaiter().GetResult();
+                return new DomainParser(ruleProvider);
+            });
+
+            services.AddSingleton<LogoutService>();
 
             return services;
         }

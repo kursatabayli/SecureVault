@@ -5,6 +5,7 @@ using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
 using Ocelot.Provider.Consul;
 using SecureVault.ApiGateway.Extensions;
+using StackExchange.Redis;
 using System.Net;
 using System.Text;
 using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
@@ -35,6 +36,22 @@ namespace SecureVault.ApiGateway
                 //options.KnownNetworks.Add(new IPNetwork(IPAddress.Parse("::ffff:172.22.0.0"), 112));
             });
 
+            builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+            {
+                var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ?? builder.Configuration["Redis:ConnectionString"];
+
+                if (string.IsNullOrEmpty(redisConnectionString))
+                {
+                    throw new InvalidOperationException("Redis connection string 'Redis:ConnectionString' not found in configuration.");
+                }
+
+                var configurationOptions = ConfigurationOptions.Parse(redisConnectionString);
+
+                configurationOptions.AbortOnConnectFail = false;
+
+                return ConnectionMultiplexer.Connect(configurationOptions);
+            });
+
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -51,17 +68,6 @@ namespace SecureVault.ApiGateway
                     ValidAudience = builder.Configuration["JwtSettings:ValidAudience"],
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"])),
                     ClockSkew = TimeSpan.Zero
-                };
-
-                options.Events = new JwtBearerEvents
-                {
-                    OnMessageReceived = context =>
-                    {
-                        if (context.Request.Cookies.TryGetValue("AccessToken", out var tokenFromCookie))
-                            context.Token = tokenFromCookie;
-
-                        return Task.CompletedTask;
-                    }
                 };
             });
 
@@ -94,6 +100,7 @@ namespace SecureVault.ApiGateway
             app.UseHttpsRedirection();
             app.UseCors("SecureVaultApp");
             app.UseAuthentication();
+            app.UseTokenBlacklist();
             app.UseAuthorization();
             await app.UseOcelot();
 

@@ -1,11 +1,12 @@
-﻿namespace SecureVault.ApiGateway.Extensions
+﻿using SecureVault.ApiGateway.MiddleWares;
+
+namespace SecureVault.ApiGateway.Extensions
 {
     public static class MiddlewareExtensions
     {
-        public static IApplicationBuilder UseIpLogging(
-            this IApplicationBuilder builder)
+        public static IApplicationBuilder UseTokenBlacklist(this IApplicationBuilder builder)
         {
-            return builder.UseMiddleware<IpLoggingMiddleware>();
+            return builder.UseMiddleware<TokenBlacklistMiddleware>();
         }
     }
 }

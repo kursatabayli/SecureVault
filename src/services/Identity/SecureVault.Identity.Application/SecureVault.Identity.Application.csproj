@@ -31,8 +31,5 @@
 			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</EmbeddedResource>
 	</ItemGroup>
-	<ItemGroup>
-		<Folder Include="Features\CQRS\UserSessions\Commands\" />
-	</ItemGroup>
 
 </Project>

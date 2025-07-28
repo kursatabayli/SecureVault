@@ -44,10 +44,10 @@ namespace SecureVault.Identity.Application.Features.CQRS.Auth.Handlers
                 var user = verificationResult.Value;
 
                 var userWithInfo = await _userRepository.GetUserWithUserInfoAsync(user.Id);
-                var (accessToken, accessTokenExp) = _authService.GenerateJwtTokenForUser(userWithInfo);
-                var (newRefreshToken, newJti, newRefreshTokenExp) = _authService.GenerateRefreshTokenJwt(user.Id, request.RememberMe);
+                var (accessToken, accessTokenJti, accessTokenExp) = _authService.GenerateJwtTokenForUser(userWithInfo);
+                var (refreshToken, refreshTokenJti, refreshTokenExp) = _authService.GenerateRefreshTokenJwt(user.Id, request.RememberMe);
 
-                await _userSessionService.ManageSessionAsync(user, request, newJti, newRefreshTokenExp);
+                await _userSessionService.ManageSessionAsync(user, request, accessTokenJti, refreshTokenJti, refreshTokenExp);
 
                 await _unitOfWork.SaveChangesAsync();
 
@@ -55,8 +55,8 @@ namespace SecureVault.Identity.Application.Features.CQRS.Auth.Handlers
                 {
                     AccessToken = accessToken,
                     AccessTokenExpiration = accessTokenExp,
-                    RefreshToken = newRefreshToken,
-                    RefreshTokenExpiration = newRefreshTokenExp
+                    RefreshToken = refreshToken,
+                    RefreshTokenExpiration = refreshTokenExp
                 };
             }
             catch (Exception ex)

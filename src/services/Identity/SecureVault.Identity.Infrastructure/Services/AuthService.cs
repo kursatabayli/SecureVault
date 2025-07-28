@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SecureVault.Identity.Application.Contracts.Services;
 using SecureVault.Identity.Domain.Entities;
@@ -11,24 +12,28 @@ namespace SecureVault.Identity.Infrastructure.Services
 {
     public class AuthService : IAuthService
     {
+        private readonly ILogger<AuthService> _logger;
         private readonly JwtSettings _jwtSettings;
-        public AuthService(IOptions<JwtSettings> jwtSettings)
+        public AuthService(IOptions<JwtSettings> jwtSettings, ILogger<AuthService> logger)
         {
             _jwtSettings = jwtSettings.Value;
+            _logger = logger;
         }
 
-        public (string, DateTime) GenerateJwtTokenForUser(User user)
+        public (string token, string jti, DateTime expiration) GenerateJwtTokenForUser(User user)
         {
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
             var creds = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+            var jti = Guid.NewGuid().ToString();
 
             var claims = new List<Claim>
-            {
-                new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new(ClaimTypes.Email, user.Email),
-                new(ClaimTypes.Name, user.UserInfo.Name),
-                new(ClaimTypes.Surname, user.UserInfo.Surname)
-            };
+        {
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Jti, jti),
+            new(ClaimTypes.Email, user.Email),
+            new(ClaimTypes.Name, user.UserInfo.Name),
+            new(ClaimTypes.Surname, user.UserInfo.Surname)
+        };
 
             var token = new JwtSecurityToken(
                 issuer: _jwtSettings.Issuer,
@@ -38,7 +43,7 @@ namespace SecureVault.Identity.Infrastructure.Services
                 signingCredentials: creds
             );
 
-            return (new JwtSecurityTokenHandler().WriteToken(token), token.ValidTo);
+            return (new JwtSecurityTokenHandler().WriteToken(token), jti, token.ValidTo);
         }
 
         public (string token, string jti, DateTime expiration) GenerateRefreshTokenJwt(Guid userId, bool rememberMe)
@@ -107,8 +112,9 @@ namespace SecureVault.Identity.Infrastructure.Services
 
                 return principal;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Token validation failed!");
                 return null;
             }
         }

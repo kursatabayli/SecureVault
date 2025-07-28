@@ -2,23 +2,27 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SecureVault.Identity.Application.Contracts.DTOs.AuthDto;
+using SecureVault.Identity.Application.Contracts.Services;
 using SecureVault.Identity.Application.Features.CQRS.Auth.Commands;
+using System.Security.Claims;
 
 namespace SecureVault.Identity.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [AllowAnonymous]
     public class AuthController : ControllerBase
     {
         private readonly IMediator _mediator;
+        private readonly IAuthService _authService;
 
-        public AuthController(IMediator mediator)
+        public AuthController(IMediator mediator, IAuthService authService)
         {
             _mediator = mediator;
+            _authService = authService;
         }
 
         [HttpGet("challenge/{email}")]
-        [AllowAnonymous]
         public async Task<IActionResult> RequestChallenge(string email)
         {
             var result = await _mediator.Send(new RequestLoginChallengeCommand(email));
@@ -29,7 +33,6 @@ namespace SecureVault.Identity.Api.Controllers
         }
 
         [HttpPost("login")]
-        [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginCredentialsDto credentials, [FromQuery] bool rememberMe = false)
         {
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
@@ -61,38 +64,28 @@ namespace SecureVault.Identity.Api.Controllers
         }
 
         [HttpPost("refresh")]
-        [AllowAnonymous]
-        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto requestDto)
+        public async Task<IActionResult> RefreshToken()
         {
-            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
-            var uniqueDeviceId = Request.Headers["X-Device-Id"].FirstOrDefault();
-            var deviceName = Request.Headers["X-Device-Name"].FirstOrDefault();
-
             var command = new RefreshTokenCommand(
-                requestDto.RefreshToken,
-                requestDto.AccessToken,
-                ipAddress,
-                uniqueDeviceId,
-                deviceName
+                Request.Headers.Authorization.FirstOrDefault()?.Split(" ").Last(),
+                Request.Headers["X-Refresh-Token"].FirstOrDefault(),
+                HttpContext.Connection.RemoteIpAddress?.ToString(),
+                Request.Headers["X-Device-Id"].FirstOrDefault(),
+                Request.Headers["X-Device-Name"].FirstOrDefault()
             );
-
             var result = await _mediator.Send(command);
-            if (result.IsSuccess)
-                return Ok(result.Value);
-            else
-                return BadRequest(result.Error);
+            return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
         }
 
         [HttpPost("logout")]
-        [AllowAnonymous]
-        public async Task<IActionResult> Logout([FromBody] LogoutRequestDto requestDto)
+        public async Task<IActionResult> Logout()
         {
-            var command = new LogoutUserCommand(requestDto.RefreshToken);
+            var command = new LogoutUserCommand(
+                Request.Headers.Authorization.FirstOrDefault()?.Split(" ").Last(),
+                Request.Headers["X-Refresh-Token"].FirstOrDefault()
+            );
             var result = await _mediator.Send(command);
-            if (result.IsSuccess)
-                return Ok(result);
-            else
-                return BadRequest(result.Error);
+            return Ok();
         }
     }
 }
