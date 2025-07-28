@@ -48,6 +48,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "db_migrations", "db_migrati
 		db_migrations\005_add_token_identifier_to_user_sessions.sql = db_migrations\005_add_token_identifier_to_user_sessions.sql
 		db_migrations\006_add_indexs_to_all_tables.sql = db_migrations\006_add_indexs_to_all_tables.sql
 		db_migrations\007_add_session_persistent_to_user_sessions.sql = db_migrations\007_add_session_persistent_to_user_sessions.sql
+		db_migrations\008_update_jti_tracking_in_user_sessions.sql = db_migrations\008_update_jti_tracking_in_user_sessions.sql
+		init.sql = init.sql
 	EndProjectSection
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{81DDED9D-158B-E303-5F62-77A2896D2A5A}"

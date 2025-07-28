@@ -16,7 +16,7 @@ namespace SecureVault.Vault.Api
 
             builder.Services.AddControllers();
             builder.Services.AddApplicationServices();
-            builder.Services.AddDbContextConfiguration(builder.Configuration);
+            builder.Services.AddMongoDbConfiguration(builder.Configuration);
             builder.Services.RegisterServices();
             builder.Services.AddOpenApi();
             builder.Services.AddLocalization();
@@ -54,17 +54,6 @@ namespace SecureVault.Vault.Api
                     ValidAudience = builder.Configuration["JwtSettings:ValidAudience"],
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"])),
                     ClockSkew = TimeSpan.Zero
-                };
-
-                options.Events = new JwtBearerEvents
-                {
-                    OnMessageReceived = context =>
-                    {
-                        if (context.Request.Cookies.TryGetValue("AccessToken", out var tokenFromCookie))
-                            context.Token = tokenFromCookie;
-
-                        return Task.CompletedTask;
-                    }
                 };
             });
 

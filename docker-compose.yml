@@ -12,6 +12,7 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081      
       - Consul__Host=${CONSUL_HOST}
+      - ConnectionStrings__Redis=redis:6379
     networks:
       - securevault-net
     depends_on:
@@ -26,7 +27,8 @@ services:
     environment:
       - ASPNETCORE_URLS=http://+:8080
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres-db;Username=${DB_USER};Password=${DB_PASSWORD};Database=${DB_NAME}
+      - MongoDbSettings__ConnectionString=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@${MONGO_HOST}:27017
+      - MongoDbSettings__DatabaseName=${MONGO_DB_NAME}      
       - Consul__Host=${CONSUL_HOST}
       - ForwardedHeadersOptions__KnownNetworks=${FORWARDED_HEADERS_KNOWN_NETWORKS}
     networks:
@@ -34,7 +36,7 @@ services:
     depends_on:
       consul:
         condition: service_healthy  
-      postgres-db:
+      mongo-db:
         condition: service_healthy
 
   securevault-identity-api:
@@ -61,6 +63,26 @@ services:
       redis:
         condition: service_healthy
 
+  mongo-db:
+    image: mongo:latest
+    container_name: mongo-db
+    ports:
+      - "27018:27017"
+    networks:
+      - securevault-net
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+
   postgres-db:
     image: postgres:17
     container_name: postgres-db
@@ -74,7 +96,7 @@ services:
       - POSTGRES_DB=${DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db_migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_initial_schema.sql
+      - ./db_migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
@@ -112,6 +134,7 @@ services:
 
 volumes:
   postgres_data:
+  mongo_data:
   
 networks:
   securevault-net:

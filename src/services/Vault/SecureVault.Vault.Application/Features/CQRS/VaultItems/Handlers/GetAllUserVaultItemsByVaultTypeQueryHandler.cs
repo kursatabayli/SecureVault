@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SecureVault.Shared.Result;
@@ -8,7 +7,6 @@ using SecureVault.Vault.Application.Contracts.Repositories;
 using SecureVault.Vault.Application.Features.CQRS.VaultItems.Queries;
 using SecureVault.Vault.Application.Features.CQRS.VaultItems.Results;
 using SecureVault.Vault.Application.Messages;
-using SecureVault.Vault.Domain.Enums;
 
 namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
 {
@@ -31,10 +29,10 @@ namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
         {
             try
             {
-                var vaultItems = _repository.GetAllUserVaultItemsByVaultTypeAsync(request.UserId, request.ItemType);
+                var vaultItems = await _repository.GetAllUserVaultItemsByVaultTypeAsync(request.UserId, request.ItemType);
 
-                var mappedVaultItems = await _mapper.ProjectTo<VaultItemResult>(vaultItems).ToListAsync(cancellationToken);
-                
+                var mappedVaultItems = _mapper.Map<IReadOnlyCollection<VaultItemResult>>(vaultItems);
+
                 return Result<IReadOnlyCollection<VaultItemResult>>.Success(mappedVaultItems);
             }
             catch (Exception ex)

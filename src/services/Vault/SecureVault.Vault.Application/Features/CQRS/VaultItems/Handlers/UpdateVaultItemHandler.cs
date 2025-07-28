@@ -4,7 +4,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SecureVault.Shared.Result;
 using SecureVault.Vault.Application.Contracts.Repositories;
-using SecureVault.Vault.Application.Contracts.Services;
 using SecureVault.Vault.Application.Features.CQRS.VaultItems.Commands;
 using SecureVault.Vault.Application.Messages;
 
@@ -13,16 +12,14 @@ namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
     public class UpdateVaultItemHandler : IRequestHandler<UpdateVaultItemCommand, Result>
     {
         private readonly IVaultItemsRepository _repository;
-        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<UpdateVaultItemHandler> _logger;
         private readonly IStringLocalizer<ReturnMessages> _returnMessages;
 
-        public UpdateVaultItemHandler(IUnitOfWork unitOfWork, ILogger<UpdateVaultItemHandler> logger, IStringLocalizer<ReturnMessages> returnMessages, IVaultItemsRepository repository)
+        public UpdateVaultItemHandler(IVaultItemsRepository repository, ILogger<UpdateVaultItemHandler> logger, IStringLocalizer<ReturnMessages> returnMessages)
         {
-            _unitOfWork = unitOfWork;
+            _repository = repository;
             _logger = logger;
             _returnMessages = returnMessages;
-            _repository = repository;
         }
 
         public async Task<Result> Handle(UpdateVaultItemCommand request, CancellationToken cancellationToken)
@@ -44,8 +41,7 @@ namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
                 }
 
                 vaultItem.UpdateData(request.EncryptedData);
-                await _unitOfWork.SaveChangesAsync();
-
+                await _repository.UpdateAsync(vaultItem);
                 return Result.Success();
             }
             catch (Exception ex)
