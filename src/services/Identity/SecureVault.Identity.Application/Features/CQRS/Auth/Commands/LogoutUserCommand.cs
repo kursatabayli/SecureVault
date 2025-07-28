@@ -3,5 +3,5 @@ using SecureVault.Shared.Result;
 
 namespace SecureVault.Identity.Application.Features.CQRS.Auth.Commands
 {
-    public record LogoutUserCommand(string RefreshToken) : IRequest<Result>;
+    public record LogoutUserCommand(string? AccessToken, string? RefreshToken) : IRequest<Result>;
 }

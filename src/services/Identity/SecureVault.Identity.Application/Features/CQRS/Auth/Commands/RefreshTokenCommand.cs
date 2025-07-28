@@ -5,8 +5,8 @@ using SecureVault.Shared.Result;
 namespace SecureVault.Identity.Application.Features.CQRS.Auth.Commands
 {
     public record RefreshTokenCommand(
-        string RefreshToken,
-        string AccessToken,
+        string? AccessToken,
+        string? RefreshToken,
 
         string? IpAddress,
         string? UniqueDeviceId,

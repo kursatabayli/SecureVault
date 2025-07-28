@@ -1,0 +1,126 @@
+﻿using Microsoft.AspNetCore.Components;
+using MudBlazor;
+using SecureVault.App.Services.Constants;
+using SecureVault.App.Services.Models.SessionModels;
+using SecureVault.App.Services.Service.Contracts;
+using Color = MudBlazor.Color;
+
+namespace SecureVault.App.Components.Pages.Settings.Sessions
+{
+    public partial class Sessions : ComponentBase
+    {
+        [Inject] private IUserSessionService UserSessionService { get; set; } = default!;
+        [Inject] private ISnackbar Snackbar { get; set; } = default!;
+        [Inject] private IDialogService DialogService { get; set; } = default!; // Onay diyaloğu için eklendi
+
+        private List<UserSessionsModel> _sessions = [];
+        private bool _isLoading = true;
+        private string? _loadError;
+        private string? _uniqueDeviceId;
+        private Guid? _revokingSessionId;
+        protected override async Task OnInitializedAsync()
+        {
+            _uniqueDeviceId = await SecureStorage.GetAsync(StorageItems.UniqueDeviceId);
+            await LoadSessionsAsync();
+        }
+
+        private async Task LoadSessionsAsync()
+        {
+            _isLoading = true;
+            try
+            {
+                var result = await UserSessionService.GetUserSessionsAsync();
+                if (result.IsSuccess)
+                {
+                    _sessions = [.. result.Value.OrderByDescending(s => IsCurrentSession(s)).ThenByDescending(s => s.LastUsedAt)];
+                }
+                else
+                {
+                    _loadError = result.Error.Message;
+                }
+            }
+            catch (Exception ex)
+            {
+                _loadError = $"Oturumlar yüklenirken bir hata oluştu: {ex.Message}";
+            }
+            finally
+            {
+                _isLoading = false;
+            }
+        }
+
+        private async Task ShowRevokeConfirmation(UserSessionsModel session)
+        {
+            var parameters = new DialogParameters<ConfirmationDialog>
+            {
+                { x => x.ContentText, "Bu oturumu sonlandırmak istediğinizden emin misiniz? Bu işlem geri alınamaz." },
+                { x => x.ButtonText, "Evet, Sonlandır" },
+                { x => x.Color, Color.Error }
+            };
+
+            var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Oturumu Sonlandır", parameters);
+            var result = await dialog.Result;
+
+            if (result is not null && !result.Canceled)
+            {
+                await RevokeSession(session);
+            }
+        }
+
+        private async Task RevokeSession(UserSessionsModel session)
+        {
+            _revokingSessionId = session.Id;
+            StateHasChanged(); // Yükleme animasyonunu göstermek için arayüzü güncelle
+
+            var result = await UserSessionService.LogoutAnyWhereAsync(session.Id);
+            if (result.IsSuccess)
+            {
+                session.IsRevoked = true;
+                Snackbar.Add("Oturum başarıyla sonlandırıldı.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Oturum sonlandırılamadı: {result.Error.Message}", Severity.Error);
+            }
+
+            _revokingSessionId = null; // İşlem bitince ID'yi temizle
+            StateHasChanged();
+        }
+
+        private bool IsCurrentSession(UserSessionsModel session) => session.DeviceDetails.UniqueDeviceId == _uniqueDeviceId;
+        private bool IsRecentlyActive(UserSessionsModel session)
+        {
+            if (IsCurrentSession(session) || session.IsRevoked)
+                return false;
+
+            return session.LastUsedAt.HasValue && (DateTimeOffset.UtcNow - session.LastUsedAt.Value).TotalMinutes < 15;
+        }
+
+        private string GetDeviceIcon(DeviceDetailModel device)
+        {
+            var os = device.OperatingSystem?.ToLower() ?? "";
+            return os switch
+            {
+                "android" => Icons.Material.Filled.Smartphone,
+                "windows" => Icons.Material.Filled.Computer,
+                _ => Icons.Material.Filled.Devices,
+            };
+        }
+
+        private string FormatDeviceName(DeviceDetailModel device) => string.IsNullOrWhiteSpace(device.DeviceName) ? device.DeviceManufacturer : device.DeviceName;
+
+        private string FormatLastUsed(DateTimeOffset? lastUsedAt)
+        {
+            if (!lastUsedAt.HasValue) return "Bilinmiyor";
+
+            var diff = DateTimeOffset.UtcNow - lastUsedAt.Value;
+
+            if (diff.TotalMinutes < 1) return "Az önce";
+            if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} dakika önce";
+            if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} saat önce";
+            if (diff.TotalDays < 30) return $"{(int)diff.TotalDays} gün önce";
+
+            return lastUsedAt.Value.ToLocalTime().ToString("dd MMMM yyyy");
+        }
+    }
+}

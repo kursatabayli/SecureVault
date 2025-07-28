@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SecureVault.Identity.Application.Features.CQRS.UserSessions.Commands;
 using SecureVault.Identity.Application.Features.CQRS.UserSessions.Queries;
 using System.Security.Claims;
 
@@ -8,6 +9,7 @@ namespace SecureVault.Identity.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class UserSessionController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -18,7 +20,6 @@ namespace SecureVault.Identity.Api.Controllers
         }
 
         [HttpGet]
-        [Authorize]
         public async Task<IActionResult> GetAllUserSessionsByUserId()
         {
             var result = await _mediator.Send(new GetAllUserSessionsByUserIdQuery(CurrentUserId));
@@ -29,6 +30,17 @@ namespace SecureVault.Identity.Api.Controllers
             return BadRequest(result.Error);
         }
 
+        [HttpDelete("{sessionId:guid}")]
+        public async Task<IActionResult> RevokeSession(Guid sessionId)
+        {
+            var command = new RevokeSessionCommand(sessionId, CurrentUserId);
+            var result = await _mediator.Send(command);
+
+            if (result.IsSuccess)
+                return NoContent();
+
+            return BadRequest(result.Error);
+        }
 
         private Guid CurrentUserId
         {

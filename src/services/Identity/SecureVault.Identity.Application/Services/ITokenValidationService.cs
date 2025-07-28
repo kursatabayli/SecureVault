@@ -5,6 +5,6 @@ namespace SecureVault.Identity.Application.Services
 {
     public interface ITokenValidationService
     {
-        Task<Result<(UserSession session, Guid userId)>> ValidateRefreshTokenAndGetSessionAsync(string refreshToken, string? uniqueDeviceId = null);
+        Task<Result<UserSession>> ValidateAndGetSessionAsync(string? accessToken, string? refreshToken, string? uniqueDeviceId = null);
     }
 }

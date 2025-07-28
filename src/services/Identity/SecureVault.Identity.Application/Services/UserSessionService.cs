@@ -13,7 +13,7 @@ namespace SecureVault.Identity.Application.Services
             _userSessionRepository = userSessionRepository;
         }
 
-        public async Task ManageSessionAsync(User user, LoginUserCommand request, string newTokenIdentifier, DateTime newRefreshTokenExpiration)
+        public async Task ManageSessionAsync(User user, LoginUserCommand request, string accessTokenJti, string refreshTokenJti, DateTime refreshTokenExpiration)
         {
             var deviceDetails = new DeviceDetail
             {
@@ -30,10 +30,11 @@ namespace SecureVault.Identity.Application.Services
             {
                 var newSession = UserSession.Create(
                     userId: user.Id,
-                    tokenIdentifier: newTokenIdentifier,
+                    accessTokenJti: accessTokenJti,
+                    refreshTokenJti: refreshTokenJti,
                     deviceDetails: deviceDetails,
                     ipAddress: request.IpAddress,
-                    expiresAt: newRefreshTokenExpiration,
+                    expiresAt: refreshTokenExpiration,
                     isRevoked: false,
                     isPersistent: request.RememberMe
                 );
@@ -42,9 +43,10 @@ namespace SecureVault.Identity.Application.Services
             else
             {
                 existingSession.Update(
-                    tokenIdentifier: newTokenIdentifier,
+                    refreshTokenJti: refreshTokenJti,
+                    accessTokenJti: accessTokenJti,
                     ipAddress: request.IpAddress,
-                    expiresAt: newRefreshTokenExpiration,
+                    expiresAt: refreshTokenExpiration,
                     isPersistent: request.RememberMe
                 );
             }

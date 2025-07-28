@@ -5,6 +5,6 @@ namespace SecureVault.Identity.Application.Services
 {
     public interface IUserSessionService
     {
-        Task ManageSessionAsync(User user, LoginUserCommand request, string newTokenIdentifier, DateTime newRefreshTokenExpiration);
+        Task ManageSessionAsync(User user, LoginUserCommand request, string accessTokenJti, string refreshTokenJti, DateTime refreshTokenExpiration);
     }
 }

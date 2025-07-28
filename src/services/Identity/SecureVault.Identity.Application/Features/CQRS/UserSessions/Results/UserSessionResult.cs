@@ -7,6 +7,7 @@
         public DeviceDetailResult DeviceDetails { get; init; }
         public string? IpAddress { get; init; }
         public DateTimeOffset CreatedAt { get; init; }
+        public DateTimeOffset? ExpiresAt { get; private set; }
         public bool IsRevoked { get; init; }
         public DateTimeOffset? LastUsedAt { get; init; }
     }

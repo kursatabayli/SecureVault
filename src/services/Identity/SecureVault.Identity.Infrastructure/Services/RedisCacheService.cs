@@ -17,21 +17,28 @@ namespace SecureVault.Identity.Infrastructure.Services
         {
             var value = await _database.StringGetAsync(key);
             if (value.IsNullOrEmpty)
-            {
                 return default;
-            }
+
+            if (typeof(T) == typeof(string))
+                return (T)(object)value.ToString();
+
             return JsonSerializer.Deserialize<T>(value!);
         }
 
         public async Task SetAsync(string key, object data, TimeSpan? expiry = null)
         {
+            if (data is string stringValue)
+            {
+                await _database.StringSetAsync(key, stringValue, expiry);
+                return;
+            }
+
             var jsonValue = JsonSerializer.Serialize(data);
             await _database.StringSetAsync(key, jsonValue, expiry);
         }
 
-        public async Task RemoveAsync(string key)
-        {
-            await _database.KeyDeleteAsync(key);
-        }
+        public async Task RemoveAsync(string key) => await _database.KeyDeleteAsync(key);
+
+        public async Task<bool> ExistsAsync(string key) => await _database.KeyExistsAsync(key);
     }
 }

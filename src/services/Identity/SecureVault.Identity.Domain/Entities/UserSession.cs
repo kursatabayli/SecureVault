@@ -4,7 +4,8 @@
     {
         public Guid Id { get; private set; }
         public Guid UserId { get; private set; }
-        public string TokenIdentifier { get; set; }
+        public string RefreshTokenJti { get; set; }
+        public string AccessTokenJti { get; set; }
         public bool IsPersistent { get; private set; }
         public DeviceDetail DeviceDetails { get; private set; }
         public string? IpAddress { get; private set; }
@@ -17,7 +18,8 @@
         private UserSession() { }
 
         public static UserSession Create(Guid userId,
-            string tokenIdentifier,
+            string refreshTokenJti,
+            string accessTokenJti,
             DeviceDetail deviceDetails,
             string? ipAddress,
             DateTimeOffset expiresAt,
@@ -28,7 +30,8 @@
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
-                TokenIdentifier = tokenIdentifier,
+                RefreshTokenJti = refreshTokenJti,
+                AccessTokenJti = accessTokenJti,
                 DeviceDetails = deviceDetails,
                 IpAddress = ipAddress,
                 ExpiresAt = expiresAt,
@@ -38,13 +41,14 @@
                 IsPersistent = isPersistent
             };
         }
-        public void Update(
-            string tokenIdentifier,
+        public void Update(string refreshTokenJti,
+            string accessTokenJti,
             string? ipAddress,
             DateTimeOffset expiresAt,
             bool isPersistent = true)
         {
-            TokenIdentifier = tokenIdentifier;
+            RefreshTokenJti = refreshTokenJti;
+            AccessTokenJti = accessTokenJti;
             IpAddress = ipAddress;
             ExpiresAt = expiresAt;
             LastUsedAt = DateTimeOffset.UtcNow;
