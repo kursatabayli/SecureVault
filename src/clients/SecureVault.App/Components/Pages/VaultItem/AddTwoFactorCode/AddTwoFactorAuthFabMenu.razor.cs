@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
-namespace SecureVault.App.Components.Pages.VaultItem.Helpers
+namespace SecureVault.App.Components.Pages.VaultItem.AddTwoFactorCode
 {
     public partial class AddTwoFactorAuthFabMenu : ComponentBase
     {
