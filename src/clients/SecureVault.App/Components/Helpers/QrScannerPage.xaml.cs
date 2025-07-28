@@ -1,6 +1,6 @@
 using ZXing.Net.Maui;
 
-namespace SecureVault.App.Components.Pages.VaultItem.Helpers;
+namespace SecureVault.App.Components.Helpers;
 
 public partial class QrScannerPage : ContentPage
 {
