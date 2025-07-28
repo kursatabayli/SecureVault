@@ -8,7 +8,7 @@ using SecureVault.App.Services.Resources;
 using SecureVault.App.Services.Service.Contracts;
 using System.Web;
 
-namespace SecureVault.App.Components.Pages.VaultItem.Helpers
+namespace SecureVault.App.Components.Pages.VaultItem.AddTwoFactorCode
 {
     public partial class AddTwoFactorCodeWithQr : ComponentBase
     {

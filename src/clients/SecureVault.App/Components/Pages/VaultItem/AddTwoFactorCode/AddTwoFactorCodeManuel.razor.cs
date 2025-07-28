@@ -6,7 +6,7 @@ using SecureVault.App.Services.Models.VaultItemModels;
 using SecureVault.App.Services.Resources;
 using SecureVault.App.Services.Service.Contracts;
 
-namespace SecureVault.App.Components.Pages.VaultItem.Helpers
+namespace SecureVault.App.Components.Pages.VaultItem.AddTwoFactorCode
 {
     public partial class AddTwoFactorCodeManuel : ComponentBase
     {
