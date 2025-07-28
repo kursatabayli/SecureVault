@@ -1,16 +1,36 @@
-﻿using SecureVault.Vault.Domain.Enums;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using SecureVault.Vault.Domain.Enums;
 
 namespace SecureVault.Vault.Domain.Entities
 {
     public class VaultItem
     {
+        [BsonId]
+        [BsonRepresentation(BsonType.String)]
         public Guid Id { get; private set; }
+
+        [BsonElement("userId")]
+        [BsonRepresentation(BsonType.String)]
         public Guid UserId { get; private set; }
+
+        [BsonElement("itemType")]
+        [BsonRepresentation(BsonType.String)]
         public ItemType ItemType { get; private set; }
+
+        [BsonElement("encryptedData")]
         public byte[] EncryptedData { get; private set; }
+
+        [BsonElement("version")]
         public int Version { get; private set; }
+
+        [BsonElement("createdAt")]
         public DateTime CreatedAt { get; private set; }
+
+        [BsonElement("updatedAt")]
         public DateTime UpdatedAt { get; private set; }
+
+        [BsonElement("isDeleted")]
         public bool IsDeleted { get; private set; }
 
         private VaultItem() { }

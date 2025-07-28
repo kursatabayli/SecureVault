@@ -7,15 +7,17 @@
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE vault_items (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    item_type SMALLINT NOT NULL,
-    encrypted_data BYTEA NOT NULL,
-    version INTEGER NOT NULL DEFAULT 1,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+
+--Artık MongoDB'de
+--CREATE TABLE vault_items (
+--    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+--    item_type SMALLINT NOT NULL,
+--    encrypted_data BYTEA NOT NULL,
+--    version INTEGER NOT NULL DEFAULT 1,
+--    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+--    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+--);
 
 
 CREATE TABLE user_sessions (

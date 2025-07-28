@@ -7,6 +7,7 @@ namespace SecureVault.Vault.Application.Contracts.Repositories
     {
         Task<VaultItem?> GetByIdAsync(Guid id);
         Task AddAsync(VaultItem vaultItem);
-        IQueryable<VaultItem> GetAllUserVaultItemsByVaultTypeAsync(Guid userId, ItemType itemType);
+        Task<bool> UpdateAsync(VaultItem vaultItem);
+        Task<IReadOnlyCollection<VaultItem>> GetAllUserVaultItemsByVaultTypeAsync(Guid userId, ItemType itemType);
     }
 }
