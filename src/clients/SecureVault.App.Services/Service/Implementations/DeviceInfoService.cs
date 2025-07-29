@@ -1,4 +1,5 @@
-﻿using SecureVault.App.Services.Service.Contracts;
+﻿using SecureVault.App.Services.Constants;
+using SecureVault.App.Services.Service.Contracts;
 
 namespace SecureVault.App.Services.Service.Implementations
 {
@@ -18,12 +19,12 @@ namespace SecureVault.App.Services.Service.Implementations
             if (_cachedUniqueId != null)
                 return _cachedUniqueId;
 
-            var id = await SecureStorage.GetAsync("UniqueId");
+            var id = await SecureStorage.GetAsync(StorageItems.UniqueDeviceId);
 
             if (string.IsNullOrEmpty(id))
             {
                 id = Guid.NewGuid().ToString();
-                await SecureStorage.SetAsync("UniqueId", id);
+                await SecureStorage.SetAsync(StorageItems.UniqueDeviceId, id);
             }
 
             _cachedUniqueId = id;
