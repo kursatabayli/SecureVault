@@ -143,8 +143,8 @@ Follow these steps to run the project on your local machine.
     FORWARDED_HEADERS_KNOWN_NETWORKS=172.22.0.0/16
 
     # JWT Secrets
-    JWT_KEY=very_secret_key
-    JWT_REFRESH_KEY=another_very_secret_key
+    JWT_KEY=YourSuperSecretKeyForJwtTokens32CharactersLong
+    JWT_REFRESH_KEY=AnotherSuperSecretKeyForRefreshTokens32CharsLong
     ```
 
 3.  **Launch with Docker:**
