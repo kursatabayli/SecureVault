@@ -125,13 +125,13 @@ Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin.
     **.env dosyası içeriği örneği:**
     ```env
     # PostgreSQL Ayarları(Identity servisi için)
-    DB_USER=postgres
-    DB_PASSWORD=root
+    DB_USER=postgre_user
+    DB_PASSWORD=postgre_secret_password
     DB_NAME=securevault_identity_dev
     DB_HOST=postgres-db
 
     # MongoDB Ayarları (Vault servisi için)
-    MONGO_INITDB_ROOT_USERNAME=mongoadmin
+    MONGO_INITDB_ROOT_USERNAME=mongo_user
     MONGO_INITDB_ROOT_PASSWORD=mongo_secret_password
     MONGO_DB_NAME=securevault_vault_dev
     MONGO_HOST=mongo-db
