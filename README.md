@@ -125,13 +125,13 @@ Follow these steps to run the project on your local machine.
     **Example `.env` file content:**
     ```env
     # PostgreSQL Database (for Identity Service)
-    DB_USER=postgres
-    DB_PASSWORD=root
+    DB_USER=postgre_user
+    DB_PASSWORD=postgre_secret_passsword
     DB_NAME=securevault_identity_dev
     DB_HOST=postgres-db
 
     # MongoDB Database (for Vault Service)
-    MONGO_INITDB_ROOT_USERNAME=mongoadmin
+    MONGO_INITDB_ROOT_USERNAME=mongo_user
     MONGO_INITDB_ROOT_PASSWORD=mongo_secret_password
     MONGO_DB_NAME=securevault_vault_dev
     MONGO_HOST=mongo-db
@@ -143,8 +143,8 @@ Follow these steps to run the project on your local machine.
     FORWARDED_HEADERS_KNOWN_NETWORKS=172.22.0.0/16
 
     # JWT Secrets
-    JWT_KEY=Dra2+Fd5FLxNYUES0rF1b4cMN/i90SzkcNb2/bGxy3Y=
-    JWT_REFRESH_KEY=OnWFntpCvU/UnaKKGzZ3k35q+nles9qfSm0F/UtOP6U=
+    JWT_KEY=very_secret_key
+    JWT_REFRESH_KEY=another_very_secret_key
     ```
 
 3.  **Launch with Docker:**
