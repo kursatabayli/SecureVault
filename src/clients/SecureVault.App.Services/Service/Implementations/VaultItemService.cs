@@ -44,7 +44,7 @@ namespace SecureVault.App.Services.Service.Implementations
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Bir vault item'ın şifresi çözülemedi. ItemId: {ItemId}", item.Id);
-                }
+                }   
             }
 
             return decryptedItems;

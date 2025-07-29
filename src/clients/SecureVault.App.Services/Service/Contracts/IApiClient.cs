@@ -8,10 +8,16 @@ namespace SecureVault.App.Services.Service.Contracts
         Task<Result<TResponse>> GetAsync<TResponse>(string endpoint, ClientTypes clientType = ClientTypes.PublicClient);
         Task<Result> PostAsync<TRequest>(string endpoint, TRequest payload, ClientTypes clientType = ClientTypes.PublicClient);
         Task<Result<TResponse>> PostAsync<TRequest, TResponse>(
-            string endpoint, 
-            TRequest payload, 
+            string endpoint,
+            TRequest payload,
             ClientTypes clientType = ClientTypes.PublicClient,
             Func<HttpRequestMessage, Task>? configureRequestAsync = null);
+        Task<Result> PostAsync(
+            string endpoint, 
+            ClientTypes clientType = ClientTypes.PublicClient, 
+            Func<HttpRequestMessage, Task>? configureRequestAsync = null);
         Task<Result> PutAsync<TRequest>(string endpoint, TRequest payload, ClientTypes clientType = ClientTypes.PublicClient);
+        Task<Result> DeleteAsync(string endpoint, ClientTypes clientType = ClientTypes.PublicClient);
+
     }
 }

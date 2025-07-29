@@ -1,10 +1,4 @@
-﻿using SecureVault.App.Components.Pages.VaultItem.Helpers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using ZXing;
+﻿using SecureVault.App.Components.Helpers;
 
 namespace SecureVault.App.Services
 {

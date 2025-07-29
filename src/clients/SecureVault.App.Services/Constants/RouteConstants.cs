@@ -14,5 +14,6 @@
         public const string Settings = "/settings";
         public const string NotFound = "/not-found";
         public const string TwoFactor = "/two-factor";
+        public const string Password = "/passwords";
     }
 }

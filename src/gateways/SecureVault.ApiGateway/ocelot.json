@@ -12,7 +12,11 @@
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
       "DownstreamPathTemplate": "/{everything}",
       "DownstreamScheme": "http",
-      "ServiceName": "VaultService"
+      "ServiceName": "VaultService",
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
     }
   ],
   "GlobalConfiguration": {

@@ -16,5 +16,7 @@
         public static readonly string VaultItemBaseUrl = BaseUrl + "vault/api/VaultItem/";
         public static readonly string GetVaultItemsByItemTypeUrl = VaultItemBaseUrl + "vault-items/type/";
         public static readonly string IsHealthyUrl = VaultItemBaseUrl + "is-healthy";
+
+        public static readonly string UserSessionBaseUrl = BaseUrl + "identity/api/UserSession/";
     }
 }

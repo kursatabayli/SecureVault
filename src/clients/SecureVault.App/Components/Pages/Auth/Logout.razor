@@ -1,17 +1,9 @@
 ﻿@page "/logout"
 @attribute [Authorize]
-@using Microsoft.Extensions.Localization
-@using SecureVault.App.Services.Resources
 @using SecureVault.App.Services.Service.Contracts
 
 @code {
     [Inject] private IAuthService AuthService { get; set; }
-    [Inject] private NavigationManager NavigationManager { get; set; }
-    [Inject] private ISnackbar Snackbar { get; set; }
 
-    protected override async Task OnInitializedAsync()
-    {
-        var result = await AuthService.LogoutAsync();
-        NavigationManager.NavigateTo("/login");
-    }
+    protected override async Task OnInitializedAsync() => await AuthService.LogoutAsync();
 }

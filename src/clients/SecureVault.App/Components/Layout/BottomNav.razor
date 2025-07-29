@@ -1,23 +1,19 @@
 ﻿@using SecureVault.App.Services.Constants
-<MudHidden Breakpoint="Breakpoint.SmAndDown" Invert="true">
-    <MudPaper Width="100%" Square="true" Class="py-2" Style="position: fixed; bottom: 0; left: 0; z-index: 1000;" Elevation="3">
-        <MudStack Row="true" Justify="Justify.SpaceAround">
-
-            <MudStack AlignItems="AlignItems.Center" Spacing="0">
-                <MudIconButton Icon="@Icons.Material.Filled.Security" aria-label="2FA" Href="@RouteConstants.TwoFactor"/>
-                <MudText Typo="Typo.caption">2FA</MudText>
+<MudHidden Breakpoint="Breakpoint.Xs" Invert="true">
+    <MudAppBar Class="px-4" Bottom Fixed Elevation="1">
+        <MudStack Class="mud-width-full" Row Justify="Justify.SpaceBetween">
+            <MudStack Spacing="0">
+                <MudIconButton Icon="@Icons.Material.Filled.Shield" Size="Size.Small" Color="Color.Inherit" Href="@RouteConstants.TwoFactor" />
+                <MudText Typo="Typo.subtitle2">2FA</MudText>
             </MudStack>
-
-            <MudStack AlignItems="AlignItems.Center" Spacing="0">
-                <MudIconButton Icon="@Icons.Material.Filled.Password" aria-label="Parola" />
-                <MudText Typo="Typo.caption">Parola</MudText>
+            <MudStack Spacing="0">
+                <MudIconButton Icon="@Icons.Material.Filled.Password" Size="Size.Small" Color="Color.Inherit" Href="@RouteConstants.Password" />
+                <MudText Typo="Typo.subtitle2">Şifreler</MudText>
             </MudStack>
-
-            <MudStack AlignItems="AlignItems.Center" Spacing="0">
-                <MudIconButton Icon="@Icons.Material.Filled.Settings" aria-label="Ayarlar" />
-                <MudText Typo="Typo.caption">Ayarlar</MudText>
+            <MudStack Spacing="0">
+                <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Color="Color.Inherit" Href="@RouteConstants.Settings"/>
+                <MudText Typo="Typo.subtitle2">Ayarlar</MudText>
             </MudStack>
-
         </MudStack>
-    </MudPaper>
+    </MudAppBar>
 </MudHidden>

@@ -15,34 +15,35 @@ namespace SecureVault.App.Services.Extensions
             services.AddTransient<AuthTokenHandler>();
             services.AddTransient<DeviceHeaderService>();
 
-            var handler = new HttpClientHandler
+            Func<HttpClientHandler> configureHandler = () => new HttpClientHandler
             {
+                SslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13,
+
                 ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
                 {
                     if (DeviceInfo.Platform == DevicePlatform.Android && message.RequestUri.Host == "192.168.31.244")
                     {
-                        Console.WriteLine("[SSL-DEBUG] Certificate validation bypassed.");
+                        Console.WriteLine("[SSL-DEBUG] Certificate validation bypassed for local Android dev.");
                         return true;
                     }
-
                     return errors == System.Net.Security.SslPolicyErrors.None;
                 }
             };
 
             services.AddHttpClient(nameof(ClientTypes.AuthenticatedClient), client =>
-                {
-                    client.BaseAddress = new Uri(Endpoints.BaseUrl);
-                    client.DefaultRequestHeaders.Accept.Clear();
-                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                }).AddHttpMessageHandler<AuthTokenHandler>()
-                  .ConfigurePrimaryHttpMessageHandler(() => handler);
+            {
+                client.BaseAddress = new Uri(Endpoints.BaseUrl);
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            }).AddHttpMessageHandler<AuthTokenHandler>()
+                  .ConfigurePrimaryHttpMessageHandler(configureHandler);
 
             services.AddHttpClient(nameof(ClientTypes.PublicClient), client =>
             {
                 client.BaseAddress = new Uri(Endpoints.BaseUrl);
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            }).ConfigurePrimaryHttpMessageHandler(() => handler);
+            }).ConfigurePrimaryHttpMessageHandler(configureHandler);
 
             return services;
         }

@@ -1,4 +1,6 @@
-﻿@inherits LayoutComponentBase
+﻿@using SecureVault.App.Services.Service.Implementations
+@inherits LayoutComponentBase
+@implements IDisposable
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="true" />
 <MudPopoverProvider />
@@ -7,56 +9,49 @@
 
 
 <MudLayout>
-
-    @if (IsAuthPage())
-    {
-        @Body
-    }
-    else
-    {
         <AuthorizeView>
-            <MudHidden Breakpoint="Breakpoint.SmAndUp" Invert="true">
-                <MudAppBar Elevation="1" Dense="true" Fixed="true">
-                    <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleDrawer" />
-                    <MudSpacer />
-                </MudAppBar>
+            <Authorized>
+                <MudHidden Breakpoint="Breakpoint.SmAndUp" Invert="true">
+                    <MudAppBar Elevation="1" Dense="true" Fixed="true">
+                        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleDrawer" />
+                        <MudSpacer />
+                    </MudAppBar>
 
-                <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2" Variant="DrawerVariant.Mini">
-                    <NavMenu />
-                </MudDrawer>
-            </MudHidden>
-        </AuthorizeView>
+                    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2" Variant="DrawerVariant.Mini">
+                        <NavMenu />
+                    </MudDrawer>
+                </MudHidden>
 
-        <MudMainContent>
-            <MudOverlay Visible="_drawerOpen" OnClick='() => _drawerOpen = false' DarkBackground="false" ZIndex="1100" />
-            <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-8 pb-16">
+                <MudMainContent>
+                    <MudOverlay Visible="_drawerOpen" OnClick='() => _drawerOpen = false' DarkBackground="false" ZIndex="1100" />
+                    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-8 pb-16">
+                        @Body
+                    </MudContainer>
+                </MudMainContent>
+                <BottomNav />
+            </Authorized>
+            <NotAuthorized>
                 @Body
-            </MudContainer>
-        </MudMainContent>
-        <BottomNav />
-    }
-
+            </NotAuthorized>
+        </AuthorizeView>
 </MudLayout>
 
 @code {
     [Inject] private NavigationManager NavigationManager { get; set; }
+    [Inject] private LogoutService LogoutService { get; set; }
     private MudTheme? _theme = null;
     private bool _drawerOpen = false;
 
-    private void ToggleDrawer()
-    {
-        _drawerOpen = !_drawerOpen;
-    }
-    private bool IsAuthPage()
-    {
-        var currentUri = NavigationManager.Uri;
-        var authRoutes = new[] { "/login", "/register", "/forgot-password" };
-        var relativePath = new Uri(currentUri).AbsolutePath;
-        return authRoutes.Contains(relativePath.ToLower());
-    }
-    private DrawerVariant _variant => _drawerOpen
-            ? DrawerVariant.Temporary
-            : DrawerVariant.Mini;
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private DrawerVariant _variant => _drawerOpen ? DrawerVariant.Temporary : DrawerVariant.Mini;
+
+    protected override void OnInitialized() => LogoutService.OnLogoutRequested += HandleLogout;
+
+    private void HandleLogout() => NavigationManager.NavigateTo("/login", forceLoad: true);
+
+    public void Dispose() => LogoutService.OnLogoutRequested -= HandleLogout;
+
 
     private readonly PaletteLight _lightPalette = new()
     {

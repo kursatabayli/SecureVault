@@ -85,7 +85,31 @@ namespace SecureVault.App.Services.Service.Implementations
                 return new Error(ErrorCodes.Client.NetworkError, _localizer[ErrorCodes.Client.NetworkError]);
             }
         }
+        public async Task<Result> PostAsync(string endpoint, ClientTypes clientType, Func<HttpRequestMessage, Task>? configureRequestAsync = null)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient(clientType.ToString());
+                var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
 
+                if (configureRequestAsync is not null)
+                {
+                    await configureRequestAsync(request);
+                }
+
+                var response = await client.SendAsync(request);
+
+                if (response.IsSuccessStatusCode)
+                    return Result.Success();
+                else
+                    return Result.Failure(await response.Content.ReadFromJsonAsync<Error>());
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"API POST Request Failed: {ex.Message}");
+                return Result.Failure(new Error(ErrorCodes.Client.NetworkError, _localizer[ErrorCodes.Client.NetworkError]));
+            }
+        }
         public async Task<Result> PutAsync<TRequest>(string endpoint, TRequest payload, ClientTypes clientType)
         {
             try
@@ -101,6 +125,25 @@ namespace SecureVault.App.Services.Service.Implementations
             catch (Exception ex)
             {
                 Debug.WriteLine($"API Request Failed: {ex.Message}");
+                return Result.Failure(new Error(ErrorCodes.Client.NetworkError, _localizer[ErrorCodes.Client.NetworkError]));
+            }
+        }
+
+        public async Task<Result> DeleteAsync(string endpoint, ClientTypes clientType)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient(clientType.ToString());
+                var response = await client.DeleteAsync(endpoint);
+
+                if (response.IsSuccessStatusCode)
+                    return Result.Success();
+                else
+                    return Result.Failure(await response.Content.ReadFromJsonAsync<Error>());
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"API DELETE Request Failed: {ex.Message}");
                 return Result.Failure(new Error(ErrorCodes.Client.NetworkError, _localizer[ErrorCodes.Client.NetworkError]));
             }
         }

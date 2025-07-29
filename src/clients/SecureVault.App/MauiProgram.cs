@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Components.WebView.Maui;
 using Microsoft.Extensions.Logging;
 using MudBlazor.Services;
+using Nager.PublicSuffix;
+using Nager.PublicSuffix.RuleProviders;
 using SecureVault.App.Extensions;
 using SecureVault.App.Services;
 using SecureVault.App.Services.Extensions;
@@ -31,6 +33,7 @@ namespace SecureVault.App
             builder.Services.AuthServices();
             builder.Services.AddAuthorizationCore();
             builder.Services.AddLocalization();
+
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();
 #if ANDROID

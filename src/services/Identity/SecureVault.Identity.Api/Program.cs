@@ -79,17 +79,6 @@ namespace SecureVault.Identity.Api
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
                     ClockSkew = TimeSpan.Zero
                 };
-
-                options.Events = new JwtBearerEvents
-                {
-                    OnMessageReceived = context =>
-                    {
-                        if (context.Request.Cookies.TryGetValue("AccessToken", out var tokenFromCookie))
-                            context.Token = tokenFromCookie;
-
-                        return Task.CompletedTask;
-                    }
-                };
             });
 
             builder.Services.AddAuthorization();

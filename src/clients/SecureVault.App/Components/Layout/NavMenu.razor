@@ -1,33 +1,10 @@
 ﻿@using SecureVault.App.Services.Constants
-@* @using SecureVault.App.Services.Constants
-
-<MudDrawer Open="_drawerOpen"
-           Breakpoint="Breakpoint.Sm"
-           Variant="DrawerVariant.Mini"
-           ClipMode="DrawerClipMode.Always"
-           Elevation="2">
-    <MudNavMenu Rounded="_drawerOpen"
-                Class="@($"{(_drawerOpen ? "pa-2" : null)} d-flex flex-column")"
-                Style="height: 100%;"
-                Margin="@(_drawerOpen ? Margin.Normal : Margin.None )"
-                Bordered="!_drawerOpen">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Class="ml-n1" OnClick="DrawerToggle" Ripple="false" />
-        <MudNavLink Href="@RouteConstants.Profile" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">Profil</MudNavLink>
-
-        <MudNavLink Href="logout" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Logout" IconColor="Color.Error" Class="mt-auto" ForceLoad="true">
-            <MudText Color="Color.Error">Çıkış Yap</MudText>
-        </MudNavLink>
-
-    </MudNavMenu>
-</MudDrawer>
- *@
-
-
-
 <MudNavMenu>
     <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Ana Sayfa</MudNavLink>
-    <MudNavLink Href="two-factor" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">2FA</MudNavLink>
-    <div class="mt-auto"></div>
+    <MudNavLink Href="two-factor" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Shield">2FA</MudNavLink>
+    <MudNavLink Href="passwords" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">Şifreler</MudNavLink>
+    <MudNavLink Href="settings" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">Ayarlar</MudNavLink>
+    <div class="mt-auto" />
     <MudNavLink Href="logout" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Logout" IconColor="Color.Error" ForceLoad="true">
         <MudText Color="Color.Error">Çıkış Yap</MudText>
     </MudNavLink>
