@@ -5,12 +5,12 @@ namespace SecureVault.App.Services.Service.Implementations
 {
     public class DeviceInfoService : IDeviceInfoService
     {
-        //private readonly INetworkService _networkService;
+        private readonly IStorageService _storageService;
 
-        //public DeviceInfoService(INetworkService networkService)
-        //{
-        //    _networkService = networkService;
-        //}
+        public DeviceInfoService(IStorageService storageService)
+        {
+            _storageService = storageService;
+        }
 
         private string _cachedUniqueId = null;
 
@@ -19,12 +19,12 @@ namespace SecureVault.App.Services.Service.Implementations
             if (_cachedUniqueId != null)
                 return _cachedUniqueId;
 
-            var id = await SecureStorage.GetAsync(StorageItems.UniqueDeviceId);
+            var id = await _storageService.GetUniqueDeviceIdAsync();
 
             if (string.IsNullOrEmpty(id))
             {
                 id = Guid.NewGuid().ToString();
-                await SecureStorage.SetAsync(StorageItems.UniqueDeviceId, id);
+                await _storageService.SetUniqueDeviceIdAsync(id);
             }
 
             _cachedUniqueId = id;
@@ -40,11 +40,8 @@ namespace SecureVault.App.Services.Service.Implementations
             var p when p == DevicePlatform.WinUI => "Windows 10",
 
             var p when p == DevicePlatform.Android => $"Android {DeviceInfo.Current.VersionString}",
-            //var p when p == DevicePlatform.iOS => $"iOS {DeviceInfo.Current.VersionString}",
-            //var p when p == DevicePlatform.MacCatalyst => $"macOS {DeviceInfo.Current.VersionString}",
 
             _ => $"{DeviceInfo.Current.Platform} {DeviceInfo.Current.VersionString}"
         };
-        //public async Task<string> GetPublicIpAddressAsync() => await _networkService.GetPublicIpAddressAsync();
     }
 }

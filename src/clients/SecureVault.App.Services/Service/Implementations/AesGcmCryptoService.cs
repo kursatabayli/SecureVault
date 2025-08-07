@@ -8,7 +8,13 @@ namespace SecureVault.App.Services.Service.Implementations
 {
     public class AesGcmCryptoService : ICryptoService
     {
-        private const string EncryptionKeyAlias = "EncryptionKey";
+        private readonly IStorageService _storageService;
+
+        public AesGcmCryptoService(IStorageService storageService)
+        {
+            _storageService = storageService;
+        }
+
         private const int AesKeySize = 32;
         private const int NonceSize = 12;
         private const int TagSize = 16;
@@ -66,7 +72,7 @@ namespace SecureVault.App.Services.Service.Implementations
 
         private async Task<byte[]> GetEncryptionKeyAsync()
         {
-            var encryptionKeyHex = await SecureStorage.Default.GetAsync(EncryptionKeyAlias);
+            var encryptionKeyHex = await _storageService.GetEncryptionKeyAsync();
             if (string.IsNullOrEmpty(encryptionKeyHex))
             {
                 throw new InvalidOperationException("Encryption key not found in SecureStorage.");

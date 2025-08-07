@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
 using MudBlazor;
-using SecureVault.App.Services.Constants;
 using SecureVault.App.Services.Models.SessionModels;
 using SecureVault.App.Services.Service.Contracts;
 using Color = MudBlazor.Color;
@@ -11,7 +10,8 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
     {
         [Inject] private IUserSessionService UserSessionService { get; set; } = default!;
         [Inject] private ISnackbar Snackbar { get; set; } = default!;
-        [Inject] private IDialogService DialogService { get; set; } = default!; // Onay diyaloğu için eklendi
+        [Inject] private IDialogService DialogService { get; set; } = default!;
+        [Inject] private IStorageService StorageService { get; set; } = default!;
 
         private List<UserSessionsModel> _sessions = [];
         private bool _isLoading = true;
@@ -20,7 +20,7 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
         private Guid? _revokingSessionId;
         protected override async Task OnInitializedAsync()
         {
-            _uniqueDeviceId = await SecureStorage.GetAsync(StorageItems.UniqueDeviceId);
+            _uniqueDeviceId = await StorageService.GetUniqueDeviceIdAsync();
             await LoadSessionsAsync();
         }
 

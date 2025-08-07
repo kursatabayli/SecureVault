@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
-using SecureVault.App.Services.Constants;
+using SecureVault.App.Services.Service.Contracts;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -7,11 +7,15 @@ namespace SecureVault.App.Services.AuthHelpers
 {
     public class CustomAuthStateProvider : AuthenticationStateProvider
     {
-        public CustomAuthStateProvider() { }
+        private readonly IStorageService _storageService;
+        public CustomAuthStateProvider(IStorageService storageService)
+        {
+            _storageService = storageService;
+        }
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            var accessToken = await SecureStorage.Default.GetAsync(StorageItems.AccessToken);
+            var accessToken = await _storageService.GetAccessTokenAsync();
 
             if (string.IsNullOrEmpty(accessToken))
             {
