@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Refit;
+using SecureVault.App.Services.APIs;
 using SecureVault.App.Services.AuthHelpers;
 using SecureVault.App.Services.Constants;
 using SecureVault.App.Services.Models.AuthModels;
@@ -15,102 +17,112 @@ namespace SecureVault.App.Services.Service.Implementations
     public class AuthService : IAuthService
     {
         private readonly IHashService _hashService;
-        private readonly DeviceHeaderService _deviceHeaderService;
         private readonly AuthenticationStateProvider _authenticationStateProvider;
         private readonly IBouncyCastleCryptoService _bouncyCastleCryptoService;
-        private readonly IApiClient _apiClient;
         private readonly LogoutService _logoutService;
-        public AuthService(IHashService hashService, AuthenticationStateProvider authenticationStateProvider, DeviceHeaderService deviceHeaderService, IBouncyCastleCryptoService bouncyCastleCryptoService, IApiClient apiClient, LogoutService logoutService)
+        private readonly ISecureVaultApi _secureVaultApi;
+        private readonly IStorageService _storageService;
+        public AuthService(IHashService hashService,
+                           AuthenticationStateProvider authenticationStateProvider,
+                           IBouncyCastleCryptoService bouncyCastleCryptoService,
+                           LogoutService logoutService,
+                           ISecureVaultApi secureVaultApi,
+                           IStorageService storageService)
         {
             _hashService = hashService;
             _authenticationStateProvider = authenticationStateProvider;
-            _deviceHeaderService = deviceHeaderService;
             _bouncyCastleCryptoService = bouncyCastleCryptoService;
-            _apiClient = apiClient;
             _logoutService = logoutService;
+            _secureVaultApi = secureVaultApi;
+            _storageService = storageService;
         }
-
         public async Task<Result?> LoginAsync(LoginModel loginModel)
         {
-            var challengeResult = await GetChallengeFromServer(loginModel.Email);
-            if (!challengeResult.IsSuccess)
-                return Result.Failure(challengeResult.Error);
+            try
+            {
+                var challengeModel = await _secureVaultApi.GetChallengeAsync(loginModel.Email);
 
-            var masterSecret = _hashService.CreateMasterSecret(loginModel.Password, challengeResult.Value.Salt);
-            byte[] privateKey = _hashService.GetPrivateKeyForAuth(masterSecret, challengeResult.Value.Salt);
+                var masterSecret = _hashService.CreateMasterSecret(loginModel.Password, challengeModel.Salt);
+                byte[] privateKey = _hashService.GetPrivateKeyForAuth(masterSecret, challengeModel.Salt);
 
-            var signatureHex = SignChallenge(challengeResult.Value.Challenge, privateKey);
+                var signatureHex = SignChallenge(challengeModel.Challenge, privateKey);
 
-            var result = await SendLoginRequestAsync(loginModel.Email, signatureHex, loginModel.RememberMe);
+                var loginCredentials = new LoginCredentialsModel(loginModel.Email, signatureHex);
+                var authResponse = await _secureVaultApi.LoginAsync(loginModel.RememberMe, loginCredentials);
 
-            if (!result.IsSuccess)
-                return Result.Failure(result.Error);
+                await _storageService.SetTokensAsync(authResponse);
+                byte[] encryptionKey = _hashService.GetEncryptionKeyForData(masterSecret, challengeModel.Salt);
+                await _storageService.SetKeysAsync(privateKey, encryptionKey);
+                ((CustomAuthStateProvider)_authenticationStateProvider).NotifyUserAuthentication(authResponse.AccessToken);
 
-            await SetTokens(result.Value);
-            byte[] encryptionKey = _hashService.GetEncryptionKeyForData(masterSecret, challengeResult.Value.Salt);
-            await SetKeys(privateKey, encryptionKey);
-            return Result.Success();
+                return Result.Success();
+            }
+            catch (ApiException ex)
+            {
+                var error = await ex.GetContentAsAsync<Error>();
+                return Result.Failure(error ?? new Error("Client.NetworkError", "Bir hata oluştu."));
+            }
         }
 
-        public async Task<Result?> RegisterAsync(RegisterUserModel registerUserDto) => await _apiClient.PostAsync(Endpoints.RegisterBaseUrl, registerUserDto);
+        public async Task<Result?> RegisterAsync(RegisterUserModel registerUserDto)
+        {
+            try
+            {
+                var response = await _secureVaultApi.RegisterAsync(registerUserDto);
+                if (response.IsSuccessStatusCode)
+                    return Result.Success();
 
+                var error = await response.Error.GetContentAsAsync<Error>();
+                return Result.Failure(error ?? new Error("Client.RegisterFailed", "Kayıt başarısız."));
+            }
+            catch (ApiException ex)
+            {
+                var error = await ex.GetContentAsAsync<Error>();
+                return Result.Failure(error ?? new Error("Client.NetworkError", "Bir hata oluştu."));
+            }
+        }
         public async Task<Result?> RefreshTokenAsync()
         {
-            var refreshToken = await SecureStorage.Default.GetAsync(StorageItems.RefreshToken);
-            var refreshTokenExpirationString = await SecureStorage.Default.GetAsync(StorageItems.RefreshTokenExpiration);
+            var refreshToken = await _storageService.GetRefreshTokenAsync();
+            var refreshTokenExpiration = await _storageService.GetRefreshTokenExpirationAsync();
 
-            if (string.IsNullOrEmpty(refreshToken) || 
-                    string.IsNullOrEmpty(refreshTokenExpirationString) ||
-                    !DateTime.TryParse(refreshTokenExpirationString, out var expirationDate) ||
-                    expirationDate.ToUniversalTime() <= DateTime.UtcNow)
+            if (string.IsNullOrEmpty(refreshToken) || refreshTokenExpiration <= DateTime.UtcNow)
             {
                 await LogoutAsync();
                 return Result.Failure(new Error("SessionExpired", "Oturum süresi doldu."));
             }
-            var accessToken = await SecureStorage.Default.GetAsync(StorageItems.AccessToken);
 
-            var result = await _apiClient.PostAsync<object, AuthResponseModel>(
-                Endpoints.RefreshTokenUrl,
-                payload: null,
-                configureRequestAsync: async (request) =>
-                {
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-                    request.Headers.TryAddWithoutValidation("X-Refresh-Token", refreshToken);
-                    await _deviceHeaderService.AddDeviceHeadersAsync(request);
-                }
-            );
-
-            if (result.IsFailure)
+            try
+            {
+                var authResponse = await _secureVaultApi.RefreshTokenAsync(refreshToken);
+                await _storageService.SetTokensAsync(authResponse);
+                return Result.Success();
+            }
+            catch (ApiException ex)
             {
                 await LogoutAsync();
-                return Result.Failure(result.Error);
+                var error = await ex.GetContentAsAsync<Error>();
+                return Result.Failure(error ?? new Error("Auth.InvalidRefreshToken", "Token yenileme başarısız."));
             }
-
-            await SetTokens(result.Value);
-            return Result.Success();
         }
 
         public async Task<Result?> LogoutAsync()
         {
-            var refreshToken = await SecureStorage.Default.GetAsync(StorageItems.RefreshToken);
-            var accessToken = await SecureStorage.Default.GetAsync(StorageItems.AccessToken);
+            var refreshToken = await _storageService.GetRefreshTokenAsync();
+            var accessToken = await _storageService.GetAccessTokenAsync();
 
             if (!string.IsNullOrEmpty(refreshToken) && !string.IsNullOrEmpty(accessToken))
             {
-                await _apiClient.PostAsync(
-                    Endpoints.LogoutUrl,
-                    configureRequestAsync: (request) => 
-                    {
-                        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-                        request.Headers.TryAddWithoutValidation("X-Refresh-Token", refreshToken);
-                        return Task.CompletedTask;
-                    });
+                try
+                {
+                    await _secureVaultApi.LogoutAsync(refreshToken);
+                }
+                catch (ApiException)
+                {
+                }
             }
 
-            SecureStorage.Default.Remove(StorageItems.AccessToken);
-            SecureStorage.Default.Remove(StorageItems.RefreshToken);
-            SecureStorage.Default.Remove(StorageItems.PrivateKey);
-            SecureStorage.Default.Remove(StorageItems.EncryptionKey);
+            _storageService.ClearAll();
 
             ((CustomAuthStateProvider)_authenticationStateProvider).NotifyUserLogout();
             _logoutService.RequestLogout();
@@ -119,45 +131,12 @@ namespace SecureVault.App.Services.Service.Implementations
 
 
         //Login Helpers
-        private async Task<Result<ChallengeModel?>> GetChallengeFromServer(string email) => await _apiClient.GetAsync<ChallengeModel>(Endpoints.ChallengeUrl + email);
         private string SignChallenge(string challenge, byte[] privateKeyBytes)
         {
             var msgBytes = Encoding.UTF8.GetBytes(challenge);
             var msgHash = SHA256.HashData(msgBytes);
 
             return _bouncyCastleCryptoService.SignHash(msgHash, privateKeyBytes);
-        }
-        private async Task<Result<AuthResponseModel>?> SendLoginRequestAsync(string email, string signatureHex, bool rememberMe)
-        {
-            var loginDto = new LoginCredentialsModel(email, signatureHex);
-            var requestUrl = string.Format(Endpoints.LoginUrl, rememberMe);
-
-            return await _apiClient.PostAsync<LoginCredentialsModel, AuthResponseModel>(
-                requestUrl,
-                loginDto,
-                configureRequestAsync: async (request) => await _deviceHeaderService.AddDeviceHeadersAsync(request)
-            );
-        }
-        private async Task SetTokens(AuthResponseModel authResponseModel)
-        {
-            await SecureStorage.Default.SetAsync(StorageItems.AccessToken, authResponseModel.AccessToken);
-            await SecureStorage.Default.SetAsync(StorageItems.AccessTokenExpiration, authResponseModel.AccessTokenExpiration.ToString("o"));
-            if (!string.IsNullOrEmpty(authResponseModel.RefreshToken))
-            {
-                await SecureStorage.Default.SetAsync(StorageItems.RefreshToken, authResponseModel.RefreshToken);
-                await SecureStorage.Default.SetAsync(
-                    StorageItems.RefreshTokenExpiration,
-                    authResponseModel.RefreshTokenExpiration.HasValue
-                        ? authResponseModel.RefreshTokenExpiration.Value.ToString("o")
-                        : string.Empty
-                );
-            }
-            ((CustomAuthStateProvider)_authenticationStateProvider).NotifyUserAuthentication(authResponseModel.AccessToken);
-        }
-        private async Task SetKeys(byte[] privateKey, byte[] encryptionKey)
-        {
-            await SecureStorage.Default.SetAsync(StorageItems.EncryptionKey, Convert.ToHexString(encryptionKey));
-            await SecureStorage.Default.SetAsync(StorageItems.PrivateKey, Convert.ToHexString(privateKey));
         }
     }
 }

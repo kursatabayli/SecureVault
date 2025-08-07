@@ -1,7 +1,10 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
+using Refit;
+using SecureVault.App.Services.APIs;
 using SecureVault.App.Services.AuthHelpers;
 using SecureVault.App.Services.Constants;
 using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace SecureVault.App.Services.Extensions
 {
@@ -13,7 +16,6 @@ namespace SecureVault.App.Services.Extensions
             services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
             services.AddTransient<DeviceHeadersHandler>();
             services.AddTransient<AuthTokenHandler>();
-            services.AddTransient<DeviceHeaderService>();
 
             Func<HttpClientHandler> configureHandler = () => new HttpClientHandler
             {
@@ -30,20 +32,24 @@ namespace SecureVault.App.Services.Extensions
                 }
             };
 
-            services.AddHttpClient(nameof(ClientTypes.AuthenticatedClient), client =>
+            var refitSettings = new RefitSettings
             {
-                client.BaseAddress = new Uri(Endpoints.BaseUrl);
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            }).AddHttpMessageHandler<AuthTokenHandler>()
-                  .ConfigurePrimaryHttpMessageHandler(configureHandler);
+                ContentSerializer = new SystemTextJsonContentSerializer(new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                })
+            };
 
-            services.AddHttpClient(nameof(ClientTypes.PublicClient), client =>
-            {
-                client.BaseAddress = new Uri(Endpoints.BaseUrl);
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            }).ConfigurePrimaryHttpMessageHandler(configureHandler);
+            services.AddRefitClient<ISecureVaultApi>(refitSettings)
+                .ConfigureHttpClient(client =>
+                {
+                    client.BaseAddress = new Uri("https://localhost:7202/");
+                    client.DefaultRequestHeaders.Accept.Clear();
+                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                })
+                .AddHttpMessageHandler<DeviceHeadersHandler>()
+                .AddHttpMessageHandler<AuthTokenHandler>()
+                .ConfigurePrimaryHttpMessageHandler(configureHandler);
 
             return services;
         }

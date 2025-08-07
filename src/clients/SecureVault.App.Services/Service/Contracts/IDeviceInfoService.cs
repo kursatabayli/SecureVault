@@ -7,6 +7,5 @@
         string GetDeviceManufacturer();
         string GetDeviceName();
         string GetOperatingSystemInfo();
-        //Task<string> GetPublicIpAddressAsync();
     }
 }

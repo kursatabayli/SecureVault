@@ -1,5 +1,4 @@
-﻿using SecureVault.App.Services.Constants;
-using SecureVault.App.Services.Service.Contracts;
+﻿using SecureVault.App.Services.Service.Contracts;
 using System;
 using System.Net;
 using System.Net.Http.Headers;
@@ -8,18 +7,34 @@ namespace SecureVault.App.Services.AuthHelpers
 {
     public sealed class AuthTokenHandler : DelegatingHandler
     {
+        private const string RefreshTokenEndpointPath = "/identity/api/Auth/refresh/";
+
         private readonly SemaphoreSlim _refreshTokenLock = new(1, 1);
-        private readonly IAuthService _authService;
-        public AuthTokenHandler(IAuthService authService)
+        private readonly IServiceProvider _serviceProvider;
+
+        public AuthTokenHandler(IServiceProvider serviceProvider)
         {
-            _authService = authService;
+            _serviceProvider = serviceProvider;
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            await RefreshTokenIfNeededAsync(cancellationToken);
+            var storageService = _serviceProvider.GetRequiredService<IStorageService>();
 
-            var accessToken = await SecureStorage.Default.GetAsync(StorageItems.AccessToken);
+            if (request.Headers.TryGetValues("X-Anonymous", out _))
+            {
+                request.Headers.Remove("X-Anonymous");
+                var bearer = await storageService.GetAccessTokenAsync();
+                if (!string.IsNullOrEmpty(bearer))
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
+                return await base.SendAsync(request, cancellationToken);
+            }
+
+            var authService = _serviceProvider.GetRequiredService<IAuthService>();
+
+            await RefreshTokenIfNeededAsync(authService, storageService, cancellationToken);
+
+            var accessToken = await storageService.GetAccessTokenAsync();
             if (!string.IsNullOrEmpty(accessToken))
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
@@ -30,7 +45,7 @@ namespace SecureVault.App.Services.AuthHelpers
                 await _refreshTokenLock.WaitAsync(cancellationToken);
                 try
                 {
-                    var currentToken = await SecureStorage.Default.GetAsync(StorageItems.AccessToken);
+                    var currentToken = await storageService.GetAccessTokenAsync();
                     if (accessToken != currentToken)
                     {
                         var clonedRequestForRetry = await CloneRequestAsync(request);
@@ -38,17 +53,17 @@ namespace SecureVault.App.Services.AuthHelpers
                         return await base.SendAsync(clonedRequestForRetry, cancellationToken);
                     }
 
-                    var refreshResult = await _authService.RefreshTokenAsync();
+                    var refreshResult = await authService.RefreshTokenAsync();
                     if (refreshResult.IsSuccess)
                     {
-                        var refreshedAccessToken = await SecureStorage.Default.GetAsync(StorageItems.AccessToken);
+                        var refreshedAccessToken = await storageService.GetAccessTokenAsync();
                         var clonedRequest = await CloneRequestAsync(request);
                         clonedRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", refreshedAccessToken);
                         return await base.SendAsync(clonedRequest, cancellationToken);
                     }
                     else
                     {
-                        await _authService.LogoutAsync();
+                        await authService.LogoutAsync();
                         return response;
                     }
                 }
@@ -62,22 +77,20 @@ namespace SecureVault.App.Services.AuthHelpers
         }
 
 
-        private async Task RefreshTokenIfNeededAsync(CancellationToken cancellationToken)
+        private async Task RefreshTokenIfNeededAsync(IAuthService authService, IStorageService storageService, CancellationToken cancellationToken)
         {
-            var expirationString = await SecureStorage.Default.GetAsync(StorageItems.AccessTokenExpiration);
-            if (string.IsNullOrEmpty(expirationString) || !DateTime.TryParse(expirationString, out var expirationDate))
-                return;
+            var expirationDate = await storageService.GetAccessTokenExpirationAsync();
 
-            if (expirationDate.ToUniversalTime() <= DateTime.UtcNow.AddSeconds(30))
+            if (expirationDate <= DateTime.UtcNow.AddSeconds(30))
             {
                 await _refreshTokenLock.WaitAsync(cancellationToken);
                 try
                 {
-                    var newExpirationString = await SecureStorage.Default.GetAsync(StorageItems.AccessTokenExpiration);
-                    if (newExpirationString != expirationString)
+                    var newExpirationDate = await storageService.GetAccessTokenExpirationAsync();
+                    if (newExpirationDate != expirationDate)
                         return;
 
-                    await _authService.RefreshTokenAsync();
+                    await authService.RefreshTokenAsync();
                 }
                 finally
                 {
