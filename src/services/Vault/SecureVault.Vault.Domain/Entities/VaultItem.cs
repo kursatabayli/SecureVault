@@ -37,6 +37,7 @@ namespace SecureVault.Vault.Domain.Entities
 
         public static VaultItem Create(Guid userId, ItemType itemType, byte[] encryptedData)
         {
+            var creationTime = DateTime.UtcNow;
             return new VaultItem
             {
                 Id = Guid.NewGuid(),
@@ -44,8 +45,8 @@ namespace SecureVault.Vault.Domain.Entities
                 ItemType = itemType,
                 EncryptedData = encryptedData,
                 Version = 1,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                CreatedAt = creationTime,
+                UpdatedAt = creationTime
             };
         }
         public void UpdateData(byte[] newEncryptedData)

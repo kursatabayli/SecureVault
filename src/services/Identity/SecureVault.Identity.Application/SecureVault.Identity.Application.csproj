@@ -7,11 +7,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AutoMapper" Version="15.0.0" />
+		<PackageReference Include="AutoMapper" Version="15.0.1" />
 		<PackageReference Include="MediatR" Version="13.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.6" />
-		<PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="9.0.6" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.6" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.8" />
+		<PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="9.0.8" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\shared\SecureVault.Shared.Result\SecureVault.Shared.Result.csproj" />

@@ -26,6 +26,7 @@
             bool isRevoked,
             bool isPersistent)
         {
+            var creationTime = DateTimeOffset.UtcNow;
             return new UserSession
             {
                 Id = Guid.NewGuid(),
@@ -35,8 +36,8 @@
                 DeviceDetails = deviceDetails,
                 IpAddress = ipAddress,
                 ExpiresAt = expiresAt,
-                CreatedAt = DateTimeOffset.UtcNow,
-                LastUsedAt = DateTimeOffset.UtcNow,
+                CreatedAt = creationTime,
+                LastUsedAt = creationTime,
                 IsRevoked = isRevoked,
                 IsPersistent = isPersistent
             };

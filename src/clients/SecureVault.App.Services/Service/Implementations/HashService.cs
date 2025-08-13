@@ -1,5 +1,4 @@
 ﻿using Konscious.Security.Cryptography;
-using PasswordGenerator;
 using SecureVault.App.Services.Service.Contracts;
 using System.Security.Cryptography;
 using System.Text;
@@ -40,7 +39,7 @@ namespace SecureVault.App.Services.Service.Implementations
                 ikm: masterSecret,
                 outputLength: 32,
                 salt: salt,
-                info: Encoding.UTF8.GetBytes("schnorr-auth-key-v1")
+                info: Encoding.UTF8.GetBytes("ecdsa-auth-key-v1")
             );
         }
 
@@ -55,12 +54,6 @@ namespace SecureVault.App.Services.Service.Implementations
                 salt: salt,
                 info: Encoding.UTF8.GetBytes("aes-gcm-data-key-v1")
             );
-        }
-
-        public string GeneratePassword()
-        {
-            var pwdGen = new Password();
-            return pwdGen.Next();
         }
     }
 }

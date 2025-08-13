@@ -14,6 +14,7 @@
 
         public static User Create(string email, byte[] publicKey, byte[] salt, UserInfo userInfo)
         {
+            var creationTime = DateTimeOffset.UtcNow;
             return new User
             {
                 Id = Guid.NewGuid(),
@@ -21,8 +22,8 @@
                 PublicKey = publicKey,
                 Salt = salt,
                 UserInfo = userInfo,
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow
+                CreatedAt = creationTime,
+                UpdatedAt = creationTime
             };
         }
         public void UpdateUserInfo(UserInfo userInfo)
