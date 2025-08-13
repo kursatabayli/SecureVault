@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using SecureVault.Vault.Application.Features.CQRS.VaultItems.Commands;
 using SecureVault.Vault.Application.Features.CQRS.VaultItems.Results;
 using SecureVault.Vault.Domain.Entities;
 

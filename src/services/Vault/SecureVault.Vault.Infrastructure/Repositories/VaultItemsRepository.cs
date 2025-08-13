@@ -9,7 +9,6 @@ namespace SecureVault.Vault.Infrastructure.Repositories
     {
         private readonly IMongoCollection<VaultItem> _collection;
 
-        // MongoDbContext'i veya doğrudan IMongoDatabase'i inject edebilirsiniz.
         public VaultItemsRepository(IMongoDatabase database)
         {
             _collection = database.GetCollection<VaultItem>("vaultItems");
