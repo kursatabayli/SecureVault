@@ -96,9 +96,9 @@ The security model is designed to ensure that only the user can access their dat
 | End-to-End Encryption | On-device encryption of vault data. | ✅ **Completed** |
 | 2FA Vault (TOTP/HOTP) | Add/list 2FA codes via QR code and manual entry. | ✅ **Completed** |
 | Advanced Session Management | View and remotely terminate active sessions. | ✅ **Completed** |
+| Recovery Key | A secure mechanism for data recovery if the password is forgotten. | 🚧 **In Progress** |
 | Vault Data Editing | Update existing password and 2FA records. | 🚧 **In Progress** |
 | Login with QR Code | Fast and secure login on web or other devices. | 📋 **Planned** |
-| Recovery Key | A secure mechanism for data recovery if the password is forgotten. | 📋 **Planned** |
 | Autofill | Autofill passwords and codes in mobile apps and browsers. | 💡 **Considering** |
 
 ---
