@@ -96,9 +96,9 @@ Güvenlik modeli, yalnızca kullanıcının kendi verilerine erişebilmesini sa�
 | Uçtan Uca Şifreleme | Kasa verilerinin cihazda şifrelenmesi. | ✅ **Tamamlandı** |
 | 2FA Kasa (TOTP/HOTP) | QR kod ile ve manuel olarak 2FA kodları ekleme/listeleme. | ✅ **Tamamlandı** |
 | Gelişmiş Oturum Yönetimi | Aktif oturumları listeleme ve uzaktan sonlandırma. | ✅ **Tamamlandı** |
+| Kurtarma Anahtarı | Parola unutulması durumunda veri kurtarma için güvenli bir mekanizma. | 🚧 **Üzerinde Çalışılıyor** |
 | Kasa Verilerini Düzenleme | Mevcut parola ve 2FA kayıtlarını güncelleme. | 🚧 **Üzerinde Çalışılıyor** |
 | QR Kod ile Oturum Açma | Web veya diğer cihazlarda hızlı ve güvenli oturum açma. | 📋 **Planlandı** |
-| Kurtarma Anahtarı | Parola unutulması durumunda veri kurtarma için güvenli bir mekanizma. | 📋 **Planlandı** |
 | Otomatik Doldurma (Autofill) | Mobil ve tarayıcılarda parola ve kodların otomatik doldurulması. | 💡 **Değerlendiriliyor** |
 
 ---
