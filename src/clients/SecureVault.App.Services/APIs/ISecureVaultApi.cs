@@ -11,7 +11,7 @@ namespace SecureVault.App.Services.APIs
         //AuthService
         [Headers("X-Anonymous: true")]
         [Post("/identity/api/Register/")]
-        Task<IApiResponse> RegisterAsync([Body] RegisterUserModel registerUserDto);
+        Task<IApiResponse> RegisterAsync([Body] RegisterUserModel registerUserModel);
 
         [Headers("X-Anonymous: true")]
         [Get("/identity/api/Auth/challenge/{email}")]
@@ -47,5 +47,8 @@ namespace SecureVault.App.Services.APIs
 
         [Put("/vault/api/VaultItem/{id}")]
         Task<IApiResponse> UpdateVaultItemAsync(Guid id, [Body] UpdateEncryptedData payload);
+
+
+        //RecoveryKeyService
     }
 }

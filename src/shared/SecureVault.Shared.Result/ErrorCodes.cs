@@ -4,6 +4,7 @@
     {
         public const string InternalServerError = "InternalServerError";
         public const string UnauthorizedAccess = "UnauthorizedAccess";
+        public const string UnexpectedError = "UnexpectedError";
 
         public static class Auth
         {
@@ -18,6 +19,11 @@
         public static class Vault
         {
             public const string ItemNotFound = "Vault_ItemNotFound";
+        }
+
+        public static class UserRecovery
+        {
+            public const string RecoveryDataAlreadyExists = "UserRecovery_RecoveryKeyAlreadyExists";
         }
 
         public static class Client

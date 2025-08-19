@@ -1,0 +1,28 @@
+﻿<MudForm Model="_registerModel" @ref="_form" ValidationDelay="0">
+    <MudText Typo="Typo.h4" GutterBottom="true" Align="Align.Center">Hesap Oluştur</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Inherit" Align="Align.Center" Class="mb-6">Topluluğumuza katılmak için bilgilerinizi girin.</MudText>
+
+    <MudGrid>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_registerModel.UserInfo.Name" Label="Ad" Variant="Variant.Outlined" Margin="Margin.Dense" For="@(() => _registerModel.UserInfo.Name)" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_registerModel.UserInfo.Surname" Label="Soyad" Variant="Variant.Outlined" Margin="Margin.Dense" For="@(() => _registerModel.UserInfo.Surname)" />
+        </MudItem>
+    </MudGrid>
+
+    <MudTextField @bind-Value="_registerModel.Email" Label="E-posta" Variant="Variant.Outlined" Margin="Margin.Dense" InputType="InputType.Email" For="@(() => _registerModel.Email)" Class="mt-3" />
+    <MudTextField @bind-Value="_registerModel.UserInfo.PhoneNumber" Label="Telefon Numarası" Variant="Variant.Outlined" Margin="Margin.Dense" For="@(() => _registerModel.UserInfo.PhoneNumber)" Class="mt-3" />
+
+    <PasswordField Label="Şifre" @bind-Password="_password" />
+    <PasswordField Label="Şifre Tekrar" @bind-Password="_confirmPassword" />
+
+    <MudStack AlignItems="AlignItems.Center" Class="mt-4">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowForward" Variant="Variant.Filled" Class="rounded-lg" Color="Color.Primary" OnClick="HandleProceed" Size="Size.Large" />
+    </MudStack>
+</MudForm>
+
+<MudDivider Class="my-6" />
+<MudText Align="Align.Center">
+    Zaten bir hesabınız var mı? <MudLink Href="/login">Giriş Yapın</MudLink>
+</MudText>

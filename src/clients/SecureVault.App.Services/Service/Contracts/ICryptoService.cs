@@ -1,11 +1,10 @@
-﻿using Microsoft.Maui.Controls;
-
-namespace SecureVault.App.Services.Service.Contracts
+﻿namespace SecureVault.App.Services.Service.Contracts
 {
     public interface ICryptoService
     {
-        Task<byte[]> EncryptAsync<T>(T dataToEncrypt);
-        Task<T> DecryptAsync<T>(byte[] encryptedData);
-
+        byte[] Encrypt<T>(T dataToEncrypt, byte[] encryptionKey);
+        T Decrypt<T>(byte[] encryptedData, byte[] encryptionKey);
+        byte[] EncryptBytes(byte[] plaintextBytes, byte[] encryptionKey);
+        byte[] DecryptBytes(byte[] encryptedData, byte[] encryptionKey);
     }
 }

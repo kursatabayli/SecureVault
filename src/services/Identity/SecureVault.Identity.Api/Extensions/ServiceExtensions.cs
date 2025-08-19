@@ -20,6 +20,7 @@ namespace SecureVault.Identity.Api.Extensions
             //Repositories
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUserSessionRepository, UserSessionRepository>();
+            services.AddScoped<IUserRecoveryDataRepository, UserRecoveryDataRepository>();
 
             //Application Services
             services.AddScoped<IUserSessionService, UserSessionService>();

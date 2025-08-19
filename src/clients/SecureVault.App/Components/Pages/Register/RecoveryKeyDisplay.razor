@@ -1,0 +1,56 @@
+﻿<MudText Typo="Typo.h5" GutterBottom="true" Align="Align.Center">Kurtarma Anahtarınız</MudText>
+<MudAlert Severity="Severity.Warning" Class="mb-4">
+    Bu 24 kelime, şifrenizi unutmanız durumunda hesabınıza erişmenin <strong>tek yoludur</strong>. Lütfen bu kelimeleri doğru sırada, güvenli bir yere not edin ve <strong>asla dijital olarak saklamayın</strong>.
+</MudAlert>
+
+<MudPaper Outlined="true" Class="pa-2 rounded-lg">
+    <MudGrid Spacing="1">
+        @{
+            int wordIndex = 1;
+        }
+        @foreach (var word in RecoveryKey.Words)
+        {
+            <MudItem xs="6" sm="4">
+                <MudText><b>@(wordIndex++).</b> @word</MudText>
+            </MudItem>
+        }
+    </MudGrid>
+</MudPaper>
+
+<MudButton OnClick="CopyToClipboard" Variant="Variant.Text" FullWidth="true" Disabled="@_isCopied" Class="mt-4">
+    @if (_isCopied)
+    {
+        <span class="d-flex align-center @_buttonAnimationClass">
+            <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" Class="mr-2" />
+            <MudText Color="Color.Success">Kopyalandı!</MudText>
+        </span>
+    }
+    else
+    {
+        <span class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Class="mr-2" />
+            <MudText>Panoya Kopyala</MudText>
+        </span>
+    }
+</MudButton>
+
+<MudCheckBox @bind-Value="_recoveryKeyConfirmed" Label="Kurtarma anahtarımı güvenli bir yere kaydettim." Color="Color.Primary" Class="mt-4" />
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" Class="mt-4">
+    <MudButton OnClick="HandleBack"
+               Variant="Variant.Outlined"
+               StartIcon="@Icons.Material.Filled.ArrowBack"
+               Size="Size.Large">
+        Geri
+    </MudButton>
+
+    <MudButton OnClick="HandleSubmit"
+               Variant="Variant.Filled"
+               Color="Color.Primary"
+               Disabled="@(!_recoveryKeyConfirmed)"
+               StartIcon="@Icons.Material.Filled.PersonAdd"
+               Size="Size.Large"
+               Style="flex-grow: 1; margin-left: 8px;">
+        Hesabı Oluştur ve Giriş Yap
+    </MudButton>
+</MudStack>

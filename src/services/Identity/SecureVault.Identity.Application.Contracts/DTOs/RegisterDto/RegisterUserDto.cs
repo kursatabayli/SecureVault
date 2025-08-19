@@ -8,5 +8,6 @@ namespace SecureVault.Identity.Application.Contracts.DTOs.RegisterDto
         public byte[] PublicKey { get; set; }
         public byte[] Salt { get; set; }
         public UserInfoDto UserInfo { get; set; }
+        public byte[] RecoveryData { get; set; }
     }
 }
