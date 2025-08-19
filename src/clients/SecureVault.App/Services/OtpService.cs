@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using OtpNet;
 using SecureVault.App.Services.Models.VaultItemModels;
 using SecureVault.App.Services.Resources;
-using SecureVault.App.Services.Service.Contracts;
+using SecureVault.App.Services.Service.Infrastructure.Contracts;
 using SecureVault.Shared.Result;
 using OtpType = SecureVault.App.Services.Models.VaultItemModels.OtpType;
 

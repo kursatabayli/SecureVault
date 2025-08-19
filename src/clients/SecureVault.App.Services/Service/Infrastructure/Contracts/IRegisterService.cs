@@ -1,7 +1,7 @@
 ﻿using SecureVault.App.Services.Models.RegisterModels;
 using SecureVault.Shared.Result;
 
-namespace SecureVault.App.Services.Service.Contracts
+namespace SecureVault.App.Services.Service.Infrastructure.Contracts
 {
     public interface IRegisterService
     {

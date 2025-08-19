@@ -1,8 +1,8 @@
 ﻿using SecureVault.App.Services.Constants;
 using SecureVault.App.Services.Models.AuthModels;
-using SecureVault.App.Services.Service.Contracts;
+using SecureVault.App.Services.Service.Infrastructure.Contracts;
 
-namespace SecureVault.App.Services.Service.Implementations
+namespace SecureVault.App.Services.Service.Infrastructure.Implementations
 {
     public class StorageService : IStorageService
     {

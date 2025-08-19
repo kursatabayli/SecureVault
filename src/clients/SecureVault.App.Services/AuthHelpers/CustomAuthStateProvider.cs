@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
-using SecureVault.App.Services.Service.Contracts;
+using SecureVault.App.Services.Service.Infrastructure.Contracts;
 using System.Security.Claims;
 using System.Text.Json;
 

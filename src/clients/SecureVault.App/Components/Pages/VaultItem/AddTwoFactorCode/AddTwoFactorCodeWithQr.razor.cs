@@ -5,7 +5,7 @@ using MudBlazor;
 using SecureVault.App.Services;
 using SecureVault.App.Services.Models.VaultItemModels;
 using SecureVault.App.Services.Resources;
-using SecureVault.App.Services.Service.Contracts;
+using SecureVault.App.Services.Service.Infrastructure.Contracts;
 using System.Web;
 
 namespace SecureVault.App.Components.Pages.VaultItem.AddTwoFactorCode

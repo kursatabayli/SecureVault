@@ -1,4 +1,4 @@
-﻿namespace SecureVault.App.Services.Service.Implementations
+﻿namespace SecureVault.App.Services.Service.Infrastructure.Implementations
 {
     public class LogoutService
     {

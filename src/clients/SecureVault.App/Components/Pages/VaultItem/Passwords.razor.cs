@@ -4,7 +4,7 @@ using Microsoft.JSInterop;
 using MudBlazor;
 using SecureVault.App.Services.Models.VaultItemModels;
 using SecureVault.App.Services.Resources;
-using SecureVault.App.Services.Service.Contracts;
+using SecureVault.App.Services.Service.Infrastructure.Contracts;
 
 namespace SecureVault.App.Components.Pages.VaultItem
 {

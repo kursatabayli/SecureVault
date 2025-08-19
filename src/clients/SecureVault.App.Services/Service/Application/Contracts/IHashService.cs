@@ -1,4 +1,4 @@
-﻿namespace SecureVault.App.Services.Service.Contracts
+﻿namespace SecureVault.App.Services.Service.Application.Contracts
 {
     public interface IHashService
     {

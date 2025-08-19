@@ -1,10 +1,10 @@
 ﻿using Refit;
 using SecureVault.App.Services.APIs;
 using SecureVault.App.Services.Models.RegisterModels;
-using SecureVault.App.Services.Service.Contracts;
+using SecureVault.App.Services.Service.Infrastructure.Contracts;
 using SecureVault.Shared.Result;
 
-namespace SecureVault.App.Services.Service.Implementations
+namespace SecureVault.App.Services.Service.Infrastructure.Implementations
 {
     public class RegisterService : IRegisterService
     {

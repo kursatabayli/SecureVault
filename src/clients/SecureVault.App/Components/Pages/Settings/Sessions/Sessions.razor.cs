@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using SecureVault.App.Services.Models.SessionModels;
-using SecureVault.App.Services.Service.Contracts;
+using SecureVault.App.Services.Service.Infrastructure.Contracts;
 using Color = MudBlazor.Color;
 
 namespace SecureVault.App.Components.Pages.Settings.Sessions

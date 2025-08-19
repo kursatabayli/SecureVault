@@ -1,4 +1,4 @@
-﻿using SecureVault.App.Services.Service.Contracts;
+﻿using SecureVault.App.Services.Service.Infrastructure.Contracts;
 using System;
 using System.Net;
 using System.Net.Http.Headers;

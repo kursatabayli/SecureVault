@@ -1,9 +1,9 @@
 ﻿using Konscious.Security.Cryptography;
-using SecureVault.App.Services.Service.Contracts;
+using SecureVault.App.Services.Service.Application.Contracts;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace SecureVault.App.Services.Service.Implementations
+namespace SecureVault.App.Services.Service.Application.Implementations
 {
     public class HashService : IHashService
     {

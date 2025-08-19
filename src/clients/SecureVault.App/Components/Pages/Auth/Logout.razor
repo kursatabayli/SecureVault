@@ -1,6 +1,7 @@
 ﻿@page "/logout"
 @attribute [Authorize]
 @using SecureVault.App.Services.Service.Contracts
+@using SecureVault.App.Services.Service.Infrastructure.Contracts
 
 @code {
     [Inject] private IAuthService AuthService { get; set; }
