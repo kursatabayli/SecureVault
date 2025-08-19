@@ -14,12 +14,14 @@ namespace SecureVault.App.Services.Service.Implementations
         private readonly ISecureVaultApi _secureVaultApi;
         private readonly ICryptoService _cryptoService;
         private readonly ILogger<VaultItemService<T>> _logger;
+        private readonly IStorageService _storageService;
 
-        public VaultItemService(ISecureVaultApi secureVaultApi, ICryptoService cryptoService, ILogger<VaultItemService<T>> logger)
+        public VaultItemService(ISecureVaultApi secureVaultApi, ICryptoService cryptoService, ILogger<VaultItemService<T>> logger, IStorageService storageService)
         {
             _secureVaultApi = secureVaultApi;
             _cryptoService = cryptoService;
             _logger = logger;
+            _storageService = storageService;
         }
 
         public async Task<Result<IReadOnlyCollection<T>>> GetVaultItemsByItemTypeAsync(ItemType itemType)
@@ -33,7 +35,8 @@ namespace SecureVault.App.Services.Service.Implementations
                 {
                     try
                     {
-                        var decryptedData = await _cryptoService.DecryptAsync<T>(item.EncryptedData);
+                        var encryptionKey = await GetEncryptionKeyAsync();
+                        var decryptedData = _cryptoService.Decrypt<T>(item.EncryptedData, encryptionKey);
                         decryptedData.Id = item.Id.Value;
                         decryptedData.CreatedAt = item.CreatedAt.Value;
                         decryptedItems.Add(decryptedData);
@@ -56,7 +59,8 @@ namespace SecureVault.App.Services.Service.Implementations
         {
             try
             {
-                var encryptedData = await _cryptoService.EncryptAsync(data);
+                var encryptionKey = await GetEncryptionKeyAsync();
+                var encryptedData = _cryptoService.Encrypt(data, encryptionKey);
                 VaultItemModel vaultItemPayload = new()
                 {
                     ItemType = itemType,
@@ -80,7 +84,8 @@ namespace SecureVault.App.Services.Service.Implementations
         {
             try
             {
-                var encryptedData = await _cryptoService.EncryptAsync(data);
+                var encryptionKey = await GetEncryptionKeyAsync();
+                var encryptedData = _cryptoService.Encrypt(data, encryptionKey); 
                 var payload = new UpdateEncryptedData { EncryptedData = encryptedData };
 
                 var response = await _secureVaultApi.UpdateVaultItemAsync(data.Id, payload);
@@ -95,6 +100,20 @@ namespace SecureVault.App.Services.Service.Implementations
                 var error = await ex.GetContentAsAsync<Error>();
                 return Result.Failure(error ?? new Error("Client.UpdateFailed", "Öğe güncellenemedi."));
             }
+        }
+
+
+        private async Task<byte[]> GetEncryptionKeyAsync()
+        {
+            var encryptionKeyHex = await _storageService.GetEncryptionKeyAsync();
+            if (string.IsNullOrEmpty(encryptionKeyHex))
+            {
+                throw new InvalidOperationException("Encryption key not found in SecureStorage.");
+            }
+
+            var encryptionKey = Convert.FromHexString(encryptionKeyHex);
+
+            return encryptionKey;
         }
     }
 }

@@ -21,6 +21,10 @@ namespace SecureVault.App.Extensions
             services.AddSingleton<IOtpService, OtpService>();
             services.AddScoped<IQrCodeScannerService, QrCodeScannerService>();
             services.AddScoped<IStorageService, StorageService>();
+            services.AddSingleton<IBip39RecoveryKeyService, Bip39RecoveryKeyService>();
+            services.AddScoped<IUserRegistrationService, UserRegistrationService>();
+            services.AddScoped<IRecoveryDataService, RecoveryDataService>();
+            services.AddScoped<IRegisterService, RegisterService>();
 
             services.AddSingleton<IDomainParser>(serviceProvider =>
             {

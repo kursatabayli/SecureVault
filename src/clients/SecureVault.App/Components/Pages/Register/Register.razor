@@ -1,0 +1,37 @@
+﻿@page "/register"
+@attribute [AllowAnonymous]
+
+
+<MudPaper class="register-container">
+    <MudStack Row Justify="Justify.Center" AlignItems="AlignItems.Center" Style="width:100%; max-width: 1200px;">
+        <MudItem md="6" Class="branding-section hidden-sm-and-down">
+            <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Large" Style="font-size: 6rem; color: var(--mud-palette-primary);" />
+            <MudText Typo="Typo.h3" GutterBottom="true" Class="mt-4">SecureVault</MudText>
+            <MudText Typo="Typo.h6" Style="opacity: 0.8;">Güvenli bir başlangıç yapın.</MudText>
+        </MudItem>
+
+        <MudItem xs="12" sm="10" md="6">
+            <MudPaper Elevation="5" Class="register-form-paper">
+                @if (_submitting)
+                {
+                    <Loading LoadingText="@_loadingText" />
+                }
+                else
+                {
+                    <div class="mud-card-content @_animationClass">
+                        @if (_registrationStep == 1)
+                        {
+                            <UserInfoForm OnProceed="ProceedToRecoveryStep" />
+                        }
+                        else if (_registrationStep == 2 && _recoveryKey != null)
+                        {
+                            <RecoveryKeyDisplay RecoveryKey="_recoveryKey"
+                                                OnSubmit="Submit"
+                                                OnBack="HandleBackNavigation" />
+                        }
+                    </div>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudStack>
+</MudPaper>

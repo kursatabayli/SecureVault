@@ -10,4 +10,8 @@
     <ProjectReference Include="..\SecureVault.Identity.Domain\SecureVault.Identity.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="DTOs\UserRecoveryDataDto\" />
+  </ItemGroup>
+
 </Project>

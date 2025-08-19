@@ -3,12 +3,9 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Refit;
 using SecureVault.App.Services.APIs;
 using SecureVault.App.Services.AuthHelpers;
-using SecureVault.App.Services.Constants;
 using SecureVault.App.Services.Models.AuthModels;
-using SecureVault.App.Services.Models.RegisterModels;
 using SecureVault.App.Services.Service.Contracts;
 using SecureVault.Shared.Result;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -64,23 +61,7 @@ namespace SecureVault.App.Services.Service.Implementations
             }
         }
 
-        public async Task<Result?> RegisterAsync(RegisterUserModel registerUserDto)
-        {
-            try
-            {
-                var response = await _secureVaultApi.RegisterAsync(registerUserDto);
-                if (response.IsSuccessStatusCode)
-                    return Result.Success();
 
-                var error = await response.Error.GetContentAsAsync<Error>();
-                return Result.Failure(error ?? new Error("Client.RegisterFailed", "Kayıt başarısız."));
-            }
-            catch (ApiException ex)
-            {
-                var error = await ex.GetContentAsAsync<Error>();
-                return Result.Failure(error ?? new Error("Client.NetworkError", "Bir hata oluştu."));
-            }
-        }
         public async Task<Result?> RefreshTokenAsync()
         {
             var refreshToken = await _storageService.GetRefreshTokenAsync();

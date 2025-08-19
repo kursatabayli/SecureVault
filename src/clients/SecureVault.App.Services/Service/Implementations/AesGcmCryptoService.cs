@@ -8,20 +8,12 @@ namespace SecureVault.App.Services.Service.Implementations
 {
     public class AesGcmCryptoService : ICryptoService
     {
-        private readonly IStorageService _storageService;
-
-        public AesGcmCryptoService(IStorageService storageService)
-        {
-            _storageService = storageService;
-        }
-
         private const int AesKeySize = 32;
         private const int NonceSize = 12;
         private const int TagSize = 16;
 
-        public async Task<byte[]> EncryptAsync<T>(T dataToEncrypt)
+        public byte[] Encrypt<T>(T dataToEncrypt, byte[] encryptionKey)
         {
-            var encryptionKey = await GetEncryptionKeyAsync();
             var plaintextBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(dataToEncrypt));
 
             using var aesGcm = new AesGcm(encryptionKey);
@@ -41,11 +33,8 @@ namespace SecureVault.App.Services.Service.Implementations
 
             return encryptedData;
         }
-
-        public async Task<T> DecryptAsync<T>(byte[] encryptedData)
+        public T Decrypt<T>(byte[] encryptedData, byte[] encryptionKey)
         {
-            var encryptionKey = await GetEncryptionKeyAsync();
-
             if (encryptedData.Length < NonceSize + TagSize)
                 throw new CryptographicException("Invalid encrypted data format.");
 
@@ -70,22 +59,52 @@ namespace SecureVault.App.Services.Service.Implementations
             return JsonSerializer.Deserialize<T>(jsonString);
         }
 
-        private async Task<byte[]> GetEncryptionKeyAsync()
+
+        public byte[] EncryptBytes(byte[] plaintextBytes, byte[] encryptionKey)
         {
-            var encryptionKeyHex = await _storageService.GetEncryptionKeyAsync();
-            if (string.IsNullOrEmpty(encryptionKeyHex))
-            {
-                throw new InvalidOperationException("Encryption key not found in SecureStorage.");
-            }
-
-            var encryptionKey = Convert.FromHexString(encryptionKeyHex);
-
             if (encryptionKey.Length != AesKeySize)
+                throw new ArgumentException($"Invalid key size. Key must be {AesKeySize} bytes.", nameof(encryptionKey));
+
+            using var aesGcm = new AesGcm(encryptionKey);
+            var nonce = new byte[NonceSize];
+            var tag = new byte[TagSize];
+            var ciphertext = new byte[plaintextBytes.Length];
+
+            RandomNumberGenerator.Fill(nonce);
+            aesGcm.Encrypt(nonce, plaintextBytes, ciphertext, tag);
+
+            var encryptedData = new byte[NonceSize + TagSize + ciphertext.Length];
+            Buffer.BlockCopy(nonce, 0, encryptedData, 0, NonceSize);
+            Buffer.BlockCopy(tag, 0, encryptedData, NonceSize, TagSize);
+            Buffer.BlockCopy(ciphertext, 0, encryptedData, NonceSize + TagSize, ciphertext.Length);
+
+            return encryptedData;
+        }
+        public byte[] DecryptBytes(byte[] encryptedData, byte[] encryptionKey)
+        {
+            if (encryptionKey.Length != AesKeySize)
+                throw new ArgumentException($"Invalid key size. Key must be {AesKeySize} bytes.", nameof(encryptionKey));
+
+            if (encryptedData.Length < NonceSize + TagSize)
+                throw new CryptographicException("Invalid encrypted data format.");
+
+            var nonce = new ReadOnlySpan<byte>(encryptedData, 0, NonceSize);
+            var tag = new ReadOnlySpan<byte>(encryptedData, NonceSize, TagSize);
+            var ciphertext = new ReadOnlySpan<byte>(encryptedData, NonceSize + TagSize, encryptedData.Length - (NonceSize + TagSize));
+
+            using var aesGcm = new AesGcm(encryptionKey);
+            var plaintextBytes = new byte[ciphertext.Length];
+
+            try
             {
-                throw new InvalidOperationException($"Invalid key size. Key must be {AesKeySize} bytes for AES-256.");
+                aesGcm.Decrypt(nonce, ciphertext, tag, plaintextBytes);
+            }
+            catch (AuthenticationTagMismatchException ex)
+            {
+                throw new SecurityException("Data authentication failed. The data may be tampered with or the key is incorrect.", ex);
             }
 
-            return encryptionKey;
+            return plaintextBytes;
         }
     }
 }

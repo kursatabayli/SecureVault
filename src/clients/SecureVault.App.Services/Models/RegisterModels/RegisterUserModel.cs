@@ -8,5 +8,6 @@ namespace SecureVault.App.Services.Models.RegisterModels
         public byte[] PublicKey { get; set; }
         public byte[] Salt { get; set; }
         public UserInfoModel UserInfo { get; set; }
+        public byte[] RecoveryData { get; set; }
     }
 }

@@ -59,7 +59,52 @@
     }
 }
 
-/*register*/
+
+/* Sessions.razor.css */
+
+.active-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    background-color: #4CAF50;
+    border-radius: 50%;
+    margin-right: 8px;
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+    }
+
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); /* Gölge genişler ve kaybolur */
+    }
+
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+    }
+}
+
+
+
+/* Kendi özel büyük buton stilimiz */
+.dev-icon-button {
+    width: 64px !important;
+    height: 64px !important;
+}
+
+    .dev-icon-button .mud-icon-button-icon {
+        font-size: 2.5rem !important;
+    }
+
+
+
+/* Register.razor */
 
 .register-container {
     display: flex;
@@ -89,38 +134,153 @@
         padding: 1.5rem;
     }
 }
-
-
-/* Sessions.razor.css */
-
-.active-indicator {
-    /* Noktanın kendisi */
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    background-color: #4CAF50; /* Canlı bir yeşil */
-    border-radius: 50%;
-    margin-right: 8px; /* Yazıdan biraz boşluk bırakır */
-    /* Gölge ve başlangıç durumu */
-    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
-    /* Animasyonun adı, süresi ve tekrarı */
-    animation: pulse-green 2s infinite;
+.step-container {
+    overflow: hidden;
 }
 
-/* Animasyonun adımları (keyframes) */
-@keyframes pulse-green {
-    0% {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+.slide-out-left {
+    animation: slideOutLeft 0.4s ease-in-out forwards;
+}
+.slide-in-right {
+    animation: slideInRight 0.4s ease-in-out forwards;
+}
+.slide-out-right {
+    animation: slideOutRight 0.4s ease-in-out forwards;
+}
+.slide-in-left {
+    animation: slideInLeft 0.4s ease-in-out forwards;
+}
+
+@keyframes slideOutLeft {
+    from {
+        opacity: 1;
+        transform: translateX(0);
     }
 
-    70% {
+    to {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+
+
+.copied-pop-in-animation {
+    animation: pop-in-effect 0.3s ease-out;
+}
+
+@keyframes pop-in-effect {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    to {
         transform: scale(1);
-        box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); /* Gölge genişler ve kaybolur */
+        opacity: 1;
+    }
+}
+
+.copied-pop-out-animation {
+    animation: pop-out-effect 0.3s ease-in forwards;
+}
+
+@keyframes pop-out-effect {
+    from {
+        transform: scale(1);
+        opacity: 1;
     }
 
-    100% {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+    to {
+        transform: scale(0.8);
+        opacity: 0;
     }
+}
+
+
+
+/* Kelime listesini çok sütunlu hale getiren sihirli kısım */
+.recovery-word-list {
+    /* Mobil öncelikli: Varsayılan olarak 2 sütun */
+    column-count: 2;
+    column-gap: 16px; /* Sütunlar arası boşluk */
+}
+
+/* Her bir kelime öğesi için stil */
+.recovery-word-item {
+    /* Sütunlar arasında kelimelerin bölünmesini engeller */
+    break-inside: avoid;
+    padding-bottom: 8px; /* Kelimeler arası dikey boşluk */
+}
+
+/* Geniş ekranlar için sütun sayısını artıralım (MudBlazor'un sm breakpoint'i) */
+@media (min-width: 600px) {
+    .recovery-word-list {
+        column-count: 3;
+    }
+}
+
+/* Çok geniş ekranlar için (MudBlazor'un md breakpoint'i) */
+@media (min-width: 960px) {
+    .recovery-word-list {
+        column-count: 4; /* Masaüstünde 4 sütun harika görünür */
+    }
+}
+
+
+/* Buton grubunu mobil için dikey hale getirme */
+.responsive-button-stack {
+    /* Varsayılan olarak yan yana */
+    flex-direction: row;
+}
+
+/* Çok dar ekranlar için (450px altı) */
+@media (max-width: 450px) {
+    .responsive-button-stack {
+        /* Butonları alt alta diz */
+        flex-direction: column;
+        gap: 8px; /* Alt alta geldiklerinde aralarına boşluk koy */
+    }
+
+        .responsive-button-stack > .mud-button {
+            /* Butonların kenar boşluklarını sıfırla ve tam genişlik yap */
+            margin: 0 !important;
+            width: 100%;
+        }
 }

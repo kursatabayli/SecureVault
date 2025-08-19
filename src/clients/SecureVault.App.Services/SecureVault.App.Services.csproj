@@ -7,6 +7,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="dotnetstandard-bip39" Version="1.0.2" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.3.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.8" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.8" />

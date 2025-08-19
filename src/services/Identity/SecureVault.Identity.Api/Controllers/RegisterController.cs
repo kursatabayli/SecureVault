@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SecureVault.Identity.Application.Contracts.DTOs.RegisterDto;
-using SecureVault.Identity.Application.Features.CQRS.Auth.Commands;
+using SecureVault.Identity.Application.Features.CQRS.Register.Commands;
 using SecureVault.Identity.Domain.Entities;
 
 namespace SecureVault.Identity.Api.Controllers
@@ -33,7 +33,8 @@ namespace SecureVault.Identity.Api.Controllers
                 registerUserDto.Email,
                 registerUserDto.PublicKey,
                 registerUserDto.Salt,
-                userInfo
+                userInfo,
+                registerUserDto.RecoveryData
             );
 
             var result = await _mediator.Send(command);

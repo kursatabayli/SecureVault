@@ -11,6 +11,7 @@ namespace SecureVault.Identity.Infrastructure.Context
 
         public DbSet<User> Users { get; set; }
         public DbSet<UserSession> UserSessions { get; set; }
+        public DbSet<UserRecoveryData> UserRecoveryData { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -31,6 +32,11 @@ namespace SecureVault.Identity.Infrastructure.Context
                     deviceDetailsBuilder.ToJson();
                 });
             });
+
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.UserRecoveryData)
+                .WithOne(rd => rd.User)
+                .HasForeignKey<UserRecoveryData>(rd => rd.UserId);
         }
     }
 }

@@ -31,5 +31,9 @@
 			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</EmbeddedResource>
 	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Features\CQRS\UserRecoveryDatas\Commands\" />
+	  <Folder Include="Features\CQRS\UserRecoveryDatas\Handlers\" />
+	</ItemGroup>
 
 </Project>

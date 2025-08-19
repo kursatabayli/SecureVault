@@ -9,6 +9,7 @@
         public UserInfo UserInfo { get; private set; }
         public DateTimeOffset CreatedAt { get; private set; }
         public DateTimeOffset UpdatedAt { get; private set; }
+        public virtual UserRecoveryData UserRecoveryData { get; private set; }
 
         private User() { }
 
