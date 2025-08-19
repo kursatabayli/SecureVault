@@ -1,6 +1,6 @@
 ﻿using SecureVault.App.Services.Models.AuthModels;
 
-namespace SecureVault.App.Services.Service.Contracts
+namespace SecureVault.App.Services.Service.Infrastructure.Contracts
 {
     public interface IStorageService
     {

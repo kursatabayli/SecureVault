@@ -1,9 +1,9 @@
 ﻿using dotnetstandard_bip39;
 using SecureVault.App.Services.Models.RecoveryKeyModels;
-using SecureVault.App.Services.Service.Contracts;
+using SecureVault.App.Services.Service.Application.Contracts;
 using System.Security.Cryptography;
 
-namespace SecureVault.App.Services.Service.Implementations
+namespace SecureVault.App.Services.Service.Application.Implementations
 {
     public class Bip39RecoveryKeyService : IBip39RecoveryKeyService
     {

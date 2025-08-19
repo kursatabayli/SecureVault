@@ -1,7 +1,7 @@
 ﻿using SecureVault.App.Services.Models.AuthModels;
 using SecureVault.Shared.Result;
 
-namespace SecureVault.App.Services.Service.Contracts
+namespace SecureVault.App.Services.Service.Infrastructure.Contracts
 {
     public interface IAuthService
     {

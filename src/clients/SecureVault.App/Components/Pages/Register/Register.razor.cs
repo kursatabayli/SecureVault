@@ -7,7 +7,7 @@ using SecureVault.App.Services;
 using SecureVault.App.Services.Models.RecoveryKeyModels;
 using SecureVault.App.Services.Models.RegisterModels;
 using SecureVault.App.Services.Resources;
-using SecureVault.App.Services.Service.Contracts;
+using SecureVault.App.Services.Service.Application.Contracts;
 
 namespace SecureVault.App.Components.Pages.Register
 {

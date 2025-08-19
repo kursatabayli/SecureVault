@@ -3,11 +3,12 @@ using Refit;
 using SecureVault.App.Services.APIs;
 using SecureVault.App.Services.Constants;
 using SecureVault.App.Services.Models.VaultItemModels;
-using SecureVault.App.Services.Service.Contracts;
+using SecureVault.App.Services.Service.Application.Contracts;
+using SecureVault.App.Services.Service.Infrastructure.Contracts;
 using SecureVault.Shared.Result;
 using System.Net.Http.Json;
 
-namespace SecureVault.App.Services.Service.Implementations
+namespace SecureVault.App.Services.Service.Infrastructure.Implementations
 {
     public class VaultItemService<T> : IVaultItemService<T> where T : class, IVaultItemData, new()
     {

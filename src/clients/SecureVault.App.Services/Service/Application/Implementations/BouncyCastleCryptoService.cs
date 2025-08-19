@@ -2,9 +2,9 @@
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Signers;
 using Org.BouncyCastle.Math;
-using SecureVault.App.Services.Service.Contracts;
+using SecureVault.App.Services.Service.Application.Contracts;
 
-namespace SecureVault.App.Services.Service.Implementations
+namespace SecureVault.App.Services.Service.Application.Implementations
 {
     public class BouncyCastleCryptoService : IBouncyCastleCryptoService
     {

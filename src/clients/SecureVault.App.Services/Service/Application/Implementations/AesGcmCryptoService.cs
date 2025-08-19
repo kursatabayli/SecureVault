@@ -1,10 +1,10 @@
-﻿using SecureVault.App.Services.Service.Contracts;
+﻿using SecureVault.App.Services.Service.Application.Contracts;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace SecureVault.App.Services.Service.Implementations
+namespace SecureVault.App.Services.Service.Application.Implementations
 {
     public class AesGcmCryptoService : ICryptoService
     {

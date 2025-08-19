@@ -1,8 +1,10 @@
 ﻿using Nager.PublicSuffix;
 using Nager.PublicSuffix.RuleProviders;
 using SecureVault.App.Services;
-using SecureVault.App.Services.Service.Contracts;
-using SecureVault.App.Services.Service.Implementations;
+using SecureVault.App.Services.Service.Application.Contracts;
+using SecureVault.App.Services.Service.Application.Implementations;
+using SecureVault.App.Services.Service.Infrastructure.Contracts;
+using SecureVault.App.Services.Service.Infrastructure.Implementations;
 
 
 namespace SecureVault.App.Extensions

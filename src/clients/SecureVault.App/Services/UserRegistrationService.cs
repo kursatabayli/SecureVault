@@ -1,7 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using SecureVault.App.Services.Models.RecoveryKeyModels;
 using SecureVault.App.Services.Models.RegisterModels;
-using SecureVault.App.Services.Service.Contracts;
+using SecureVault.App.Services.Service.Application.Contracts;
+using SecureVault.App.Services.Service.Infrastructure.Contracts;
 using SecureVault.Shared.Result;
 
 namespace SecureVault.App.Services

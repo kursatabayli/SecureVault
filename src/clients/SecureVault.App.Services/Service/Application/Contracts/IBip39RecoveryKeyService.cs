@@ -1,6 +1,6 @@
 ﻿using SecureVault.App.Services.Models.RecoveryKeyModels;
 
-namespace SecureVault.App.Services.Service.Contracts
+namespace SecureVault.App.Services.Service.Application.Contracts
 {
     public interface IBip39RecoveryKeyService
     {
