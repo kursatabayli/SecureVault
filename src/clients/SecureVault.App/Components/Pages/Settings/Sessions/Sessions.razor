@@ -1,5 +1,6 @@
 ﻿@page "/sessions"
-@using SecureVault.App.Services.Models.SessionModels
+@using SecureVault.App.Application.Contracts.DTOs.Session
+@using SecureVault.App.Models.SessionModels
 @attribute [Authorize]
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
@@ -89,6 +90,14 @@
         }
     </MudPaper>
 </MudContainer>
+
+
+<MudStack class="fab-container">
+    <MudFab StartIcon="@Icons.Material.Filled.Add"
+            OnClick="OpenAuthorizeDeviceDialog"
+            Size="Size.Medium"
+            Color="Color.Primary" />
+</MudStack>
 
 
 @code {

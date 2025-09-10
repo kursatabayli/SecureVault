@@ -4,17 +4,17 @@
 
     <MudGrid>
         <MudItem xs="12" sm="6">
-            <MudTextField @bind-Value="_registerModel.UserInfo.Name" Label="Ad" Variant="Variant.Outlined" Margin="Margin.Dense" For="@(() => _registerModel.UserInfo.Name)" />
+            <MudTextField @bind-Value="_registerModel.Name" Label="Ad" Variant="Variant.Outlined" Margin="Margin.Dense" For="@(() => _registerModel.Name)" />
         </MudItem>
         <MudItem xs="12" sm="6">
-            <MudTextField @bind-Value="_registerModel.UserInfo.Surname" Label="Soyad" Variant="Variant.Outlined" Margin="Margin.Dense" For="@(() => _registerModel.UserInfo.Surname)" />
+            <MudTextField @bind-Value="_registerModel.Surname" Label="Soyad" Variant="Variant.Outlined" Margin="Margin.Dense" For="@(() => _registerModel.Surname)" />
         </MudItem>
     </MudGrid>
 
     <MudTextField @bind-Value="_registerModel.Email" Label="E-posta" Variant="Variant.Outlined" Margin="Margin.Dense" InputType="InputType.Email" For="@(() => _registerModel.Email)" Class="mt-3" />
-    <MudTextField @bind-Value="_registerModel.UserInfo.PhoneNumber" Label="Telefon Numarası" Variant="Variant.Outlined" Margin="Margin.Dense" For="@(() => _registerModel.UserInfo.PhoneNumber)" Class="mt-3" />
+    <MudTextField @bind-Value="_registerModel.PhoneNumber" Label="Telefon Numarası" Variant="Variant.Outlined" Margin="Margin.Dense" For="@(() => _registerModel.PhoneNumber)" Class="mt-3" />
 
-    <PasswordField Label="Şifre" @bind-Password="_password" />
+    <PasswordField Label="Şifre" @bind-Password="_registerModel.Password" />
     <PasswordField Label="Şifre Tekrar" @bind-Password="_confirmPassword" />
 
     <MudStack AlignItems="AlignItems.Center" Class="mt-4">

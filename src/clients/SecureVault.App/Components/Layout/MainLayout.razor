@@ -1,7 +1,8 @@
-﻿@using SecureVault.App.Services.Service.Implementations
-@using SecureVault.App.Services.Service.Infrastructure.Implementations
-@inherits LayoutComponentBase
+﻿@inherits LayoutComponentBase
 @implements IDisposable
+
+@using SecureVault.App.Application.Contracts.Abstractions.UI
+@using SecureVault.App.Infrastructure.Helpers.Data
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="true" />
 <MudPopoverProvider />
@@ -10,36 +11,38 @@
 
 
 <MudLayout>
-        <AuthorizeView>
-            <Authorized>
-                <MudHidden Breakpoint="Breakpoint.SmAndUp" Invert="true">
-                    <MudAppBar Elevation="1" Dense="true" Fixed="true">
-                        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleDrawer" />
-                        <MudSpacer />
-                    </MudAppBar>
+    <AuthorizeView>
+        <Authorized>
+            <MudHidden Breakpoint="Breakpoint.SmAndUp" Invert="true">
+                <MudAppBar Elevation="1" Dense="true" Fixed="true">
+                    <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleDrawer" />
+                    <MudSpacer />
+                </MudAppBar>
 
-                    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2" Variant="DrawerVariant.Mini">
-                        <NavMenu />
-                    </MudDrawer>
-                </MudHidden>
+                <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2" Variant="DrawerVariant.Mini">
+                    <NavMenu />
+                </MudDrawer>
+            </MudHidden>
 
-                <MudMainContent>
-                    <MudOverlay Visible="_drawerOpen" OnClick='() => _drawerOpen = false' DarkBackground="false" ZIndex="1100" />
-                    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-8 pb-16">
-                        @Body
-                    </MudContainer>
-                </MudMainContent>
-                <BottomNav />
-            </Authorized>
-            <NotAuthorized>
-                @Body
-            </NotAuthorized>
-        </AuthorizeView>
+            <MudMainContent>
+                <MudOverlay Visible="_drawerOpen" OnClick='() => _drawerOpen = false' DarkBackground="false" ZIndex="1100" />
+                <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-8 pb-16">
+                    @Body
+                </MudContainer>
+            </MudMainContent>
+            <BottomNav />
+        </Authorized>
+        <NotAuthorized>
+            @Body
+        </NotAuthorized>
+    </AuthorizeView>
 </MudLayout>
 
 @code {
-    [Inject] private NavigationManager NavigationManager { get; set; }
-    [Inject] private LogoutService LogoutService { get; set; }
+    [Inject] IAuthenticationStateNotifier AuthStateNotifier { get; set; } = null!;
+
+    [Inject] NavigationManager NavigationManager { get; set; } = null!;
+
     private MudTheme? _theme = null;
     private bool _drawerOpen = false;
 
@@ -47,12 +50,43 @@
 
     private DrawerVariant _variant => _drawerOpen ? DrawerVariant.Temporary : DrawerVariant.Mini;
 
-    protected override void OnInitialized() => LogoutService.OnLogoutRequested += HandleLogout;
+    protected override void OnInitialized()
+    {
+        _theme = new()
+        {
+            PaletteLight = _lightPalette,
+            PaletteDark = _darkPalette,
+            LayoutProperties = new LayoutProperties()
+            {
+                DefaultBorderRadius = "6px",
+                DrawerWidthLeft = "280px",
+                DrawerWidthRight = "320px",
+                AppbarHeight = "64px"
+            },
 
-    private void HandleLogout() => NavigationManager.NavigateTo("/login", forceLoad: true);
+        };
+        AuthStateNotifier.OnAuthenticationStateChangedAsync += HandleAuthenticationStateChangedAsync;
+    }
 
-    public void Dispose() => LogoutService.OnLogoutRequested -= HandleLogout;
+    private async Task HandleAuthenticationStateChangedAsync(bool isAuthenticated)
+    {
+        if (!isAuthenticated)
+        {
+            var currentUri = new Uri(NavigationManager.Uri);
+            var currentPath = currentUri.AbsolutePath;
 
+            if (!string.Equals(currentPath, "/login", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(currentPath, "/logout", StringComparison.OrdinalIgnoreCase))
+            {
+                await InvokeAsync(() => NavigationManager.NavigateTo("/logout"));
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthStateNotifier.OnAuthenticationStateChangedAsync -= HandleAuthenticationStateChangedAsync;
+    }
 
     private readonly PaletteLight _lightPalette = new()
     {

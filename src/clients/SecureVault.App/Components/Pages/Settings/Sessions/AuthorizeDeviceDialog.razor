@@ -1,0 +1,42 @@
+﻿<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.PhonelinkSetup" Class="mr-2" />
+            Yeni Cihazı Yetkilendir
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (!_isProcessing)
+        {
+            <div class="pa-2">
+                <MudText Class="mb-4">Yeni bir cihaza giriş izni vermek için bir yöntem seçin.</MudText>
+                <div class="d-flex flex-column gap-4 mt-4">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.QrCodeScanner"
+                               OnClick="StartByScanning"
+                               Size="Size.Large">
+                        Diğer Cihazdaki QR Kodu Tara
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Filled.QrCode2"
+                               OnClick="StartByGenerating"
+                               Size="Size.Large">
+                        Bu Cihazda QR Kodu Göster
+                    </MudButton>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-column align-center justify-center" style="min-height: 250px;">
+                 <Loading LoadingText="@_statusMessage" />
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Kapat</MudButton>
+    </DialogActions>
+</MudDialog>

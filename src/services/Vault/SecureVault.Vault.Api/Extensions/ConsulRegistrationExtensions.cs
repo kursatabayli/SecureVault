@@ -53,7 +53,7 @@ namespace SecureVault.Vault.Api.Extensions
                         Tags = [serviceName],
                         Check = new AgentServiceCheck()
                         {
-                            HTTP = "http://securevault-vault-api:8080/health",
+                            HTTP = $"http://{serviceAddress}:{uri.Port}/health",
                             Notes = "Checks /health endpoint",
                             Timeout = TimeSpan.FromSeconds(3),
                             Interval = TimeSpan.FromSeconds(10)

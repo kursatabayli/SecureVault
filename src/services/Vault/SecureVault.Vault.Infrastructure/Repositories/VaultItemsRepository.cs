@@ -1,7 +1,7 @@
 ﻿using MongoDB.Driver;
 using SecureVault.Vault.Application.Contracts.Repositories;
+using SecureVault.Vault.Application.Contracts.Specifications;
 using SecureVault.Vault.Domain.Entities;
-using SecureVault.Vault.Domain.Enums;
 
 namespace SecureVault.Vault.Infrastructure.Repositories
 {
@@ -16,17 +16,26 @@ namespace SecureVault.Vault.Infrastructure.Repositories
 
         public async Task AddAsync(VaultItem vaultItem) => await _collection.InsertOneAsync(vaultItem);
 
-        public async Task<IReadOnlyCollection<VaultItem>> GetAllUserVaultItemsByVaultTypeAsync(Guid userId, ItemType itemType)
-        {
-            var filter = Builders<VaultItem>.Filter.And(
-                Builders<VaultItem>.Filter.Eq(v => v.UserId, userId),
-                Builders<VaultItem>.Filter.Eq(v => v.ItemType, itemType),
-                Builders<VaultItem>.Filter.Eq(v => v.IsDeleted, false)
-            );
-            return await _collection.Find(filter).ToListAsync();
-        }
+        public async Task<IReadOnlyCollection<TResult>> FindAsync<TResult>(ISpecification<VaultItem, TResult> spec)
+            => await _collection.Find(spec.Criteria)
+                                .Project(spec.Projection)
+                                .ToListAsync();
 
         public async Task<VaultItem?> GetByIdAsync(Guid id) => await _collection.Find(v => v.Id == id).SingleOrDefaultAsync();
+
+        public async Task<DateTimeOffset?> GetLatestUpdateTimeAsync(Guid userId)
+        {
+            var latestDate = await _collection.Find(v => v.UserId == userId)
+                                            .SortByDescending(v => v.UpdatedAt)
+                                            .Limit(1)
+                                            .Project(v => v.UpdatedAt)
+                                            .SingleOrDefaultAsync();
+
+            if (latestDate == default)
+                return null;
+
+            return latestDate;
+        }
 
         public async Task<bool> UpdateAsync(VaultItem vaultItem)
         {

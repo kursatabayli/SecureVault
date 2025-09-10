@@ -1,0 +1,58 @@
+﻿@page "/login-with-qr-code"
+@attribute [AllowAnonymous]
+
+<MudPaper class="login-container">
+    <MudStack Row Justify="Justify.Center" AlignItems="AlignItems.Center" Style="width:100%; max-width: 1200px;">
+        <MudItem md="6" Class="branding-section hidden-sm-and-down">
+            <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Large" Style="font-size: 6rem; color: var(--mud-palette-primary);" />
+            <MudText Typo="Typo.h3" GutterBottom="true" Class="mt-4">SecureVault</MudText>
+            <MudText Typo="Typo.h6" Style="opacity: 0.8;">Verilerinizi güvenle yönetin.</MudText>
+        </MudItem>
+
+        <MudItem xs="12" sm="10" md="6">
+            <MudPaper Elevation="5" Class="login-form-paper">
+
+                <MudText Typo="Typo.h4" GutterBottom="true" Align="Align.Center">Giriş Yap</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Inherit" Align="Align.Center" Class="mb-6">Giriş yapmak için bir yöntem seçin.</MudText>
+                @if (!_isProcessing)
+                {
+                    <MudPaper Class="pa-4" Elevation="3">
+                        <MudText Typo="Typo.h5" GutterBottom="true">QR Kod ile Giriş</MudText>
+                        <MudText Class="mb-4">Giriş yapmak için bir yöntem seçin.</MudText>
+
+                        <div class="d-flex flex-column gap-4 mt-4">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.QrCodeScanner"
+                                       OnClick="StartByScanning"
+                                       Size="Size.Large">
+                                Başka Cihazdaki QR Kodu Tara
+                            </MudButton>
+
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Secondary"
+                                       StartIcon="@Icons.Material.Filled.QrCode2"
+                                       OnClick="StartByGenerating"
+                                       Size="Size.Large">
+                                Bu Cihazda QR Kodu Göster
+                            </MudButton>
+                        </div>
+
+                        <div class="d-flex gap-4 mt-6">
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Default"
+                                       OnClick="GoBack"
+                                       Class="flex-grow-1">
+                                Geri Dön
+                            </MudButton>
+                        </div>
+                    </MudPaper>
+                }
+                else
+                {
+                    <Loading LoadingText="@_statusMessage" />
+                }
+            </MudPaper>
+        </MudItem>
+    </MudStack>
+</MudPaper>

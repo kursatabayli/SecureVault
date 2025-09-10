@@ -1,4 +1,47 @@
-﻿/*fab menu*/
+﻿/* Ana uygulama konteynerini başlangıçta tam ekran yapalım */
+#app {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-text {
+    margin-top: 16px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 1.25rem;
+    color: #58A6FF;
+}
+
+.loading-circular {
+    width: 48px;
+    height: 48px;
+    border: 5px solid rgba(89, 74, 226, 0.3);
+    border-top: 5px solid #58A6FF;
+    border-radius: 50%;
+    animation: spin 1.4s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+
+/*fab menu*/
 .fab-container {
     position: fixed;
     bottom: 2rem;
@@ -284,3 +327,6 @@
             width: 100%;
         }
 }
+
+
+

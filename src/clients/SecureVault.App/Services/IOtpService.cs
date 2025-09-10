@@ -1,11 +1,11 @@
-﻿using SecureVault.App.Services.Models.VaultItemModels;
+﻿using SecureVault.App.Models.TwoFactorAuthCodeModels;
 using SecureVault.Shared.Result;
 
 namespace SecureVault.App.Services
 {
-    public interface IOtpService : IDisposable
+    public interface IOtpService : IAsyncDisposable
     {
-        event Action? OnTick;
+        event Func<Task>? OnTick;
         bool IsLoading { get; }
         Error? InitializationError { get; }
         IReadOnlyList<OtpViewModel> Items { get; }

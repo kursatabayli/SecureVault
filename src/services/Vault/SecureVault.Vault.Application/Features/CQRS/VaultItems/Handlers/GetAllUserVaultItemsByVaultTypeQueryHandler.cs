@@ -1,11 +1,11 @@
-﻿using AutoMapper;
-using MediatR;
+﻿using MediatR;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SecureVault.Shared.Result;
 using SecureVault.Vault.Application.Contracts.Repositories;
 using SecureVault.Vault.Application.Features.CQRS.VaultItems.Queries;
 using SecureVault.Vault.Application.Features.CQRS.VaultItems.Results;
+using SecureVault.Vault.Application.Features.Specifications.VaultItems;
 using SecureVault.Vault.Application.Messages;
 
 namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
@@ -15,25 +15,23 @@ namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
         private readonly IVaultItemsRepository _repository;
         private readonly ILogger<GetAllUserVaultItemsByVaultTypeQueryHandler> _logger;
         private readonly IStringLocalizer<ReturnMessages> _returnMessages;
-        private readonly IMapper _mapper;
 
-        public GetAllUserVaultItemsByVaultTypeQueryHandler(IVaultItemsRepository repository, ILogger<GetAllUserVaultItemsByVaultTypeQueryHandler> logger, IStringLocalizer<ReturnMessages> returnMessages, IMapper mapper)
+        public GetAllUserVaultItemsByVaultTypeQueryHandler(IVaultItemsRepository repository, ILogger<GetAllUserVaultItemsByVaultTypeQueryHandler> logger, IStringLocalizer<ReturnMessages> returnMessages)
         {
             _repository = repository;
             _logger = logger;
             _returnMessages = returnMessages;
-            _mapper = mapper;
         }
 
         public async Task<Result<IReadOnlyCollection<VaultItemResult>>> Handle(GetAllUserVaultItemsByVaultTypeQuery request, CancellationToken cancellationToken)
         {
             try
             {
-                var vaultItems = await _repository.GetAllUserVaultItemsByVaultTypeAsync(request.UserId, request.ItemType);
+                var spec = new VaultItemsByUserIdAndItemTypeSpecification(request.UserId, request.ItemType);
 
-                var mappedVaultItems = _mapper.Map<IReadOnlyCollection<VaultItemResult>>(vaultItems);
+                var vaultItemsResult = await _repository.FindAsync(spec);
 
-                return Result<IReadOnlyCollection<VaultItemResult>>.Success(mappedVaultItems);
+                return Result<IReadOnlyCollection<VaultItemResult>>.Success(vaultItemsResult);
             }
             catch (Exception ex)
             {

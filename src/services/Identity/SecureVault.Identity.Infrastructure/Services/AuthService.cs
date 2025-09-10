@@ -27,13 +27,13 @@ namespace SecureVault.Identity.Infrastructure.Services
             var jti = Guid.NewGuid().ToString();
 
             var claims = new List<Claim>
-        {
-            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.Jti, jti),
-            new(ClaimTypes.Email, user.Email),
-            new(ClaimTypes.Name, user.UserInfo.Name),
-            new(ClaimTypes.Surname, user.UserInfo.Surname)
-        };
+            {
+                new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new(JwtRegisteredClaimNames.Jti, jti),
+                new(ClaimTypes.Email, user.Email),
+                new(ClaimTypes.Name, user.UserInfo.Name),
+                new(ClaimTypes.Surname, user.UserInfo.Surname)
+            };
 
             var token = new JwtSecurityToken(
                 issuer: _jwtSettings.Issuer,
@@ -75,15 +75,9 @@ namespace SecureVault.Identity.Infrastructure.Services
             return (tokenHandler.WriteToken(token), jti, expiration);
         }
 
-        public ClaimsPrincipal? GetPrincipalFromAccessToken(string token, bool validateLifetime = true)
-        {
-            return ValidateToken(token, _jwtSettings.Key, validateLifetime);
-        }
+        public ClaimsPrincipal? GetPrincipalFromAccessToken(string token, bool validateLifetime = true) => ValidateToken(token, _jwtSettings.Key, validateLifetime);
 
-        public ClaimsPrincipal? GetPrincipalFromRefreshToken(string token)
-        {
-            return ValidateToken(token, _jwtSettings.RefreshTokenKey, true);
-        }
+        public ClaimsPrincipal? GetPrincipalFromRefreshToken(string token) => ValidateToken(token, _jwtSettings.RefreshTokenKey, true);
 
         private ClaimsPrincipal? ValidateToken(string token, string secretKey, bool validateLifetime)
         {

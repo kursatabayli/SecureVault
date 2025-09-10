@@ -1,4 +1,5 @@
 ﻿using SecureVault.App.Components.Helpers;
+using MauiApplication = Microsoft.Maui.Controls.Application;
 
 namespace SecureVault.App.Services
 {
@@ -7,7 +8,7 @@ namespace SecureVault.App.Services
         public async Task<string> ScanAsync()
         {
             var tcs = new TaskCompletionSource<string>();
-            await Application.Current.MainPage.Navigation.PushModalAsync(new QrScannerPage(tcs));
+            await MauiApplication.Current.MainPage.Navigation.PushModalAsync(new QrScannerPage(tcs));
             return await tcs.Task;
         }
     }

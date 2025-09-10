@@ -1,11 +1,9 @@
-﻿using Microsoft.AspNetCore.Components.WebView.Maui;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MudBlazor.Services;
-using Nager.PublicSuffix;
-using Nager.PublicSuffix.RuleProviders;
-using SecureVault.App.Extensions;
-using SecureVault.App.Services;
-using SecureVault.App.Services.Extensions;
+using SecureVault.App.Application;
+using SecureVault.App.Infrastructure;
+using System.Reflection;
 using ZXing.Net.Maui.Controls;
 
 namespace SecureVault.App
@@ -24,20 +22,38 @@ namespace SecureVault.App
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 });
+            var a = Assembly.GetExecutingAssembly();
+            using var stream = a.GetManifestResourceStream("SecureVault.App.appsettings.json");
 
+            var config = new ConfigurationBuilder()
+                        .AddJsonStream(stream)
+                        .Build();
+
+            builder.Configuration.AddConfiguration(config);
             builder.Services.AddMauiBlazorWebView();
 
             builder.Services.AddLocalization();
             builder.Services.AddMudServices();
-            builder.Services.RegisterServices();
-            builder.Services.AuthServices();
+            builder.Services.AddAppServices(builder.Configuration);
+            builder.Services.AddInfrastructureServices(builder.Configuration);
+            builder.Services.AddApplicationServices();
             builder.Services.AddAuthorizationCore();
             builder.Services.AddLocalization();
 
+            builder.Services.AddSingleton<App>();
+
 #if DEBUG
+            using var devStream = a.GetManifestResourceStream("SecureVault.App.appsettings.Development.json");
+            if (devStream != null)
+            {
+                var devConfig = new ConfigurationBuilder()
+                    .AddJsonStream(devStream)
+                    .Build();
+                builder.Configuration.AddConfiguration(devConfig);
+            }
             builder.Services.AddBlazorWebViewDeveloperTools();
 #if ANDROID
-            BlazorWebViewHandler.BlazorWebViewMapper.AppendToMapping("EnableDebugging", (handler, view) =>
+            Microsoft.AspNetCore.Components.WebView.Maui.BlazorWebViewHandler.BlazorWebViewMapper.AppendToMapping("EnableDebugging", (handler, view) =>
             {
                 if (handler.PlatformView is Android.Webkit.WebView)
                 {
@@ -47,7 +63,6 @@ namespace SecureVault.App
 #endif
             builder.Logging.AddDebug();
 #endif
-
 
             return builder.Build();
         }

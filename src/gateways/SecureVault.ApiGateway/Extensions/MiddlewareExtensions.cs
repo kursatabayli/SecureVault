@@ -4,9 +4,10 @@ namespace SecureVault.ApiGateway.Extensions
 {
     public static class MiddlewareExtensions
     {
-        public static IApplicationBuilder UseTokenBlacklist(this IApplicationBuilder builder)
+        public static IApplicationBuilder AddMiddlewares(this IApplicationBuilder builder)
         {
-            return builder.UseMiddleware<TokenBlacklistMiddleware>();
+            return builder.UseMiddleware<CorrelationIdMiddleware>()
+                          .UseMiddleware<TokenBlacklistMiddleware>();
         }
     }
 }

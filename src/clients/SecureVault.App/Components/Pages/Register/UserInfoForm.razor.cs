@@ -1,19 +1,19 @@
 ﻿using Microsoft.AspNetCore.Components;
 using MudBlazor;
-using SecureVault.App.Services.Models.RegisterModels;
+using SecureVault.App.Application.Features.CQRS.Register.Commands;
+using SecureVault.App.Models.RegisterModels;
 
 namespace SecureVault.App.Components.Pages.Register
 {
     public partial class UserInfoForm : ComponentBase
     {
         private MudForm? _form;
-        private string? _password;
         private string? _confirmPassword;
-        private readonly RegisterUserModel _registerModel = new() { UserInfo = new() };
+        private readonly RegisterModel _registerModel = new();
 
         [Inject] private ISnackbar Snackbar { get; set; } = null!;
 
-        [Parameter] public EventCallback<(RegisterUserModel model, string password)> OnProceed { get; set; }
+        [Parameter] public EventCallback<RegisterModel> OnProceed { get; set; }
 
         private async Task HandleProceed()
         {
@@ -26,7 +26,7 @@ namespace SecureVault.App.Components.Pages.Register
                 return;
             }
 
-            if (_password != _confirmPassword)
+            if (_registerModel.Password != _confirmPassword)
             {
                 Snackbar.Add("Şifreler uyuşmuyor.", Severity.Warning);
                 return;
@@ -34,7 +34,7 @@ namespace SecureVault.App.Components.Pages.Register
 
             if (OnProceed.HasDelegate)
             {
-                await OnProceed.InvokeAsync((_registerModel, _password!));
+                await OnProceed.InvokeAsync(_registerModel);
             }
         }
     }

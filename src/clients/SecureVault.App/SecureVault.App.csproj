@@ -22,10 +22,10 @@
         <Nullable>enable</Nullable>
 
         <!-- Display name -->
-        <ApplicationTitle>SecureVault.App</ApplicationTitle>
+        <ApplicationTitle>Secure Vault</ApplicationTitle>
 
         <!-- App Identifier -->
-        <ApplicationId>com.companyname.securevault.app</ApplicationId>
+        <ApplicationId>com.netwatch.securevault</ApplicationId>
 
         <!-- Versions -->
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -37,13 +37,17 @@
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
         <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+        <DefaultLanguage>TR</DefaultLanguage>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <PackageCertificateThumbprint>9D4324899A74C3D804A006A6D34AFD66A2C3E604</PackageCertificateThumbprint>
+        <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
     </PropertyGroup>
 
     <ItemGroup>
         <!-- App Icon -->
-        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+        <MauiIcon Include="Resources\AppIcon\appicon.png" />
 
-        <!-- Splash Screen -->
+		<!-- Splash Screen -->
         <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
 
         <!-- Images -->
@@ -58,27 +62,45 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Content Remove="appsettings.Development.json" />
+      <Content Remove="appsettings.json" />
+    </ItemGroup>
+
+    <ItemGroup>
       <None Remove="Platforms\Android\Resources\xml\network_security_config.xml" />
     </ItemGroup>
 
     <ItemGroup>
-		<PackageReference Include="Nager.PublicSuffix" Version="3.5.0" />
-		<PackageReference Include="ZXing.Net.MAUI" Version="0.4.0" />
-		<PackageReference Include="ZXing.Net.MAUI.Controls" Version="0.4.0" />
+      <EmbeddedResource Include="appsettings.Development.json" />
+      <EmbeddedResource Include="appsettings.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Nager.PublicSuffix" Version="3.6.0" />
+		<PackageReference Include="QRCoder" Version="1.6.0" />
+		<PackageReference Include="ZXing.Net.Bindings.SkiaSharp" Version="0.16.21" />
+		<PackageReference Include="ZXing.Net.MAUI" Version="0.5.0" />
+		<PackageReference Include="ZXing.Net.MAUI.Controls" Version="0.5.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.3.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.8" />
-		<PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="9.0.8" />
-		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />
-		<PackageReference Include="MudBlazor" Version="8.11.0" />
-		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.90" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="9.0.90" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.8" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.9" />
+		<PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="9.0.9" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.9" />
+		<PackageReference Include="MudBlazor" Version="8.12.0" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.100" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="9.0.100" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.9" />
         <PackageReference Include="Otp.NET" Version="1.4.0" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\shared\SecureVault.Shared.Result\SecureVault.Shared.Result.csproj" />
-      <ProjectReference Include="..\SecureVault.App.Services\SecureVault.App.Services.csproj" />
+      <ProjectReference Include="..\SecureVault.App.Application\SecureVault.App.Application.csproj" />
+      <ProjectReference Include="..\SecureVault.App.Infrastructure\SecureVault.App.Infrastructure.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -91,6 +113,21 @@
       <MauiXaml Update="Components\Helpers\QrScannerPage.xaml">
         <Generator>MSBuild:Compile</Generator>
       </MauiXaml>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Resources\Localization\SharedResources.Designer.cs">
+        <DependentUpon>SharedResources.resx</DependentUpon>
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+      </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Update="Resources\Localization\SharedResources.resx">
+        <LastGenOutput>SharedResources.Designer.cs</LastGenOutput>
+        <Generator>PublicResXFileCodeGenerator</Generator>
+      </EmbeddedResource>
     </ItemGroup>
 
 </Project>

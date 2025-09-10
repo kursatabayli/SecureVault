@@ -1,5 +1,5 @@
-﻿using SecureVault.Vault.Domain.Entities;
-using SecureVault.Vault.Domain.Enums;
+﻿using SecureVault.Vault.Application.Contracts.Specifications;
+using SecureVault.Vault.Domain.Entities;
 
 namespace SecureVault.Vault.Application.Contracts.Repositories
 {
@@ -8,6 +8,7 @@ namespace SecureVault.Vault.Application.Contracts.Repositories
         Task<VaultItem?> GetByIdAsync(Guid id);
         Task AddAsync(VaultItem vaultItem);
         Task<bool> UpdateAsync(VaultItem vaultItem);
-        Task<IReadOnlyCollection<VaultItem>> GetAllUserVaultItemsByVaultTypeAsync(Guid userId, ItemType itemType);
+        Task<IReadOnlyCollection<TResult>> FindAsync<TResult>(ISpecification<VaultItem, TResult> spec);
+        Task<DateTimeOffset?> GetLatestUpdateTimeAsync(Guid userId);
     }
 }

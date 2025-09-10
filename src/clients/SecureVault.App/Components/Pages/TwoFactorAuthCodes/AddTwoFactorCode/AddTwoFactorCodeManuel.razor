@@ -1,0 +1,56 @@
+﻿@using SecureVault.App.Domain.Enums
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Keyboard" Class="mr-2" />
+            Yeni Hesap Ekle
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_submitting)
+        {
+            <Loading />
+        }
+        else
+        {
+            <MudForm Model="_twoFactorAuthModel" @ref="form" Class="mt-4">
+                <MudTextField Label="Servis Sağlayıcı"
+                              @bind-Value="_twoFactorAuthModel.Issuer"
+                              For="@(() => _twoFactorAuthModel.Issuer)"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Immediate="true" />
+
+                <MudTextField Label="Hesap Adı"
+                              @bind-Value="_twoFactorAuthModel.AccountName"
+                              For="@(() => _twoFactorAuthModel.AccountName)"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Class="mt-3" />
+
+                <MudTextField Label="Gizli Anahtar"
+                              @bind-Value="_twoFactorAuthModel.SecretKey"
+                              For="@(() => _twoFactorAuthModel.SecretKey)"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Class="mt-3"
+                              HelperText="Sağlayıcınızdan aldığınız anahtarı buraya yapıştırın." />
+
+                <MudSelect Label="Kod Türü"
+                           @bind-Value="_twoFactorAuthModel.Type"
+                           For="@(() => _twoFactorAuthModel.Type)"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Class="mt-3">
+                    <MudSelectItem Value="OtpType.TOTP">TOTP (Zaman Tabanlı)</MudSelectItem>
+                    <MudSelectItem Value="OtpType.HOTP">HOTP (Sayaç Tabanlı)</MudSelectItem>
+                </MudSelect>
+            </MudForm>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">İptal</MudButton>
+        <MudButton OnClick="Submit" Color="Color.Primary" Disabled="_submitting" Variant="Variant.Filled">Kaydet</MudButton>
+    </DialogActions>
+</MudDialog>
