@@ -30,7 +30,7 @@ namespace SecureVault.ApiGateway.MiddleWares
                     {
                         _logger.LogWarning("İptal edilmiş bir token ile istek denemesi yapıldı. JTI: {Jti}, IP: {IpAddress}", jti, context.Connection.RemoteIpAddress);
 
-                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
                         await context.Response.WriteAsync("This token has been revoked.");
                         return;
                     }

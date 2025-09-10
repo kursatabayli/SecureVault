@@ -50,8 +50,8 @@ namespace SecureVault.Identity.Application.Features.CQRS.UserSessions.Handlers
                 {
                     var cacheKey = $"blacklist:{accessTokenJti}";
 
-                    var approxAccessTokenExpiryTime = sessionToRevoke.LastUsedAt.GetValueOrDefault(DateTimeOffset.UtcNow).AddMinutes(15);
-                    var expiryTimeSpan = approxAccessTokenExpiryTime - DateTimeOffset.UtcNow;
+                    var approxAccessTokenExpiryTime = sessionToRevoke.LastUsedAt.GetValueOrDefault(DateTime.UtcNow).AddMinutes(15);
+                    var expiryTimeSpan = approxAccessTokenExpiryTime - DateTime.UtcNow;
 
                     if (expiryTimeSpan > TimeSpan.Zero)
                         await _cacheService.SetAsync(cacheKey, "revoked", expiryTimeSpan);

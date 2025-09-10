@@ -1,10 +1,9 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using SecureVault.Identity.Application.Contracts.DTOs.AuthDto;
-using SecureVault.Identity.Application.Contracts.Services;
 using SecureVault.Identity.Application.Features.CQRS.Auth.Commands;
-using System.Security.Claims;
 
 namespace SecureVault.Identity.Api.Controllers
 {
@@ -14,12 +13,10 @@ namespace SecureVault.Identity.Api.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IMediator _mediator;
-        private readonly IAuthService _authService;
 
-        public AuthController(IMediator mediator, IAuthService authService)
+        public AuthController(IMediator mediator)
         {
             _mediator = mediator;
-            _authService = authService;
         }
 
         [HttpGet("challenge/{email}")]
@@ -42,7 +39,10 @@ namespace SecureVault.Identity.Api.Controllers
             var deviceModel = Request.Headers["X-Device-Model"].FirstOrDefault();
             var deviceManufacturer = Request.Headers["X-Device-Manufacturer"].FirstOrDefault();
             var operatingSystem = Request.Headers["X-Device-OS"].FirstOrDefault();
-
+            var dpopProof = Request.Headers["DPoP"].FirstOrDefault();
+            var uri = new Uri(Request.GetDisplayUrl());
+            var requestUrl = uri.AbsolutePath;
+            var requestMethod = Request.Method;
             var command = new LoginUserCommand(
                 credentials.Email,
                 credentials.Signature,
@@ -52,7 +52,10 @@ namespace SecureVault.Identity.Api.Controllers
                 deviceModel,
                 deviceManufacturer,
                 operatingSystem,
-                ipAddress
+                ipAddress,
+                dpopProof,
+                requestUrl,
+                requestMethod
             );
 
             var result = await _mediator.Send(command);
@@ -66,12 +69,19 @@ namespace SecureVault.Identity.Api.Controllers
         [HttpPost("refresh")]
         public async Task<IActionResult> RefreshToken()
         {
+            var uri = new Uri(Request.GetDisplayUrl());
+            var requestUrl = uri.AbsolutePath;
+            var requestMethod = Request.Method;
+
             var command = new RefreshTokenCommand(
                 Request.Headers.Authorization.FirstOrDefault()?.Split(" ").Last(),
                 Request.Headers["X-Refresh-Token"].FirstOrDefault(),
                 HttpContext.Connection.RemoteIpAddress?.ToString(),
                 Request.Headers["X-Device-Id"].FirstOrDefault(),
-                Request.Headers["X-Device-Name"].FirstOrDefault()
+                Request.Headers["X-Device-Name"].FirstOrDefault(),
+                Request.Headers["DPoP"].FirstOrDefault(),
+                requestUrl,
+                requestMethod
             );
             var result = await _mediator.Send(command);
             return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
@@ -84,7 +94,7 @@ namespace SecureVault.Identity.Api.Controllers
                 Request.Headers.Authorization.FirstOrDefault()?.Split(" ").Last(),
                 Request.Headers["X-Refresh-Token"].FirstOrDefault()
             );
-            var result = await _mediator.Send(command);
+            _ = await _mediator.Send(command);
             return Ok();
         }
     }

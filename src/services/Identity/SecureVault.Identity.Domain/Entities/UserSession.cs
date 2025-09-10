@@ -13,6 +13,7 @@
         public DateTimeOffset? ExpiresAt { get; private set; }
         public bool IsRevoked { get; private set; }
         public DateTimeOffset? LastUsedAt { get; private set; }
+        public virtual User User { get; private set; }
 
 
         private UserSession() { }

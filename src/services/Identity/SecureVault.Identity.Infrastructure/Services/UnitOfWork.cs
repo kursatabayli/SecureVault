@@ -35,10 +35,10 @@ namespace SecureVault.Identity.Infrastructure.Services
             });
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            _context?.Dispose();
-            GC.SuppressFinalize(this);
+            if (_context != null)
+                await _context.DisposeAsync();
         }
 
     }

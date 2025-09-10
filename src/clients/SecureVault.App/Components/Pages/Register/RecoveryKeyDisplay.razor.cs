@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
-using SecureVault.App.Services.Models.RecoveryKeyModels;
+using SecureVault.App.Models.RecoveryKeyModels;
 
 namespace SecureVault.App.Components.Pages.Register
 {

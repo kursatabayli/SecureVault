@@ -1,14 +1,17 @@
+using Consul;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
 using Ocelot.Provider.Consul;
 using SecureVault.ApiGateway.Extensions;
+using SecureVault.ApiGateway.Handlers;
+using SecureVault.ApiGateway.Helpers;
+using SecureVault.ApiGateway.Services;
+using Serilog;
+using Serilog.Events;
 using StackExchange.Redis;
-using System.Net;
 using System.Text;
-using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 
 namespace SecureVault.ApiGateway
 {
@@ -16,95 +19,135 @@ namespace SecureVault.ApiGateway
     {
         public static async Task Main(string[] args)
         {
-            var builder = WebApplication.CreateBuilder(args);
-            builder.Services.Configure<ForwardedHeadersOptions>(options =>
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateBootstrapLogger();
+
+            try
             {
-                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-                options.KnownNetworks.Clear();
-                options.KnownProxies.Clear();
+                Log.Information("Uygulama baþlatýlýyor.");
 
-                //daha sonra kaldýrýlabilir
-                options.ForwardedForHeaderName = "X-Real-IP";
+                var builder = WebApplication.CreateBuilder(args);
 
-                var knownNetworks = builder.Configuration["ForwardedHeadersOptions:KnownNetworks"];
-                if (!string.IsNullOrEmpty(knownNetworks))
+                builder.Host.UseSerilog((context, services, configuration) => configuration
+                    .ReadFrom.Configuration(context.Configuration)
+                    .ReadFrom.Services(services)
+                    .Enrich.FromLogContext()
+                    .WriteTo.Console());
+
+                var consulAddress = new Uri(builder.Configuration.GetConnectionString("ConsulHost"));
+                builder.Services.AddSingleton<IConsulClient, ConsulClient>(p => new ConsulClient(config =>
                 {
-                    var cidrParts = knownNetworks.Split('/');
-                    if (cidrParts.Length == 2 && IPAddress.TryParse(cidrParts[0], out var ipAddress) && int.TryParse(cidrParts[1], out var prefixLength))
-                        options.KnownNetworks.Add(new IPNetwork(ipAddress, prefixLength));
-                }
-                //options.KnownNetworks.Add(new IPNetwork(IPAddress.Parse("::ffff:172.22.0.0"), 112));
-            });
+                    config.Address = consulAddress;
+                }));
 
-            builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-            {
-                var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ?? builder.Configuration["Redis:ConnectionString"];
-
-                if (string.IsNullOrEmpty(redisConnectionString))
+                builder.Services.AddSingleton<IServiceDiscovery, ConsulServiceDiscovery>();
+                builder.Services.AddTransient<ServiceDiscoveryDelegatingHandler>();
+                builder.Services.AddTransient<CorrelationIdDelegatingHandler>();
+                builder.Services.AddHttpClient("VaultApiClient", client =>
                 {
-                    throw new InvalidOperationException("Redis connection string 'Redis:ConnectionString' not found in configuration.");
-                }
-
-                var configurationOptions = ConfigurationOptions.Parse(redisConnectionString);
-
-                configurationOptions.AbortOnConnectFail = false;
-
-                return ConnectionMultiplexer.Connect(configurationOptions);
-            });
-
-            builder.Services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            }).AddJwtBearer(options =>
-            {
-                options.TokenValidationParameters = new TokenValidationParameters
+                    client.BaseAddress = new Uri("http://VaultService/");
+                })
+                .AddHttpMessageHandler<ServiceDiscoveryDelegatingHandler>()
+                .AddHttpMessageHandler<CorrelationIdDelegatingHandler>();
+                builder.Services.AddHttpClient("IdentityApiClient", client =>
                 {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidIssuer = builder.Configuration["JwtSettings:ValidIssuer"],
-                    ValidAudience = builder.Configuration["JwtSettings:ValidAudience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"])),
-                    ClockSkew = TimeSpan.Zero
-                };
-            });
-
-            builder.Services.AddAuthorization(); 
-            
-            builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
-
-            builder.Services.AddOcelot(builder.Configuration).AddConsul<MyConsulServiceBuilder>();
-
-            var origins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>();
+                    client.BaseAddress = new Uri("http://IdentityService/");
+                })
+                .AddHttpMessageHandler<ServiceDiscoveryDelegatingHandler>()
+                .AddHttpMessageHandler<CorrelationIdDelegatingHandler>();
+                builder.Services.AddHttpClient("InteractionApiClient", client =>
+                {
+                    client.BaseAddress = new Uri("http://InteractionService/");
+                })
+                .AddHttpMessageHandler<ServiceDiscoveryDelegatingHandler>()
+                .AddHttpMessageHandler<CorrelationIdDelegatingHandler>();
 
 
-            builder.Services.AddCors(options =>
-            {
-                options.AddPolicy("SecureVaultApp",
-                    policyBuilder =>
+                builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+                {
+                    var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+
+                    if (string.IsNullOrEmpty(redisConnectionString))
                     {
-                        policyBuilder.WithOrigins(origins ?? [])
-                                     .AllowAnyMethod()
-                                     .AllowAnyHeader()
-                                     .AllowCredentials()
-                                     .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
-                    });
-            });
+                        throw new InvalidOperationException("Redis connection string 'Redis:ConnectionString' not found in configuration.");
+                    }
 
-            var app = builder.Build();
+                    var configurationOptions = ConfigurationOptions.Parse(redisConnectionString);
 
-            app.UseForwardedHeaders();
+                    configurationOptions.AbortOnConnectFail = false;
 
-            app.UseHttpsRedirection();
-            app.UseCors("SecureVaultApp");
-            app.UseAuthentication();
-            app.UseTokenBlacklist();
-            app.UseAuthorization();
-            await app.UseOcelot();
+                    return ConnectionMultiplexer.Connect(configurationOptions);
+                });
 
-            await app.RunAsync();
+                builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(nameof(JwtSettings)));
+                var jwtSettings = builder.Configuration.GetSection(nameof(JwtSettings)).Get<JwtSettings>();
+
+                builder.Services.AddAuthentication(options =>
+                {
+                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                }).AddJwtBearer(options =>
+                {
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidIssuer = jwtSettings.Issuer,
+                        ValidAudience = jwtSettings.Audience,
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                        ClockSkew = TimeSpan.Zero
+                    };
+                });
+
+                builder.Services.AddAuthorization();
+
+                builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
+
+                builder.Services.AddOcelot(builder.Configuration).AddConsul<MyConsulServiceBuilder>();
+
+                var origins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>();
+
+
+                builder.Services.AddCors(options =>
+                {
+                    options.AddPolicy("SecureVaultApp",
+                        policyBuilder =>
+                        {
+                            policyBuilder.WithOrigins(origins ?? [])
+                                         .AllowAnyMethod()
+                                         .AllowAnyHeader()
+                                         .AllowCredentials()
+                                         .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
+                        });
+                });
+
+                var app = builder.Build();
+
+                app.UseSerilogRequestLogging();
+                app.UseHttpsRedirection();
+                app.UseCors("SecureVaultApp");
+                app.UseRouting();
+                app.UseAuthentication();
+                app.AddMiddlewares();
+                app.UseAuthorization();
+                app.UseWebSockets();
+                await app.UseOcelot();
+
+                await app.RunAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Uygulama baþlatýlýrken kritik bir hata oluþtu.");
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
         }
     }
 }

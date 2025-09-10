@@ -1,14 +1,19 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using AutoMapper;
+using MediatR;
+using Microsoft.AspNetCore.Components;
 using MudBlazor;
-using SecureVault.App.Services.Models.SessionModels;
-using SecureVault.App.Services.Service.Infrastructure.Contracts;
+using SecureVault.App.Application.Contracts.Abstractions.Persistence;
+using SecureVault.App.Application.Features.CQRS.Sessions.Commands;
+using SecureVault.App.Application.Features.CQRS.Sessions.Queries;
+using SecureVault.App.Models.SessionModels;
 using Color = MudBlazor.Color;
 
 namespace SecureVault.App.Components.Pages.Settings.Sessions
 {
     public partial class Sessions : ComponentBase
     {
-        [Inject] private IUserSessionService UserSessionService { get; set; } = default!;
+        [Inject] private IMediator Mediator { get; set; } = default!;
+        [Inject] private IMapper Mapper { get; set; } = default!;
         [Inject] private ISnackbar Snackbar { get; set; } = default!;
         [Inject] private IDialogService DialogService { get; set; } = default!;
         [Inject] private IStorageService StorageService { get; set; } = default!;
@@ -29,15 +34,13 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
             _isLoading = true;
             try
             {
-                var result = await UserSessionService.GetUserSessionsAsync();
+                var result = await Mediator.Send(new GetUserSessionsQuery());
                 if (result.IsSuccess)
-                {
-                    _sessions = [.. result.Value.OrderByDescending(s => IsCurrentSession(s)).ThenByDescending(s => s.LastUsedAt)];
-                }
+                    _sessions = Mapper.Map<List<UserSessionsModel>>(result.Value);
                 else
-                {
                     _loadError = result.Error.Message;
-                }
+
+                _sessions = [.. _sessions.OrderByDescending(s => IsCurrentSession(s)).ThenByDescending(s => s.LastUsedAt)];
             }
             catch (Exception ex)
             {
@@ -70,9 +73,11 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
         private async Task RevokeSession(UserSessionsModel session)
         {
             _revokingSessionId = session.Id;
-            StateHasChanged(); // Yükleme animasyonunu göstermek için arayüzü güncelle
+            StateHasChanged();
 
-            var result = await UserSessionService.LogoutAnyWhereAsync(session.Id);
+            var command = new RevokeUserSessionCommand { SessionId = session.Id };
+            var result = await Mediator.Send(command); 
+            
             if (result.IsSuccess)
             {
                 session.IsRevoked = true;
@@ -83,7 +88,7 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
                 Snackbar.Add($"Oturum sonlandırılamadı: {result.Error.Message}", Severity.Error);
             }
 
-            _revokingSessionId = null; // İşlem bitince ID'yi temizle
+            _revokingSessionId = null;
             StateHasChanged();
         }
 
@@ -121,6 +126,19 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
             if (diff.TotalDays < 30) return $"{(int)diff.TotalDays} gün önce";
 
             return lastUsedAt.Value.ToLocalTime().ToString("dd MMMM yyyy");
+        }
+
+        private async Task OpenAuthorizeDeviceDialog()
+        {
+            var options = new DialogOptions
+            {
+                BackdropClick = false,
+                CloseOnEscapeKey = false,
+            };
+            var dialog = await DialogService.ShowAsync<AuthorizeDeviceDialog>("Yeni Cihazı Yetkilendir", options);
+            var result = await dialog.Result;
+            if (!result.Canceled)
+                await LoadSessionsAsync();
         }
     }
 }

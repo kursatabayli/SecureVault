@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="MongoDB.Driver" Version="3.4.2" />
+        <PackageReference Include="MongoDB.Driver" Version="3.4.3" />
     </ItemGroup>
     <ItemGroup>
       <ProjectReference Include="..\SecureVault.Vault.Application.Contracts\SecureVault.Vault.Application.Contracts.csproj" />

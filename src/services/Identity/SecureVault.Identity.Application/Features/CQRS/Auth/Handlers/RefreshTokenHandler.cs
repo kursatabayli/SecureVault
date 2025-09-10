@@ -31,9 +31,12 @@ namespace SecureVault.Identity.Application.Features.CQRS.Auth.Handlers
 
         public async Task<Result<AuthResponse>> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
         {
-            var validationResult = await _tokenValidationService.ValidateAndGetSessionAsync(request.AccessToken, request.RefreshToken, request.UniqueDeviceId);
+            var sessionValidationResult = await _tokenValidationService.ValidateAndGetSessionAsync(request.AccessToken, request.RefreshToken, request.UniqueDeviceId);
+            
+            if (!sessionValidationResult.IsSuccess)
+                return sessionValidationResult.Error;
 
-            var session = validationResult.Value;
+            var session = sessionValidationResult.Value;
 
             try
             {

@@ -1,0 +1,38 @@
+﻿@page "/add-2fa-image"
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Image" Class="mr-2" />
+            Resimden QR Kod ile Hesap Ekle
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_isProcessing)
+        {
+            <div class="d-flex flex-column align-center justify-center my-4 pa-4" style="min-height: 200px;">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <MudText Class="mt-3">@_statusMessage</MudText>
+            </div>
+        }
+        else
+        {
+            <div class="my-4">
+                <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg" FilesChanged="OnFileSelectedAsync" MaximumFileCount="1">
+                    <ActivatorContent>
+                        <MudButton HtmlTag="label"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.CloudUpload">
+                            Resim Seç
+                        </MudButton>
+                    </ActivatorContent>
+                </MudFileUpload>
+                <MudText Typo="Typo.caption" Class="mt-2">Lütfen QR kodu içeren bir .png veya .jpg dosyası seçin.</MudText>
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text" Disabled="@_isProcessing">İptal</MudButton>
+    </DialogActions>
+</MudDialog>

@@ -25,45 +25,50 @@ namespace SecureVault.Vault.Domain.Entities
         public int Version { get; private set; }
 
         [BsonElement("createdAt")]
-        public DateTime CreatedAt { get; private set; }
+        public DateTimeOffset CreatedAt { get; private set; }
 
         [BsonElement("updatedAt")]
-        public DateTime UpdatedAt { get; private set; }
+        public DateTimeOffset UpdatedAt { get; private set; }
 
         [BsonElement("isDeleted")]
         public bool IsDeleted { get; private set; }
 
+        [BsonElement("lastUpdatedByDeviceId")]
+        [BsonRepresentation(BsonType.String)]
+        public string LastUpdatedByDeviceId { get; private set; }
         private VaultItem() { }
 
-        public static VaultItem Create(Guid userId, ItemType itemType, byte[] encryptedData)
+        public static VaultItem Create(Guid id, Guid userId, ItemType itemType, byte[] encryptedData, DateTimeOffset creationTime, string deviceId)
         {
-            var creationTime = DateTime.UtcNow;
             return new VaultItem
             {
-                Id = Guid.NewGuid(),
+                Id = id,
                 UserId = userId,
                 ItemType = itemType,
                 EncryptedData = encryptedData,
                 Version = 1,
                 CreatedAt = creationTime,
-                UpdatedAt = creationTime
+                UpdatedAt = creationTime,
+                LastUpdatedByDeviceId = deviceId,
             };
         }
-        public void UpdateData(byte[] newEncryptedData)
+        public void UpdateData(byte[] newEncryptedData, DateTimeOffset updatedAt, string deviceId)
         {
             if (IsDeleted)
                 throw new InvalidOperationException("Cannot update a deleted item.");
 
             EncryptedData = newEncryptedData ?? [];
             Version++;
-            UpdatedAt = DateTime.UtcNow;
+            UpdatedAt = updatedAt;
+            LastUpdatedByDeviceId = deviceId;
         }
-        public void Delete()
+        public void Delete(string deviceId)
         {
             if (!IsDeleted)
             {
                 IsDeleted = true;
-                UpdatedAt = DateTime.UtcNow;
+                UpdatedAt = DateTimeOffset.UtcNow;
+                LastUpdatedByDeviceId = deviceId;
             }
         }
     }

@@ -1,13 +1,13 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using MediatR;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Microsoft.JSInterop;
 using MudBlazor;
-using SecureVault.App.Services;
-using SecureVault.App.Services.Models.RecoveryKeyModels;
-using SecureVault.App.Services.Models.RegisterModels;
-using SecureVault.App.Services.Resources;
-using SecureVault.App.Services.Service.Application.Contracts;
+using SecureVault.App.Application.Contracts.Abstractions.Cryptography;
+using SecureVault.App.Application.Features.CQRS.Register.Commands;
+using SecureVault.App.Models.RecoveryKeyModels;
+using SecureVault.App.Models.RegisterModels;
+using SecureVault.App.Resources.Localization;
 
 namespace SecureVault.App.Components.Pages.Register
 {
@@ -18,27 +18,24 @@ namespace SecureVault.App.Components.Pages.Register
         private string _loadingText = "İşlem yapılıyor...";
         private string _animationClass = "slide-in-right";
 
-        private RegisterUserModel? _registerModel;
-        private string? _password;
-        private RecoveryKeyModel? _recoveryKey;
-
-        [Inject] private IUserRegistrationService UserRegistrationService { get; set; } = null!;
+        private RegisterModel _registerModel;
+        private RecoveryKeyModel _recoveryKeyModel;
+        [Inject] private IMediator Mediator { get; set; } = null!;
         [Inject] private IBip39RecoveryKeyService Bip39RecoveryKeyService { get; set; } = null!;
         [Inject] private ISnackbar Snackbar { get; set; } = null!;
         [Inject] private NavigationManager NavigationManager { get; set; } = null!;
         [Inject] private ILogger<Register> Logger { get; set; } = null!;
         [Inject] private IStringLocalizer<SharedResources> Localizer { get; set; } = null!;
 
-        private async Task ProceedToRecoveryStep((RegisterUserModel model, string password) args)
+        private async Task ProceedToRecoveryStep(RegisterModel registerModel)
         {
-            _registerModel = args.model;
-            _password = args.password;
-
+            _registerModel = registerModel;
             _animationClass = "slide-out-left";
             StateHasChanged();
             await Task.Delay(400);
 
-            _recoveryKey = Bip39RecoveryKeyService.Generate();
+            _recoveryKeyModel = new RecoveryKeyModel(Bip39RecoveryKeyService.Generate());
+
             _registrationStep = 2;
             _animationClass = "slide-in-right";
             StateHasChanged();
@@ -50,13 +47,12 @@ namespace SecureVault.App.Components.Pages.Register
             await Task.Delay(400);
 
             _registrationStep = 1;
-            _recoveryKey = null;
             _animationClass = "slide-in-left";
             StateHasChanged();
         }
         private async Task Submit()
         {
-            if (_registerModel is null || _recoveryKey is null || string.IsNullOrEmpty(_password))
+            if (_registerModel is null)
             {
                 Snackbar.Add("Beklenmedik bir hata oluştu. Lütfen sayfayı yenileyin.", Severity.Error);
                 return;
@@ -68,8 +64,17 @@ namespace SecureVault.App.Components.Pages.Register
 
             try
             {
-                var result = await UserRegistrationService.RegisterAndBackupAsync(_registerModel, _password, _recoveryKey);
+                var command = new RegisterUserCommand 
+                {
+                    Email = _registerModel.Email,
+                    Password = _registerModel.Password,
+                    Name = _registerModel.Name,
+                    Surname = _registerModel.Surname,
+                    PhoneNumber = _registerModel.PhoneNumber,
+                    MnemonicRecoveryKey = _recoveryKeyModel.Mnemonic
+                };
 
+                var result = await Mediator.Send(command);
                 if (result.IsSuccess)
                 {
                     Snackbar.Add("Hesabınız başarıyla oluşturuldu!", Severity.Success);
@@ -101,7 +106,7 @@ namespace SecureVault.App.Components.Pages.Register
             await Task.Delay(400);
 
             _registrationStep = 1;
-            _recoveryKey = null;
+            _recoveryKeyModel = null;
             _animationClass = "slide-in-left";
             StateHasChanged();
         }

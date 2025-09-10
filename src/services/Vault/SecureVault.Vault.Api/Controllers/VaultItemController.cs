@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using AutoMapper;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SecureVault.Vault.Application.Contracts.DTOs.VaultItemDto;
@@ -21,6 +22,16 @@ namespace SecureVault.Vault.Api.Controllers
             _mediator = mediator;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetUserVaultItemsAsync()
+        {
+            var result = await _mediator.Send(new GetAllUserVaultItemsByUserIdQuery(CurrentUserId));
+            if (result.IsSuccess)
+                return Ok(result.Value);
+            else
+                return BadRequest(result.Error);
+        }
+
         [HttpGet("vault-items/type/{itemType}")]
         public async Task<IActionResult> GetUserVaultItemsByVaultTypeAsync(ItemType itemType)
         {
@@ -31,21 +42,38 @@ namespace SecureVault.Vault.Api.Controllers
                 return BadRequest(result.Error);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateVaultItemCommand command)
+        [HttpGet("sync")]
+        public async Task<IActionResult> GetUserVaultItemsByLastSyncTimeAsync([FromQuery] DateTimeOffset lastUpdateTime)
         {
-            var finalCommand = command with { UserId = CurrentUserId };
-            var result = await _mediator.Send(finalCommand);
+            var result = await _mediator.Send(new GetAllUserVaultItemsByLastSyncTimeQuery(CurrentUserId, lastUpdateTime, UniqueDeviceId));
+            if (result.IsSuccess)
+                return Ok(result.Value);
+            else
+                return BadRequest(result.Error);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] CreateVaultItemDto createVaultItemDto)
+        {
+            var command = new CreateVaultItemCommand(
+                createVaultItemDto.Id,
+                CurrentUserId,
+                createVaultItemDto.ItemType,
+                createVaultItemDto.EncryptedData,
+                createVaultItemDto.CreatedAt,
+                UniqueDeviceId
+            );
+            var result = await _mediator.Send(command);
             if (result.IsSuccess)
                 return Ok();
             else
                 return BadRequest(result.Error);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateVaultItemDto request)
+        [HttpPut]
+        public async Task<IActionResult> Update([FromBody] UpdateVaultItemDto request)
         {
-            var command = new UpdateVaultItemCommand(id, CurrentUserId, request.EncryptedData);
+            var command = new UpdateVaultItemCommand(request.Id, CurrentUserId, request.EncryptedData, request.UpdatedAt, UniqueDeviceId);
             var result = await _mediator.Send(command);
             if (result.IsSuccess)
                 return Ok(result);
@@ -56,7 +84,7 @@ namespace SecureVault.Vault.Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var command = new DeleteVaultItemCommand(id, CurrentUserId);
+            var command = new DeleteVaultItemCommand(id, CurrentUserId, UniqueDeviceId);
             var result = await _mediator.Send(command);
             if (result.IsSuccess)
                 return Ok();
@@ -64,6 +92,7 @@ namespace SecureVault.Vault.Api.Controllers
                 return BadRequest(result.Error);
         }
 
+        private string UniqueDeviceId => Request.Headers["X-Device-Id"].FirstOrDefault();
         private Guid CurrentUserId
         {
             get

@@ -1,30 +1,35 @@
-﻿using Microsoft.Extensions.Localization;
+﻿using AutoMapper;
+using MediatR;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OtpNet;
-using SecureVault.App.Services.Models.VaultItemModels;
-using SecureVault.App.Services.Resources;
-using SecureVault.App.Services.Service.Infrastructure.Contracts;
+using SecureVault.App.Application.Features.CQRS.TwoFactorAuthCodes.Queries;
+using SecureVault.App.Domain.Enums;
+using SecureVault.App.Models.TwoFactorAuthCodeModels;
+using SecureVault.App.Resources.Localization;
 using SecureVault.Shared.Result;
-using OtpType = SecureVault.App.Services.Models.VaultItemModels.OtpType;
+using OtpType = SecureVault.App.Domain.Enums.OtpType;
 
 namespace SecureVault.App.Services
 {
     public class OtpService : IOtpService
     {
-        private readonly IVaultItemService<TwoFactorAuthModel> _vaultItemService;
+        private readonly IMediator _mediator;
+        private readonly IMapper _mapper;
         private readonly IStringLocalizer<SharedResources> _localizer;
         private readonly ILogger<OtpService> _logger;
         private readonly List<OtpViewModel> _displayItems = [];
         private readonly CancellationTokenSource _cts = new();
         public bool IsLoading { get; private set; } = true;
         public Error? InitializationError { get; private set; }
-        public event Action? OnTick;
+        public event Func<Task>? OnTick;
         public IReadOnlyList<OtpViewModel> Items => _displayItems.AsReadOnly();
         private bool _isLoopStarted = false;
-
-        public OtpService(IVaultItemService<TwoFactorAuthModel> vaultItemService, IStringLocalizer<SharedResources> localizer, ILogger<OtpService> logger)
+        private Task? _updateLoopTask;
+        public OtpService(IMediator mediator, IMapper mapper, IStringLocalizer<SharedResources> localizer, ILogger<OtpService> logger)
         {
-            _vaultItemService = vaultItemService;
+            _mediator = mediator;
+            _mapper = mapper;
             _localizer = localizer;
             _logger = logger;
         }
@@ -33,7 +38,7 @@ namespace SecureVault.App.Services
         {
             IsLoading = true;
             InitializationError = null;
-            OnTick?.Invoke();
+            await InvokeOnTickAsync();
 
             try
             {
@@ -47,12 +52,12 @@ namespace SecureVault.App.Services
             finally
             {
                 IsLoading = false;
-                OnTick?.Invoke();
+                await InvokeOnTickAsync();
             }
 
             if (!_isLoopStarted)
             {
-                _ = StartUiUpdateLoop();
+                _updateLoopTask = StartUiUpdateLoop();
                 _isLoopStarted = true;
             }
         }
@@ -64,20 +69,18 @@ namespace SecureVault.App.Services
 
         private async Task LoadDataAndGenerateInitialCodes()
         {
-            var result = await _vaultItemService.GetVaultItemsByItemTypeAsync(ItemType.TwoFactorAuth);
-            if (!result.IsSuccess)
-            {
-                InitializationError = result.Error;
+            var result = await _mediator.Send(new GetAllTwoFactorAuthCodeQuery());
+            if (result is null)
                 return;
-            }
+            var twoFactorAuthModel = _mapper.Map<List<TwoFactorAuthCodeModel>>(result);
             _displayItems.Clear();
-            _displayItems.AddRange(result.Value.Select(model => new OtpViewModel { Model = model }));
+            _displayItems.AddRange(twoFactorAuthModel.Select(model => new OtpViewModel { Model = model }));
 
             foreach (var item in _displayItems)
             {
-                item.OtpGenerator = CreateOtpGenerator(item.Model);
+                item.OtpGenerator = OtpService.CreateOtpGenerator(item.Model);
                 GenerateNewCode(item);
-                UpdateTimeLeft(item);
+                OtpService.UpdateTimeLeft(item);
             }
         }
 
@@ -96,7 +99,7 @@ namespace SecureVault.App.Services
                         if (item.OtpGenerator is Totp totpGenerator)
                         {
                             int previousTimeLeft = item.TimeLeft;
-                            UpdateTimeLeft(item);
+                            OtpService.UpdateTimeLeft(item);
 
                             if (item.TimeLeft > previousTimeLeft)
                             {
@@ -105,7 +108,11 @@ namespace SecureVault.App.Services
                         }
                     }
 
-                    OnTick?.Invoke();
+                    await InvokeOnTickAsync();
+                }
+                catch (TaskCanceledException)
+                {
+                    break;
                 }
                 catch (Exception ex)
                 {
@@ -113,12 +120,12 @@ namespace SecureVault.App.Services
                 }
             }
         }
-        private void UpdateTimeLeft(OtpViewModel item)
+        private static void UpdateTimeLeft(OtpViewModel item)
         {
             if (item.OtpGenerator is Totp totpGenerator)
             {
                 item.TimeLeft = totpGenerator.RemainingSeconds();
-                item.ProgressValue = ((double)item.TimeLeft / item.Model.Period) * 100;
+                item.ProgressValue = (double)item.TimeLeft / item.Model.Period * 100;
             }
             else
             {
@@ -147,7 +154,7 @@ namespace SecureVault.App.Services
                 item.CurrentCode = _localizer[SharedResources.Text_ClickToGenerate];
             }
         }
-        private Otp? CreateOtpGenerator(TwoFactorAuthModel model)
+        private static Otp? CreateOtpGenerator(TwoFactorAuthCodeModel model)
         {
             var secretKeyBytes = Base32Encoding.ToBytes(model.SecretKey);
             var hashMode = model.Algorithm switch
@@ -181,13 +188,13 @@ namespace SecureVault.App.Services
 
                 item.Model.Counter++;
 
-                var updateResult = await _vaultItemService.UpdateVaultItem(item.Model);
-                if (!updateResult.IsSuccess)
-                {
-                    _logger.LogError("Failed to update HOTP counter for item {ItemId}: {Error}", itemId, updateResult.Error);
-                    item.HasError = true;
-                    item.CurrentCode = _localizer[SharedResources.Text_Error_General];
-                }
+                //var updateResult = await _vaultItemService.UpdateVaultItem(item.Model);
+                //if (!updateResult.IsSuccess)
+                //{
+                //    _logger.LogError("Failed to update HOTP counter for item {ItemId}: {Error}", itemId, updateResult.Error);
+                //    item.HasError = true;
+                //    item.CurrentCode = _localizer[SharedResources.Text_Error_General];
+                //}
             }
             catch (Exception ex)
             {
@@ -197,14 +204,40 @@ namespace SecureVault.App.Services
             }
             finally
             {
-                OnTick?.Invoke();
+                await InvokeOnTickAsync();
             }
         }
-        public void Dispose()
+
+        private async Task InvokeOnTickAsync()
         {
+            if (OnTick == null) return;
+
+            var handlers = OnTick.GetInvocationList();
+            foreach (var handler in handlers)
+            {
+                try
+                {
+                    if (handler is Func<Task> taskHandler)
+                    {
+                        await taskHandler();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "OnTick abonesi hata fırlattı.");
+                }
+            }
+        }
+        public async ValueTask DisposeAsync()
+        {
+            if (_cts.IsCancellationRequested) return;
+
             _cts.Cancel();
+            if (_updateLoopTask != null)
+            {
+                await _updateLoopTask;
+            }
             _cts.Dispose();
-            GC.SuppressFinalize(this);
         }
     }
 }

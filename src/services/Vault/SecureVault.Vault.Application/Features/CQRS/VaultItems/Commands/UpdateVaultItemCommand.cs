@@ -3,6 +3,6 @@ using SecureVault.Shared.Result;
 
 namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Commands
 {
-    public record UpdateVaultItemCommand(Guid Id, Guid UserId, byte[] EncryptedData)
+    public record UpdateVaultItemCommand(Guid Id, Guid UserId, byte[] EncryptedData, DateTimeOffset UpdatedAt, string LastUpdatedByDeviceId)
         : IRequest<Result>;
 }

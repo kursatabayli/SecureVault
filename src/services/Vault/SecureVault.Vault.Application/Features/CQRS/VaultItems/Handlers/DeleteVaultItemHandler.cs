@@ -1,6 +1,8 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using SecureVault.Shared.Contracts.Events;
+using SecureVault.Shared.RabbitMQ.Contracts;
 using SecureVault.Shared.Result;
 using SecureVault.Vault.Application.Contracts.Repositories;
 using SecureVault.Vault.Application.Features.CQRS.VaultItems.Commands;
@@ -13,12 +15,13 @@ namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
         private readonly IVaultItemsRepository _repository;
         private readonly ILogger<DeleteVaultItemHandler> _logger;
         private readonly IStringLocalizer<ReturnMessages> _returnMessages;
-
-        public DeleteVaultItemHandler(IVaultItemsRepository repository, ILogger<DeleteVaultItemHandler> logger, IStringLocalizer<ReturnMessages> returnMessages)
+        private readonly IEventPublisher _eventPublisher;
+        public DeleteVaultItemHandler(IVaultItemsRepository repository, ILogger<DeleteVaultItemHandler> logger, IStringLocalizer<ReturnMessages> returnMessages, IEventPublisher eventPublisher)
         {
             _repository = repository;
             _logger = logger;
             _returnMessages = returnMessages;
+            _eventPublisher = eventPublisher;
         }
 
         public async Task<Result> Handle(DeleteVaultItemCommand request, CancellationToken cancellationToken)
@@ -39,9 +42,11 @@ namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
                     return Result.Failure(new Error(ErrorCodes.UnauthorizedAccess, _returnMessages[ErrorCodes.UnauthorizedAccess]));
                 }
 
-                vaultItem.Delete();
+                vaultItem.Delete(request.LastUpdatedByDeviceId);
                 await _repository.UpdateAsync(vaultItem);
-                _logger.LogInformation("Vault item başarıyla silindi. ItemId: {ItemId}, UserId: {UserId}", request.Id, request.UserId);
+
+                var itemUpdatedEvent = new UserActivityOccurredIntegrationEvent(vaultItem.UserId);
+                await _eventPublisher.PublishAsync(itemUpdatedEvent, "vault.item.created", cancellationToken);
 
                 return Result.Success();
             }
