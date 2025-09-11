@@ -44,6 +44,7 @@ namespace SecureVault.App.Infrastructure
             services.AddTransient<DeviceHeadersHandler>();
             services.AddTransient<AuthTokenHandler>();
             services.AddTransient<AddBearerTokenHandler>();
+            services.AddTransient<PollyResiliencyHandler>();
             services.AddSingleton<IHttpHandlerPipelineBuilder, HttpHandlerPipelineBuilder>();   
 
             //repositories
@@ -115,12 +116,14 @@ namespace SecureVault.App.Infrastructure
             }
             services.AddRefitClient<ISecureVaultAuthorizeApi>(refitSettings)
                     .ConfigureHttpClient(configureClient)
+                    .AddHttpMessageHandler<PollyResiliencyHandler>()
                     .AddHttpMessageHandler<DeviceHeadersHandler>()
                     .AddHttpMessageHandler<AuthTokenHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => configureHandler(apiSettings.DevMachineName));
 
             services.AddRefitClient<ISecureVaultAnonymousApi>(refitSettings)
                     .ConfigureHttpClient(configureClient)
+                    .AddHttpMessageHandler<PollyResiliencyHandler>()
                     .AddHttpMessageHandler<DeviceHeadersHandler>()
                     .AddHttpMessageHandler<AddBearerTokenHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => configureHandler(apiSettings.DevMachineName));

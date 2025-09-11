@@ -1,7 +1,9 @@
-﻿namespace SecureVault.App.Application.Contracts.Abstractions.Api
+﻿using SecureVault.Shared.Result;
+
+namespace SecureVault.App.Application.Contracts.Abstractions.Api
 {
     public interface IInteractionService
     {
-        Task<string> CreateQrLoginChannelAsync(CancellationToken cancellationToken);
+        Task<Result<string>> CreateQrLoginChannelAsync(CancellationToken cancellationToken);
     }
 }
