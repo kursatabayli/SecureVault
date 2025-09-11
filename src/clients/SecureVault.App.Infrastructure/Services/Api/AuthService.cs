@@ -1,4 +1,5 @@
-﻿using Refit;
+﻿using Polly.CircuitBreaker;
+using Refit;
 using SecureVault.App.Application.Contracts.Abstractions.Api;
 using SecureVault.App.Application.Contracts.Abstractions.Cryptography;
 using SecureVault.App.Application.Contracts.Abstractions.Persistence;
@@ -18,10 +19,10 @@ namespace SecureVault.App.Infrastructure.Services.Api
         private readonly ISecureVaultAnonymousApi _secureVaultAnonymousApi;
         private readonly IStorageService _storageService;
         public AuthService(IHashService hashService,
-                           IAuthenticationStateNotifier authenticationStateNotifier,
-                           IBouncyCastleCryptoService bouncyCastleCryptoService,
-                           ISecureVaultAnonymousApi secureVaultAnonymousApi,
-                           IStorageService storageService)
+                               IAuthenticationStateNotifier authenticationStateNotifier,
+                               IBouncyCastleCryptoService bouncyCastleCryptoService,
+                               ISecureVaultAnonymousApi secureVaultAnonymousApi,
+                               IStorageService storageService)
         {
             _hashService = hashService;
             _authenticationStateNotifier = authenticationStateNotifier;
@@ -34,27 +35,34 @@ namespace SecureVault.App.Infrastructure.Services.Api
             try
             {
                 var challengeDto = await _secureVaultAnonymousApi.GetChallengeAsync(loginDto.Email, cancellationToken);
-
                 var masterSecret = _hashService.CreateMasterSecret(loginDto.Password, challengeDto.Salt);
                 byte[] privateKey = _hashService.GetPrivateKeyForAuth(masterSecret, challengeDto.Salt);
-
                 var signatureHex = SignChallenge(challengeDto.Challenge, privateKey);
-
                 var loginCredentials = new LoginCredentialsDto(loginDto.Email, signatureHex);
                 var authResponse = await _secureVaultAnonymousApi.LoginAsync(loginDto.RememberMe, loginCredentials, cancellationToken);
-
                 await _storageService.SetTokensAsync(authResponse);
                 byte[] encryptionKey = _hashService.GetEncryptionKeyForData(masterSecret, challengeDto.Salt);
                 await _storageService.SetKeysAsync(privateKey, encryptionKey);
                 _storageService.SetEmail(loginDto.Email);
                 await _authenticationStateNotifier.NotifyUserAuthenticated(authResponse.AccessToken);
-
                 return Result.Success();
+            }
+            catch (BrokenCircuitException)
+            {
+                return Result.Failure(new Error("Service.Unavailable", "Servis geçici olarak kullanılamıyor. Lütfen birkaç dakika sonra tekrar deneyin."));
             }
             catch (ApiException ex)
             {
                 var error = await ex.GetContentAsAsync<Error>();
-                return Result.Failure(error ?? new Error("Client.NetworkError", "Bir hata oluştu."));
+                return Result.Failure(error ?? new Error("Client.LoginFailed", "Giriş başarısız."));
+            }
+            catch (HttpRequestException)
+            {
+                return Result.Failure(new Error("Service.ConnectionError", "Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin veya daha sonra tekrar deneyin."));
+            }
+            catch (Exception)
+            {
+                return Result.Failure(new Error("Client.UnexpectedError", "Beklenmedik bir hata oluştu. Lütfen daha sonra tekrar deneyin."));
             }
         }
 
@@ -63,23 +71,31 @@ namespace SecureVault.App.Infrastructure.Services.Api
             try
             {
                 var challengeDto = await _secureVaultAnonymousApi.GetChallengeAsync(loginQrCodeDto.Email, cancellationToken);
-
                 var signatureHex = SignChallenge(challengeDto.Challenge, loginQrCodeDto.PrivateKey);
-
                 var loginCredentials = new LoginCredentialsDto(loginQrCodeDto.Email, signatureHex);
                 var authResponse = await _secureVaultAnonymousApi.LoginAsync(true, loginCredentials, cancellationToken);
-
                 await _storageService.SetTokensAsync(authResponse);
                 await _storageService.SetKeysAsync(loginQrCodeDto.PrivateKey, loginQrCodeDto.EncryptionKey);
                 _storageService.SetEmail(loginQrCodeDto.Email);
                 await _authenticationStateNotifier.NotifyUserAuthenticated(authResponse.AccessToken);
-
                 return Result.Success();
+            }
+            catch (BrokenCircuitException)
+            {
+                return Result.Failure(new Error("Service.Unavailable", "Servis geçici olarak kullanılamıyor. Lütfen birkaç dakika sonra tekrar deneyin."));
             }
             catch (ApiException ex)
             {
                 var error = await ex.GetContentAsAsync<Error>();
-                return Result.Failure(error ?? new Error("Client.NetworkError", "Bir hata oluştu."));
+                return Result.Failure(error ?? new Error("Client.LoginFailed", "Giriş başarısız."));
+            }
+            catch (HttpRequestException)
+            {
+                return Result.Failure(new Error("Service.ConnectionError", "Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin veya daha sonra tekrar deneyin."));
+            }
+            catch (Exception)
+            {
+                return Result.Failure(new Error("Client.UnexpectedError", "Beklenmedik bir hata oluştu. Lütfen daha sonra tekrar deneyin."));
             }
         }
         public async Task<Result?> RefreshTokenAsync(CancellationToken cancellationToken)
@@ -99,11 +115,23 @@ namespace SecureVault.App.Infrastructure.Services.Api
                 await _storageService.SetTokensAsync(authResponse);
                 return Result.Success();
             }
+            catch (BrokenCircuitException)
+            {
+                return Result.Failure(new Error("Service.Unavailable", "Servis geçici olarak kullanılamıyor. Lütfen birkaç dakika sonra tekrar deneyin."));
+            }
             catch (ApiException ex)
             {
                 await LogoutAsync(cancellationToken);
                 var error = await ex.GetContentAsAsync<Error>();
                 return Result.Failure(error ?? new Error("Auth.InvalidRefreshToken", "Token yenileme başarısız."));
+            }
+            catch (HttpRequestException)
+            {
+                return Result.Failure(new Error("Service.ConnectionError", "Sunucuya bağlanılamadı. Token yenilenemedi."));
+            }
+            catch (Exception)
+            {
+                return Result.Failure(new Error("Client.UnexpectedError", "Token yenileme sırasında beklenmedik bir hata oluştu."));
             }
         }
 
@@ -118,12 +146,15 @@ namespace SecureVault.App.Infrastructure.Services.Api
                 {
                     await _secureVaultAnonymousApi.LogoutAsync(refreshToken, cancellationToken);
                 }
-                catch (ApiException)
+                catch (Exception)
                 {
+                    // Logout sırasında sunucuya ulaşılamasa bile sorun değil.
+                    // Akışın devam edip local token'ları temizlemesi daha önemli.
+                    // Bu yüzden bu blokta hatayı yutuyoruz.
                 }
             }
 
-            await _authenticationStateNotifier.NotifyUserLogout(); 
+            await _authenticationStateNotifier.NotifyUserLogout();
             return Result.Success();
         }
 

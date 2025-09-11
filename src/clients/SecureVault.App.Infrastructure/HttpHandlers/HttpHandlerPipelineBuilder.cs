@@ -32,13 +32,15 @@ namespace SecureVault.App.Infrastructure.HttpHandlers
                 }
             };
 
+            var pollyResiliencyHandler = _serviceProvider.GetRequiredService<PollyResiliencyHandler>();
             var deviceHeadersHandler = _serviceProvider.GetRequiredService<DeviceHeadersHandler>();
             var authTokenHandler = _serviceProvider.GetRequiredService<AuthTokenHandler>();
 
+            pollyResiliencyHandler.InnerHandler = deviceHeadersHandler;
             deviceHeadersHandler.InnerHandler = authTokenHandler;
             authTokenHandler.InnerHandler = customFinalHandler;
 
-            return deviceHeadersHandler;
+            return pollyResiliencyHandler;
         }
     }
 }

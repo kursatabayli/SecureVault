@@ -55,10 +55,10 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
 
                 if (method == InitiationMethod.GenerateQrCode)
                 {
-                    _channelId = await _interactionService.CreateQrLoginChannelAsync(cancellationToken);
+                    var response = await _interactionService.CreateQrLoginChannelAsync(cancellationToken);
                     if (string.IsNullOrEmpty(_channelId))
                         throw new InvalidOperationException("Sunucudan kanal ID'si alınamadı.");
-
+                    _channelId = response.Value;
                     await SafeInvokeAsync(() => OnQrCodeAvailable?.Invoke(_channelId));
                 }
                 else
