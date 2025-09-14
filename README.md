@@ -163,7 +163,7 @@ Follow the steps below to run the project on your local machine.
 #### Setup Steps
 1.  **Clone the Project:**
     ```bash
-    git clone [https://github.com/kursatabayli/SecureVault.git](https://github.com/kursatabayli/SecureVault.git)
+    git clone https://github.com/kursatabayli/SecureVault.git
     cd securevault
     ```
 
