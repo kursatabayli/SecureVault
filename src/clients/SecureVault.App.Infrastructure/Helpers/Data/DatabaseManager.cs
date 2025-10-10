@@ -4,14 +4,22 @@ using SecureVault.App.Infrastructure.Context;
 
 namespace SecureVault.App.Infrastructure.Helpers.Data
 {
-    public static class DatabaseManager
+    public class DatabaseManager
     {
-        public static async Task EnsureDatabaseIsReadyAsync(IServiceProvider serviceProvider)
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ILoggerFactory _loggerFactory;
+
+        // Constructor ile IServiceScopeFactory ve ILoggerFactory enjekte ediyoruz.
+        public DatabaseManager(IServiceScopeFactory scopeFactory, ILoggerFactory loggerFactory)
         {
-            await using var scope = serviceProvider.CreateAsyncScope();
+            _scopeFactory = scopeFactory;
+            _loggerFactory = loggerFactory;
+        }
+        public async Task EnsureDatabaseIsReadyAsync()
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
             var services = scope.ServiceProvider;
-            var loggerFactory = services.GetRequiredService<ILoggerFactory>();
-            var logger = loggerFactory.CreateLogger("DatabaseManager");
+            var logger = _loggerFactory.CreateLogger("DatabaseManager");
             try
             {
                 logger.LogInformation("Veritabanı durumu kontrol ediliyor ve hazırlanıyor...");
@@ -26,12 +34,11 @@ namespace SecureVault.App.Infrastructure.Helpers.Data
             }
         }
 
-        public static async Task DeleteDatabaseAsync(IServiceProvider serviceProvider)
+        public async Task DeleteDatabaseAsync()
         {
-            await using var scope = serviceProvider.CreateAsyncScope();
+            await using var scope = _scopeFactory.CreateAsyncScope();
             var services = scope.ServiceProvider;
-            var loggerFactory = services.GetRequiredService<ILoggerFactory>();
-            var logger = loggerFactory.CreateLogger("DatabaseManager");
+            var logger = _loggerFactory.CreateLogger("DatabaseManager");
             try
             {
                 logger.LogInformation("Veritabanı silme işlemi başlatılıyor...");
@@ -46,12 +53,11 @@ namespace SecureVault.App.Infrastructure.Helpers.Data
             }
         }
 
-        public static async Task ResetDatabaseAsync(IServiceProvider serviceProvider)
+        public async Task ResetDatabaseAsync()
         {
-            await using var scope = serviceProvider.CreateAsyncScope();
+            await using var scope = _scopeFactory.CreateAsyncScope();
             var services = scope.ServiceProvider;
-            var loggerFactory = services.GetRequiredService<ILoggerFactory>();
-            var logger = loggerFactory.CreateLogger("DatabaseManager");
+            var logger = _loggerFactory.CreateLogger("DatabaseManager");
             try
             {
                 logger.LogInformation("Veritabanı sıfırlama işlemi başlatılıyor...");

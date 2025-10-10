@@ -22,12 +22,11 @@ namespace SecureVault.App.Components.Pages.Auth
         [Inject] private ISnackbar Snackbar { get; set; } = null!;
         [Inject] private NavigationManager NavigationManager { get; set; } = null!;
         [Inject] private ILogger<Login> Logger { get; set; } = null!;
-        [Inject] private IServiceProvider ServiceProvider { get; set; } = null!;
-
+        [Inject] private DatabaseManager DbManager { get; set; } = null!;
 
         protected override async Task OnInitializedAsync()
         {
-            await DatabaseManager.EnsureDatabaseIsReadyAsync(ServiceProvider);
+            await DbManager.EnsureDatabaseIsReadyAsync();
         }
         private async Task Submit()
         {

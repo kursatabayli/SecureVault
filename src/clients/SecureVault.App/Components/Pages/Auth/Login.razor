@@ -29,12 +29,12 @@
                                    @bind-Password="loginModel.Password"
                                    ValidationExpression="@(() => loginModel.Password)" />
 
-                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mt-4">
-                        <MudCheckBox @bind-Value="loginModel.RememberMe" Label="Beni Hatırla" Color="Color.Primary" Dense="true"></MudCheckBox>
+                    <MudCheckBox Class="mt-4" @bind-Value="loginModel.RememberMe" Label="Beni Hatırla" Color="Color.Primary" Dense="true" />
+
+                    <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center" Class="mt-4">
                         <MudLink Href="/login-with-qr-code">Qr Kod İle Giriş Yapın</MudLink>
                         <MudLink Href="/forgot-password">Şifrenizi mi unuttunuz?</MudLink>
                     </MudStack>
-
                 </MudForm>
 
                 <MudButton Variant="Variant.Filled"
