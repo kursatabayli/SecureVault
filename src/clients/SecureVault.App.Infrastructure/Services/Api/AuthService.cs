@@ -73,7 +73,8 @@ namespace SecureVault.App.Infrastructure.Services.Api
                 var challengeDto = await _secureVaultAnonymousApi.GetChallengeAsync(loginQrCodeDto.Email, cancellationToken);
                 var signatureHex = SignChallenge(challengeDto.Challenge, loginQrCodeDto.PrivateKey);
                 var loginCredentials = new LoginCredentialsDto(loginQrCodeDto.Email, signatureHex);
-                var authResponse = await _secureVaultAnonymousApi.LoginAsync(true, loginCredentials, cancellationToken);
+                var authResponse = await _secureVaultAnonymousApi.LoginAsync(loginQrCodeDto.RememberMe, loginCredentials, cancellationToken);
+
                 await _storageService.SetTokensAsync(authResponse);
                 await _storageService.SetKeysAsync(loginQrCodeDto.PrivateKey, loginQrCodeDto.EncryptionKey);
                 _storageService.SetEmail(loginQrCodeDto.Email);

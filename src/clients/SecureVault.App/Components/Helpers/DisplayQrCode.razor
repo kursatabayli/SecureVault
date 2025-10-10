@@ -1,0 +1,23 @@
+﻿@using SecureVault.App.Services
+
+<MudText Typo="Typo.h6" GutterBottom="true">
+    <MudIcon Icon="@Icons.Material.Filled.QrCode2" Class="mr-2" />
+    Giriş Yapmak İçin Okutun
+</MudText>
+
+<div class="d-flex flex-column align-center justify-center my-4 pa-4">
+    @if (!string.IsNullOrEmpty(_qrCodeBase64String))
+    {
+        <MudText Typo="Typo.body1" Class="mb-4 text-center">Diğer cihazınızla bu QR kodu okutarak giriş yapabilirsiniz.</MudText>
+        <MudImage Src="@_qrCodeBase64String" Alt="Giriş için QR Kod" Style="max-width: 250px; border: 1px solid #e0e0e0; border-radius: 8px;" />
+    }
+    else
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        <MudText Class="mt-3">QR Kod oluşturuluyor...</MudText>
+    }
+</div>
+
+<div class="d-flex justify-end mt-2">
+    <MudButton OnClick="HandleClose" Variant="Variant.Text">Kapat</MudButton>
+</div>

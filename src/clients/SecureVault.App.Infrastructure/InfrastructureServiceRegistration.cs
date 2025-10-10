@@ -15,6 +15,7 @@ using SecureVault.App.Infrastructure.Repositories;
 using SecureVault.App.Infrastructure.Services.Api;
 using SecureVault.App.Infrastructure.Services.Device;
 using SecureVault.App.Infrastructure.Services.QrCodeLogin;
+using SecureVault.App.Infrastructure.Services.QrCodeLogin.MessageHandlers;
 using SecureVault.App.Infrastructure.Services.Storage;
 using SecureVault.App.Infrastructure.Services.Sync;
 using SecureVault.App.Infrastructure.Services.Sync.Handlers;
@@ -76,7 +77,16 @@ namespace SecureVault.App.Infrastructure
 
             //qr code login
             services.AddScoped<IQrLoginOrchestrator, QrLoginOrchestratorService>();
+            services.AddScoped<IQrLoginContext>(sp => sp.GetRequiredService<IQrLoginOrchestrator>() as QrLoginOrchestratorService);
+            services.AddScoped<IQrHubConnection, QrHubConnection>();
+            services.AddScoped<ISecureChannelManager, SecureChannelManager>();
 
+            services.AddScoped<IMessageHandler, AuthorizationApprovedHandler>();
+            services.AddScoped<IMessageHandler, AuthorizationDeniedHandler>();
+            services.AddScoped<IMessageHandler, ChannelReadyHandler>();
+            services.AddScoped<IMessageHandler, DeviceInfoRequestHandler>();
+            services.AddScoped<IMessageHandler, EncryptedLoginDataHandler>();
+            services.AddScoped<IMessageHandler, PublicKeyHandler>();
 
             services.Configure<ApiSettings>(config.GetSection(nameof(ApiSettings)));
             services.Configure<SignalRSettings>(config.GetSection(nameof(SignalRSettings)));
