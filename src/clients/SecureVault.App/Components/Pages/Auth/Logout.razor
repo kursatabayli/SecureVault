@@ -7,11 +7,12 @@
 @code {
     [Inject] private IMediator Mediator { get; set; }
     [Inject] private NavigationManager NavigationManager { get; set; }
-    [Inject] private IServiceProvider ServiceProvider { get; set; }
+    [Inject] private DatabaseManager DbManager { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         await Mediator.Send(new LogoutCommand());
-        await DatabaseManager.ResetDatabaseAsync(ServiceProvider);
+        await DbManager.ResetDatabaseAsync();
         NavigationManager.NavigateTo("/login", true);
     }
 }

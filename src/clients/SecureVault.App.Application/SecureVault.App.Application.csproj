@@ -20,8 +20,4 @@
     <ProjectReference Include="..\SecureVault.App.Application.Contracts\SecureVault.App.Application.Contracts.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Features\CQRS\Auth\Queries\" />
-  </ItemGroup>
-
 </Project>
