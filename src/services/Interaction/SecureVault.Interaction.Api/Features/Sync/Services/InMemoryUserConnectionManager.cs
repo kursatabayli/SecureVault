@@ -5,15 +5,17 @@ namespace SecureVault.Interaction.Api.Features.Sync.Services
 {
     public class InMemoryUserConnectionManager : IUserConnectionManager
     {
-        private static readonly ConcurrentDictionary<Guid, HashSet<string>> _userConnections = new();
+        private record Connection(string ConnectionId, string DeviceId);
+
+        private static readonly ConcurrentDictionary<Guid, HashSet<Connection>> _userConnections = new();
         private static readonly ConcurrentDictionary<string, Guid> _connectionUsers = new();
 
-        public void AddConnection(Guid userId, string connectionId)
+        public void AddConnection(Guid userId, string connectionId, string deviceId)
         {
             var connections = _userConnections.GetOrAdd(userId, _ => []);
             lock (connections)
             {
-                connections.Add(connectionId);
+                connections.Add(new Connection(connectionId, deviceId));
             }
             _connectionUsers.TryAdd(connectionId, userId);
         }
@@ -26,24 +28,29 @@ namespace SecureVault.Interaction.Api.Features.Sync.Services
                 {
                     lock (connections)
                     {
-                        connections.Remove(connectionId);
+                        var connectionToRemove = connections.FirstOrDefault(c => c.ConnectionId == connectionId);
+                        if (connectionToRemove is not null)
+                            connections.Remove(connectionToRemove);
+
                         if (!connections.Any())
-                        {
                             _userConnections.TryRemove(userId, out _);
-                        }
                     }
                 }
                 return userId;
             }
             return null;
         }
-        public IReadOnlyList<string> GetConnections(Guid userId)
+        public IReadOnlyList<string> GetConnections(Guid userId, string? deviceIdToExclude = null)
         {
             if (_userConnections.TryGetValue(userId, out var connections))
             {
                 lock (connections)
                 {
-                    return [.. connections];
+                    IEnumerable<Connection> query = connections;
+                    if (!string.IsNullOrEmpty(deviceIdToExclude))
+                        query = query.Where(c => c.DeviceId != deviceIdToExclude);
+
+                    return [.. query.Select(c => c.ConnectionId)];
                 }
             }
             return [];

@@ -45,7 +45,7 @@ namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
                 vaultItem.UpdateData(request.EncryptedData, request.UpdatedAt, request.LastUpdatedByDeviceId);
                 await _repository.UpdateAsync(vaultItem);
 
-                var itemUpdatedEvent = new UserActivityOccurredIntegrationEvent(vaultItem.UserId);
+                var itemUpdatedEvent = new UserActivityOccurredIntegrationEvent(vaultItem.UserId, request.LastUpdatedByDeviceId);
                 await _eventPublisher.PublishAsync(itemUpdatedEvent, "vault.item.created", cancellationToken);
 
                 return Result.Success();

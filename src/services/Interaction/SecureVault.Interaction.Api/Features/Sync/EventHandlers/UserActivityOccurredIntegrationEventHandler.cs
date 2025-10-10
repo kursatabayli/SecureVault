@@ -18,8 +18,8 @@ namespace SecureVault.Interaction.Api.Features.Sync.EventHandlers
 
         public async Task Handle(UserActivityOccurredIntegrationEvent @event)
         {
-            _logger.LogInformation("UserId: {UserId} için senkronizasyon bildirimi gönderiliyor.", @event.UserId);
-            await _notificationService.NotifyClientsForSync(@event.UserId);
+            _logger.LogInformation("UserId: {UserId} için senkronizasyon bildirimi gönderiliyor. Kaynak Cihaz: {DeviceId}", @event.UserId, @event.OriginDeviceId);
+            await _notificationService.NotifyClientsForSync(@event.UserId, @event.OriginDeviceId);
         }
     }
 }
