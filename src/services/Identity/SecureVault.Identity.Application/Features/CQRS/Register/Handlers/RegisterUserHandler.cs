@@ -19,16 +19,14 @@ namespace SecureVault.Identity.Application.Features.CQRS.Register.Handlers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IStringLocalizer<ReturnMessages> _returnMessages;
         private readonly ILogger<RegisterUserHandler> _logger;
-        private readonly IEventPublisher _eventPublisher;
 
-        public RegisterUserHandler(IUserRepository userRepository, IUnitOfWork unitOfWork, IStringLocalizer<ReturnMessages> returnMessages, ILogger<RegisterUserHandler> logger, IUserRecoveryDataRepository userRecoveryDataRepository, IEventPublisher eventPublisher)
+        public RegisterUserHandler(IUserRepository userRepository, IUnitOfWork unitOfWork, IStringLocalizer<ReturnMessages> returnMessages, ILogger<RegisterUserHandler> logger, IUserRecoveryDataRepository userRecoveryDataRepository)
         {
             _userRepository = userRepository;
             _unitOfWork = unitOfWork;
             _returnMessages = returnMessages;
             _logger = logger;
             _userRecoveryDataRepository = userRecoveryDataRepository;
-            _eventPublisher = eventPublisher;
         }
 
         public async Task<Result> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
@@ -46,10 +44,6 @@ namespace SecureVault.Identity.Application.Features.CQRS.Register.Handlers
                 await _userRecoveryDataRepository.CreateAsync(newRecoveryData);
 
                 await _unitOfWork.SaveChangesWithTransactionAsync();
-
-                var integrationEvent = new UserRegisteredIntegrationEvent(newUser.Id);
-
-                await _eventPublisher.PublishAsync(integrationEvent, "user.created");
 
                 return Result.Success();
             }
