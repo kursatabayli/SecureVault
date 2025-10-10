@@ -10,49 +10,67 @@
         </MudItem>
 
         <MudItem xs="12" sm="10" md="6">
-            <MudPaper Elevation="5" Class="login-form-paper">
-
-                <MudText Typo="Typo.h4" GutterBottom="true" Align="Align.Center">Giriş Yap</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Inherit" Align="Align.Center" Class="mb-6">Giriş yapmak için bir yöntem seçin.</MudText>
-                @if (!_isProcessing)
+                        <MudPaper Elevation="5" Class="login-form-paper">
+                @switch (_currentView)
                 {
-                    <MudPaper Class="pa-4" Elevation="3">
-                        <MudText Typo="Typo.h5" GutterBottom="true">QR Kod ile Giriş</MudText>
-                        <MudText Class="mb-4">Giriş yapmak için bir yöntem seçin.</MudText>
+                    case LoginPageView.InitialSelection:
+                        <MudText Typo="Typo.h4" GutterBottom="true" Align="Align.Center">Giriş Yap</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Inherit" Align="Align.Center" Class="mb-6">Giriş yapmak için bir yöntem seçin.</MudText>
+                        
+                        <MudPaper Class="pa-4" Elevation="0">
+                            <MudText Typo="Typo.h5" GutterBottom="true">QR Kod ile Giriş</MudText>
+                            <div class="d-flex flex-column gap-4 mt-4">
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.QrCodeScanner"
+                                           OnClick="ScanQrCode"
+                                           Size="Size.Large">
+                                    Başka Cihazdaki QR Kodu Tara
+                                </MudButton>
 
-                        <div class="d-flex flex-column gap-4 mt-4">
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
-                                       StartIcon="@Icons.Material.Filled.QrCodeScanner"
-                                       OnClick="StartByScanning"
-                                       Size="Size.Large">
-                                Başka Cihazdaki QR Kodu Tara
-                            </MudButton>
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Secondary"
+                                           StartIcon="@Icons.Material.Filled.QrCode2"
+                                           OnClick="GenerateQrCode"
+                                           Size="Size.Large">
+                                    Bu Cihazda QR Kodu Göster
+                                </MudButton>
+                            </div>
 
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Secondary"
-                                       StartIcon="@Icons.Material.Filled.QrCode2"
-                                       OnClick="StartByGenerating"
-                                       Size="Size.Large">
-                                Bu Cihazda QR Kodu Göster
-                            </MudButton>
+                            <div class="d-flex gap-4 mt-6">
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Default"
+                                           OnClick="GoBack"
+                                           Class="flex-grow-1">
+                                    Geri Dön
+                                </MudButton>
+                            </div>
+                        </MudPaper>
+                        break;
+
+                    case LoginPageView.Processing:
+                        <div class="d-flex flex-column align-center justify-center" style="min-height: 450px;">
+                             <Loading LoadingText="@_statusMessage" />
                         </div>
-
-                        <div class="d-flex gap-4 mt-6">
-                            <MudButton Variant="Variant.Outlined"
-                                       Color="Color.Default"
-                                       OnClick="GoBack"
-                                       Class="flex-grow-1">
-                                Geri Dön
-                            </MudButton>
-                        </div>
-                    </MudPaper>
-                }
-                else
-                {
-                    <Loading LoadingText="@_statusMessage" />
+                        break;
+                        
+                    case LoginPageView.DisplayingQr:
+                        <DisplayQrCode ChannelId="@_channelIdForQr" OnClose="HandleQrClose" />
+                        break;
                 }
             </MudPaper>
         </MudItem>
     </MudStack>
 </MudPaper>
+
+@code {
+    private enum LoginPageView
+    {
+        InitialSelection,
+        Processing,
+        DisplayingQr
+    }
+    private LoginPageView _currentView = LoginPageView.InitialSelection;
+    private string _statusMessage = "İşlem bekleniyor...";
+    private string _channelIdForQr;
+}

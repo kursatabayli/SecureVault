@@ -17,23 +17,25 @@ namespace SecureVault.App.Components.Pages.Auth
         [Inject] private IDialogService DialogService { get; set; }
         [Inject] private IQrLoginOrchestrator Orchestrator { get; set; }
         [Inject] private NavigationManager NavigationManager { get; set; }
-        private IDialogReference _qrCodeDialogReference;
 
-        private string _statusMessage = "İşlem bekleniyor...";
-        private bool _isProcessing = false;
         private CancellationTokenSource _sessionCts;
         private readonly DialogOptions DialogOptions = new() { BackdropClick = false, CloseOnEscapeKey = false, };
         protected override void OnInitialized()
         {
-            Orchestrator.OnStatusUpdate += HandleStatusUpdate;
-            Orchestrator.OnError += HandleError;
+            Orchestrator.OnStateChanged += HandleStateChanged;
             Orchestrator.OnQrCodeAvailable += HandleQrCodeAvailable;
             Orchestrator.OnLoginCredentialsReceived += HandleLoginCredentialsReceived;
         }
-
-        private async Task StartByScanning()
+        private void SetView(LoginPageView view, string statusMessage = null)
         {
-            _isProcessing = true;
+            _currentView = view;
+            if (statusMessage is not null)
+                _statusMessage = statusMessage;
+            InvokeAsync(StateHasChanged);
+        }
+        private async Task ScanQrCode()
+        {
+            SetView(LoginPageView.Processing, "QR kod taranıyor...");
 
             var dialog = await DialogService.ShowAsync<ScanQRCodeDialog>("QR Kodu Tara", DialogOptions);
             var result = await dialog.Result;
@@ -43,93 +45,93 @@ namespace SecureVault.App.Components.Pages.Auth
                 try
                 {
                     _sessionCts = new CancellationTokenSource();
-                    await Orchestrator.StartSession(QrLoginRole.Requester, InitiationMethod.ScanQrCode, scannedChannelId, _sessionCts.Token);
+                    await Orchestrator.JoinSessionByScanning(QrLoginRole.Requester, scannedChannelId, _sessionCts.Token);
                 }
                 catch (OperationCanceledException)
                 {
                     _statusMessage = "İşlem iptal edildi.";
-                    _isProcessing = false;
                     await InvokeAsync(StateHasChanged);
                 }
                 catch (Exception ex)
                 {
-                    await HandleError($"İşlem başlatılamadı: {ex.Message}");
+                    await HandleStateChanged(QrSessionState.Error, $"Oturuma katılım sağlanamadı: {ex.Message}");
                 }
             }
             else
-            {
-                _isProcessing = false;
-                StateHasChanged();
-            }
+                SetView(LoginPageView.InitialSelection);
+
         }
 
-        private async Task StartByGenerating()
+        private async Task GenerateQrCode()
         {
-            _isProcessing = true;
+            SetView(LoginPageView.Processing, "Güvenli oturum başlatılıyor...");
             try
             {
                 _sessionCts = new CancellationTokenSource();
 
-                await Orchestrator.StartSession(QrLoginRole.Requester, InitiationMethod.GenerateQrCode, null, _sessionCts.Token);
+                await Orchestrator.StartSession(QrLoginRole.Requester, _sessionCts.Token);
             }
             catch (OperationCanceledException)
             {
                 _statusMessage = "İşlem iptal edildi.";
-                _isProcessing = false;
                 await InvokeAsync(StateHasChanged);
             }
             catch (Exception ex)
             {
-                await HandleError($"İşlem başlatılamadı: {ex.Message}");
+                await HandleStateChanged(QrSessionState.Error, $"İşlem başlatılamadı: {ex.Message}");
             }
         }
-        private async Task HandleStatusUpdate(string status)
+        private async Task HandleStateChanged(QrSessionState state, string message)
         {
-            _statusMessage = status;
-            if (status.Contains("Diğer cihaz doğrulandı") || status.Contains("Güvenli kanal oluşturuluyor"))
-                _qrCodeDialogReference?.Close();
-            await InvokeAsync(StateHasChanged);
-        }
-        private async Task HandleError(string error)
-        {
-            Snackbar.Add(error, Severity.Error);
-            _isProcessing = false;
-            _qrCodeDialogReference?.Close();
-            await InvokeAsync(StateHasChanged);
-        }
-        private async Task HandleQrCodeAvailable(string channelId)
-        {
-            var parameters = new DialogParameters<DisplayQrCodeDialog> { { x => x.ChannelId, channelId } };
-            _qrCodeDialogReference = await DialogService.ShowAsync<DisplayQrCodeDialog>("Giriş Yapmak İçin Okutun", parameters, DialogOptions);
-        }
+            _statusMessage = message;
 
+            switch (state)
+            {
+                case QrSessionState.AwaitingAuthorization:
+                    if (_currentView == LoginPageView.DisplayingQr)
+                        _channelIdForQr = null;
+                    SetView(LoginPageView.Processing, message);
+                    break;
+
+                case QrSessionState.Error:
+                    Snackbar.Add(message, Severity.Error);
+                    SetView(LoginPageView.InitialSelection);
+                    break;
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+        private Task HandleQrCodeAvailable(string channelId)
+        {
+            _channelIdForQr = channelId;
+            SetView(LoginPageView.DisplayingQr);
+            return Task.CompletedTask;
+        }
+        private void HandleQrClose()
+        {
+            _sessionCts?.Cancel();
+            SetView(LoginPageView.InitialSelection);
+        }
         private async Task HandleLoginCredentialsReceived(LoginQrCodeDto credentials)
         {
-            _statusMessage = "Oturum bilgileri doğrulandı. Giriş yapılıyor...";
-            await InvokeAsync(StateHasChanged);
+            SetView(LoginPageView.Processing, "Oturum bilgileri doğrulandı. Giriş yapılıyor...");
 
             var command = Mapper.Map<LoginWithQrCodeCommand>(credentials);
             var result = await Mediator.Send(command);
 
             if (result.IsSuccess)
-            {
                 NavigationManager.NavigateTo("/", forceLoad: true);
-            }
             else
-            {
-                await HandleError(result.Error.Message ?? "Giriş işlemi sırasında bilinmeyen bir hata oluştu.");
-            }
+                await HandleStateChanged(QrSessionState.Error, result.Error.Message ?? "Giriş işlemi sırasında bilinmeyen bir hata oluştu.");
         }
 
         private void GoBack()
         {
-            _qrCodeDialogReference?.Close();
+            _sessionCts?.Cancel();
             NavigationManager.NavigateTo("/login");
         }
         public async ValueTask DisposeAsync()
         {
-            Orchestrator.OnStatusUpdate -= HandleStatusUpdate;
-            Orchestrator.OnError -= HandleError;
+            Orchestrator.OnStateChanged -= HandleStateChanged;
             Orchestrator.OnQrCodeAvailable -= HandleQrCodeAvailable;
             Orchestrator.OnLoginCredentialsReceived -= HandleLoginCredentialsReceived;
             _sessionCts?.Cancel();

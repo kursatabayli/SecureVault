@@ -6,37 +6,55 @@
         </MudText>
     </TitleContent>
     <DialogContent>
-        @if (!_isProcessing)
+        @switch (_currentView)
         {
-            <div class="pa-2">
-                <MudText Class="mb-4">Yeni bir cihaza giriş izni vermek için bir yöntem seçin.</MudText>
-                <div class="d-flex flex-column gap-4 mt-4">
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.QrCodeScanner"
-                               OnClick="StartByScanning"
-                               Size="Size.Large">
-                        Diğer Cihazdaki QR Kodu Tara
-                    </MudButton>
-
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Secondary"
-                               StartIcon="@Icons.Material.Filled.QrCode2"
-                               OnClick="StartByGenerating"
-                               Size="Size.Large">
-                        Bu Cihazda QR Kodu Göster
-                    </MudButton>
+            case DialogView.InitialSelection:
+                <div class="pa-4">
+                    <MudText Class="mb-4">Yeni bir cihaza giriş izni vermek için bir yöntem seçin.</MudText>
+                    <div class="d-flex flex-column gap-4 mt-4">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.QrCodeScanner" OnClick="ScanQrCode" Size="Size.Large">
+                            Diğer Cihazdaki QR Kodu Tara
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.QrCode2" OnClick="GenerateQrCode" Size="Size.Large">
+                            Bu Cihazda QR Kodu Göster
+                        </MudButton>
+                    </div>
                 </div>
-            </div>
-        }
-        else
-        {
-            <div class="d-flex flex-column align-center justify-center" style="min-height: 250px;">
-                 <Loading LoadingText="@_statusMessage" />
-            </div>
+                break;
+
+            case DialogView.Processing:
+                <div class="d-flex flex-column align-center justify-center" style="min-height: 250px;">
+                    <Loading LoadingText="@_statusMessage" />
+                </div>
+                break;
+
+            case DialogView.AwaitingConfirmation:
+                <ConfirmDeviceComponent DeviceDetail="_deviceToConfirm" OnDecisionMade="HandleConfirmationDecision" />
+                break;
+
+            case DialogView.DisplayingQr:
+                <DisplayQrCode ChannelId="@_channelIdForQr" OnClose="HandleQrClose" />
+                break;
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Text">Kapat</MudButton>
+        @if (_currentView == DialogView.InitialSelection)
+        {
+            <MudButton OnClick="Cancel" Variant="Variant.Text">Kapat</MudButton>
+        }
     </DialogActions>
 </MudDialog>
+
+@code {
+    private enum DialogView
+    {
+        InitialSelection,
+        Processing,
+        DisplayingQr,
+        AwaitingConfirmation
+    }
+    private DialogView _currentView = DialogView.InitialSelection;
+    private string _titleText = "Yeni Cihazı Yetkilendir";
+    private string _titleIcon = Icons.Material.Filled.PhonelinkSetup;
+    private string _channelIdForQr;
+}

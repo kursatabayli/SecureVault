@@ -1,0 +1,36 @@
+﻿@using SecureVault.App.Application.Contracts.DTOs.Session
+
+<MudText Typo="Typo.h6" GutterBottom="true">Yeni Cihaz Bağlantı İsteği</MudText>
+
+@if (DeviceDetail != null)
+{
+    <MudText>Aşağıdaki cihaz giriş yapmak/yetkilendirmek istiyor. Onaylıyor musunuz?</MudText>
+    <MudList T="string" Class="mt-4" ReadOnly="true">
+        <MudListItem Icon="@Icons.Material.Filled.Devices" Text="@($"Cihaz: {DeviceDetail.DeviceManufacturer} {DeviceDetail.DeviceModel}")" />
+        <MudListItem Icon="@Icons.Material.Filled.Computer" Text="@($"İşletim Sistemi: {DeviceDetail.OperatingSystem}")" />
+    </MudList>
+
+    <MudCheckBox @bind-Value="RememberMe" Label="Oturumu açık bırak" Color="Color.Primary" Class="mt-4" />
+
+}
+else
+{
+    <MudText>Cihaz bilgileri alınamadı.</MudText>
+}
+
+<div class="d-flex justify-end gap-2 mt-4">
+    <MudButton OnClick="HandleCancel" Color="Color.Error" Variant="Variant.Text">Reddet</MudButton>
+    <MudButton OnClick="HandleSubmit" Color="Color.Success" Variant="Variant.Filled">Onayla</MudButton>
+</div>
+
+@code {
+    [Parameter] public DeviceDetailDto DeviceDetail { get; set; }
+
+    [Parameter] public EventCallback<(bool IsApproved, bool RememberMe)> OnDecisionMade { get; set; }
+
+    private bool RememberMe { get; set; } = false;
+
+    private async Task HandleSubmit() => await OnDecisionMade.InvokeAsync((true, RememberMe));
+
+    private async Task HandleCancel() => await OnDecisionMade.InvokeAsync((false, false));
+}

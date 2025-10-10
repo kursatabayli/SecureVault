@@ -1,201 +1,199 @@
-﻿using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Logging;
 using SecureVault.App.Application.Contracts.Abstractions.Api;
-using SecureVault.App.Application.Contracts.Abstractions.Cryptography;
+using SecureVault.App.Application.Contracts.Abstractions.Device;
 using SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin;
 using SecureVault.App.Application.Contracts.DTOs.Auth;
-using SecureVault.App.Infrastructure.Helpers;
-using SecureVault.App.Infrastructure.HttpHandlers;
-using System.Security.Cryptography;
-using System.Threading.Tasks;
+using SecureVault.App.Application.Contracts.DTOs.Session;
+using System.Text.Json;
 
 namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
 {
-    public class QrLoginOrchestratorService : IQrLoginOrchestrator
+    public class QrLoginOrchestratorService : IQrLoginOrchestrator, IQrLoginContext
     {
+        // --- Bağımlılıklar ---
         private readonly IInteractionService _interactionService;
-        private readonly ICryptoService _cryptoService;
-        private readonly IHttpHandlerPipelineBuilder _pipelineBuilder;
+        private readonly IQrHubConnection _hubConnection;
+        private readonly ISecureChannelManager _secureChannelManager;
         private readonly IDispatcher _dispatcher;
-        private HubConnection _hubConnection;
-        private string _channelId;
-        private ECDiffieHellman _ecdh;
-        private byte[] _sharedSecret;
-        private readonly string _hubUrl;
+        private readonly IDeviceInfoService _deviceInfoService;
+        private readonly ILogger<QrLoginOrchestratorService> _logger;
+        private readonly IReadOnlyDictionary<string, IMessageHandler> _messageHandlers;
 
+        public QrLoginRole CurrentRole => _currentRole;
+        public bool IsPublicKeySent => _isPublicKeySent;
+        public ISecureChannelManager SecureChannelManager => _secureChannelManager;
+
+        // --- Durum (State) Değişkenleri ---
+        private string _channelId;
         private QrLoginRole _currentRole;
+        private QrSessionState _currentState = QrSessionState.Idle;
         private bool _isPublicKeySent = false;
 
+        // --- Olaylar (Events) ---
+        public event Func<QrSessionState, string, Task> OnStateChanged;
         public event Func<string, Task> OnQrCodeAvailable;
-        public event Func<string, Task> OnStatusUpdate;
         public event Func<LoginQrCodeDto, Task> OnLoginCredentialsReceived;
         public event Func<Task> OnAuthorizationComplete;
-        public event Func<string, Task> OnError;
+        public event Func<DeviceDetailDto, Task> OnDeviceAuthorizationRequired;
 
-        public QrLoginOrchestratorService(IInteractionService interactionService, ICryptoService cryptoService, IHttpHandlerPipelineBuilder pipelineBuilder, IOptions<ApiSettings> apiSettings,
-            IOptions<QrCodeSettings> qrCodeSettings, IDispatcher dispatcher)
+        public QrLoginOrchestratorService(
+            IInteractionService interactionService,
+            IQrHubConnection hubConnection,
+            ISecureChannelManager secureChannelManager,
+            IDispatcher dispatcher,
+            IDeviceInfoService deviceInfoService,
+            ILogger<QrLoginOrchestratorService> logger,
+            IEnumerable<IMessageHandler> handlers)
         {
             _interactionService = interactionService;
-            _cryptoService = cryptoService;
-            _pipelineBuilder = pipelineBuilder;
-            var baseUrl = new Uri(apiSettings.Value.BaseUrl);
-            var fullHubUri = new Uri(baseUrl, qrCodeSettings.Value.HubPath);
-            _hubUrl = fullHubUri.ToString();
+            _hubConnection = hubConnection;
+            _secureChannelManager = secureChannelManager;
             _dispatcher = dispatcher;
+            _deviceInfoService = deviceInfoService;
+            _logger = logger;
+            _messageHandlers = handlers.ToDictionary(h => h.MessageType, h => h);
+
+            // Olayları dinlemeye başla
+            _hubConnection.OnMessageReceived += HandleReceivedMessage;
+            _hubConnection.OnErrorReceived += HandleErrorReceived;
         }
 
-        public async Task StartSession(QrLoginRole role, InitiationMethod method, string? scannedChannelId = null, CancellationToken cancellationToken = default)
+        public async Task SetState(QrSessionState newState, string message)
+        {
+            _currentState = newState;
+            _logger.LogInformation("State changed to {State}: {Message}", newState, message);
+            await SafeInvokeAsync(() => OnStateChanged?.Invoke(newState, message));
+        }
+
+        public async Task StartSession(QrLoginRole role, CancellationToken cancellationToken = default)
         {
             await ResetStateAsync();
             _currentRole = role;
 
             try
             {
-                await SafeInvokeAsync(() => OnStatusUpdate?.Invoke("Oturum başlatılıyor..."));
+                await SetState(QrSessionState.CreatingChannel, "Oturum kanalı oluşturuluyor...");
+                _channelId = await _interactionService.CreateQrLoginChannelAsync(cancellationToken);
 
-                if (method == InitiationMethod.GenerateQrCode)
-                {
-                    _channelId = await _interactionService.CreateQrLoginChannelAsync(cancellationToken);
-                    if (string.IsNullOrEmpty(_channelId))
-                        throw new InvalidOperationException("Sunucudan kanal ID'si alınamadı.");
+                if (string.IsNullOrEmpty(_channelId))
+                    throw new InvalidOperationException("Sunucudan kanal ID'si alınamadı.");
 
-                    await SafeInvokeAsync(() => OnQrCodeAvailable?.Invoke(_channelId));
-                }
-                else
-                {
-                    if (string.IsNullOrEmpty(scannedChannelId))
-                        throw new ArgumentNullException(nameof(scannedChannelId), "Taranan Channel ID boş olamaz.");
-                    _channelId = scannedChannelId;
-                }
-
-                await ConnectToHubAndListen(cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                await DisposeAsync();
+                await SafeInvokeAsync(() => OnQrCodeAvailable?.Invoke(_channelId));
+                await _hubConnection.ConnectAndJoinChannelAsync(_channelId, cancellationToken);
+                await SetState(QrSessionState.AwaitingPeer, "Diğer cihazın bağlanması bekleniyor...");
             }
             catch (Exception ex)
             {
-                await SafeInvokeAsync(() => OnError?.Invoke($"Oturum başlatılamadı: {ex.Message}"));
+                _logger.LogError(ex, "Oturum başlatılamadı.");
+                await SetState(QrSessionState.Error, $"Oturum başlatılamadı: {ex.Message}");
                 await DisposeAsync();
             }
         }
 
-        private async Task ConnectToHubAndListen(CancellationToken cancellationToken)
+        public async Task JoinSessionByScanning(QrLoginRole role, string scannedChannelId, CancellationToken cancellationToken = default)
         {
-            _hubConnection = new HubConnectionBuilder()
-                .WithUrl(_hubUrl, options =>
-                {
-                    options.HttpMessageHandlerFactory = _ => _pipelineBuilder.CreatePipeline();
-                })
-                .WithAutomaticReconnect()
-                .Build();
+            await ResetStateAsync();
+            _currentRole = role;
+            _channelId = scannedChannelId;
 
-            _hubConnection.On("StartKeyExchange", async () =>
+            try
             {
-                await SafeInvokeAsync(() => OnStatusUpdate?.Invoke("Diğer cihaz doğrulandı. Güvenli kanal oluşturuluyor..."));
-                await InitiateKeyExchange();
-            });
+                if (string.IsNullOrEmpty(scannedChannelId))
+                    throw new ArgumentNullException(nameof(scannedChannelId), "Taranan Channel ID boş olamaz.");
 
-            _hubConnection.On<string, string>("ReceiveMessage", async (type, payload) => await HandleReceivedMessage(type, payload, cancellationToken));
-            _hubConnection.On<string>("Error", async (errorMessage) => await SafeInvokeAsync(() => OnError?.Invoke($"Sunucu hatası: {errorMessage}")));
-
-            await _hubConnection.StartAsync(cancellationToken);
-            await _hubConnection.InvokeAsync("JoinChannel", _channelId, cancellationToken);
-            await SafeInvokeAsync(() => OnStatusUpdate?.Invoke("Diğer cihazın bağlanması veya QR kodu okutması bekleniyor..."));
+                await _hubConnection.ConnectAndJoinChannelAsync(_channelId, cancellationToken);
+                await SetState(QrSessionState.AwaitingPeer, "Diğer cihazın bağlanması bekleniyor...");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Oturuma katılım sağlanamadı.");
+                await SetState(QrSessionState.Error, $"Oturuma katılım sağlanamadı: {ex.Message}");
+                await DisposeAsync();
+            }
+        }
+        private async Task HandleReceivedMessage(string messageType, string payload)
+        {
+            if (_messageHandlers.TryGetValue(messageType, out var handler))
+            {
+                await handler.HandleAsync(this, payload);
+            }
+            else
+            {
+                _logger.LogWarning("Unknown message type received: {MessageType}", messageType);
+            }
         }
 
-        private async Task InitiateKeyExchange(CancellationToken cancellationToken = default)
+        private async Task HandleErrorReceived(string errorMessage)
+        {
+            await SetState(QrSessionState.Error, $"Sunucu hatası: {errorMessage}");
+        }
+
+        public async Task InitiateKeyExchange()
         {
             if (_isPublicKeySent) return;
 
-            _ecdh = ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256);
-            var publicKey = _ecdh.PublicKey.ExportSubjectPublicKeyInfo();
-            var publicKeyBase64 = Convert.ToBase64String(publicKey);
-
-            await SendMessage("PublicKey", publicKeyBase64, cancellationToken);
+            await SetState(QrSessionState.ExchangingKeys, "Anahtar değişimi yapılıyor...");
+            var publicKeyBase64 = _secureChannelManager.InitiateKeyExchange();
+            await _hubConnection.SendMessageAsync("PublicKey", publicKeyBase64);
             _isPublicKeySent = true;
         }
 
-        private async Task HandleReceivedMessage(string messageType, string payload, CancellationToken cancellationToken = default)
+        public async Task SendDeviceInfo()
         {
-            if (messageType == "PublicKey")
+            var deviceInfo = new DeviceDetailDto
             {
-                await InitiateKeyExchange(cancellationToken);
+                UniqueDeviceId = await _deviceInfoService.GetUniqueDeviceIdAsync(),
+                DeviceModel = _deviceInfoService.GetDeviceModel(),
+                DeviceName = _deviceInfoService.GetDeviceName(),
+                DeviceManufacturer = _deviceInfoService.GetDeviceManufacturer(),
+                OperatingSystem = _deviceInfoService.GetOperatingSystemInfo()
+            };
 
-                var counterPartyPublicKeyBytes = Convert.FromBase64String(payload);
-                using var counterPartyEcdh = ECDiffieHellman.Create();
-                counterPartyEcdh.ImportSubjectPublicKeyInfo(counterPartyPublicKeyBytes, out _);
+            var payload = JsonSerializer.Serialize(deviceInfo);
+            await _hubConnection.SendMessageAsync("DeviceInfoRequest", payload);
+        }
 
-                if (_ecdh == null)
-                {
-                    await SafeInvokeAsync(() => OnError?.Invoke("Kritik Hata: Anahtar değişimi sırasında anahtar çifti oluşturulamadı."));
-                    return;
-                }
+        public async Task ApproveAuthorization()
+        {
+            await _hubConnection.SendMessageAsync("AuthorizationApproved", string.Empty);
+            await InitiateKeyExchange();
+        }
 
-                _sharedSecret = _ecdh.DeriveKeyMaterial(counterPartyEcdh.PublicKey);
-                await SafeInvokeAsync(() => OnStatusUpdate?.Invoke("Güvenli kanal kuruldu."));
-            }
-            else if (messageType == "EncryptedLoginData" && _currentRole == QrLoginRole.Requester)
-            {
-                await SafeInvokeAsync(() => OnStatusUpdate?.Invoke("Oturum bilgileri alındı, doğrulanıyor..."));
-                try
-                {
-                    var encryptedBytes = Convert.FromBase64String(payload);
-                    var decryptedDto = _cryptoService.Decrypt<LoginQrCodeDto>(encryptedBytes, _sharedSecret);
-                    await SafeInvokeAsync(() => OnLoginCredentialsReceived?.Invoke(decryptedDto));
-                }
-                catch (Exception ex)
-                {
-                    await SafeInvokeAsync(() => OnError?.Invoke($"Oturum bilgileri çözülemedi: {ex.Message}"));
-                }
-            }
+        public async Task DenyAuthorization()
+        {
+            await _hubConnection.SendMessageAsync("AuthorizationDenied", string.Empty);
+            await SetState(QrSessionState.Idle, "Bağlantı isteği reddedildi.");
+            await DisposeAsync();
         }
 
         public async Task SendCredentials(LoginQrCodeDto credentials)
         {
-            if (_currentRole != QrLoginRole.Provider || _sharedSecret == null)
+            if (_currentRole != QrLoginRole.Provider || !_secureChannelManager.IsSecureChannelEstablished)
             {
-                await SafeInvokeAsync(() => OnError?.Invoke("Bu cihaz oturum bilgisi gönderme yetkisine sahip değil veya güvenli kanal hazır değil."));
+                await SetState(QrSessionState.Error, "Bu cihaz oturum bilgisi gönderme yetkisine sahip değil veya güvenli kanal hazır değil.");
                 return;
             }
 
             try
             {
-                await SafeInvokeAsync(() => OnStatusUpdate?.Invoke("Oturum bilgileri şifrelenip gönderiliyor..."));
-                var encryptedBytes = _cryptoService.Encrypt(credentials, _sharedSecret);
+                await SetState(QrSessionState.TransferringCredentials, "Oturum bilgileri şifrelenip gönderiliyor...");
+                var encryptedBytes = _secureChannelManager.Encrypt(credentials);
                 var encryptedBase64 = Convert.ToBase64String(encryptedBytes);
-                await SendMessage("EncryptedLoginData", encryptedBase64);
+                await _hubConnection.SendMessageAsync("EncryptedLoginData", encryptedBase64);
                 await SafeInvokeAsync(() => OnAuthorizationComplete?.Invoke());
+                await SetState(QrSessionState.Completed, "Yetkilendirme tamamlandı.");
             }
             catch (Exception ex)
             {
-                await SafeInvokeAsync(() => OnError?.Invoke($"Kimlik bilgileri gönderilemedi: {ex.Message}"));
+                _logger.LogError(ex, "Kimlik bilgileri gönderilemedi.");
+                await SetState(QrSessionState.Error, $"Kimlik bilgileri gönderilemedi: {ex.Message}");
             }
         }
 
-        private async Task SendMessage(string messageType, string payload, CancellationToken cancellationToken = default)
-        {
-            if (_hubConnection?.State == HubConnectionState.Connected)
-                await _hubConnection.InvokeAsync("SendMessageToChannel", _channelId, messageType, payload, cancellationToken);
-        }
+        public async Task RaiseDeviceAuthorizationRequired(DeviceDetailDto deviceInfo) => await SafeInvokeAsync(() => OnDeviceAuthorizationRequired?.Invoke(deviceInfo));
+        public async Task RaiseLoginCredentialsReceived(LoginQrCodeDto credentials) => await SafeInvokeAsync(() => OnLoginCredentialsReceived?.Invoke(credentials));
 
-        private async Task ResetStateAsync()
-        {
-            if (_hubConnection is not null)
-            {
-                await _hubConnection.DisposeAsync();
-                _hubConnection = null;
-            }
-            _ecdh?.Dispose();
-            _ecdh = null;
-
-            _isPublicKeySent = false;
-            _sharedSecret = null;
-            _channelId = null;
-        }
-
-        private async Task SafeInvokeAsync(Func<Task>? eventHandler)
+        public async Task SafeInvokeAsync(Func<Task>? eventHandler)
         {
             if (eventHandler == null) return;
 
@@ -218,10 +216,18 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
                 });
             }
         }
-
-        public async ValueTask DisposeAsync()
+        private Task ResetStateAsync()
         {
-            await ResetStateAsync();
+            _logger.LogInformation("Resetting QR login session state.");
+            _isPublicKeySent = false;
+            _channelId = null;
+            _currentState = QrSessionState.Idle;
+
+            return Task.CompletedTask;
+        }
+        public ValueTask DisposeAsync()
+        {
+            return new ValueTask(ResetStateAsync());
         }
     }
 }
