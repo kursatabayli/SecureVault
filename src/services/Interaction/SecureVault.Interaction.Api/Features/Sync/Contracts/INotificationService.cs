@@ -2,6 +2,6 @@
 {
     public interface INotificationService
     {
-        Task NotifyClientsForSync(Guid userId);
+        Task NotifyClientsForSync(Guid userId, string originDeviceId);
     }
 }

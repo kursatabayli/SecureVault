@@ -20,8 +20,9 @@ namespace SecureVault.Interaction.Api.Features.Sync.Hubs
         public override Task OnConnectedAsync()
         {
             var userId = GetUserIdFromContext();
+            var deviceId = GetDeviceIdFromContext();
             var connectionId = Context.ConnectionId; 
-            _userConnectionManager.AddConnection(userId, connectionId);
+            _userConnectionManager.AddConnection(userId, connectionId, deviceId);
             _logger.LogInformation("Kullanıcı bağlandı. UserId: {UserId}, ConnectionId: {ConnectionId}", userId, connectionId);
             return base.OnConnectedAsync();
         }
@@ -59,6 +60,18 @@ namespace SecureVault.Interaction.Api.Features.Sync.Hubs
                 throw new InvalidOperationException("Geçerli bir kullanıcı kimliği bulunamadı.");
             }
             return userId;
+        }
+
+        private string GetDeviceIdFromContext()
+        {
+            var httpContext = Context.GetHttpContext();
+            var deviceId = httpContext?.Request.Headers["X-Device-Id"].ToString();
+
+            if (string.IsNullOrEmpty(deviceId))
+            {
+                throw new InvalidOperationException("Geçerli bir cihaz kimliği ('X-Device-ID' header) bulunamadı.");
+            }
+            return deviceId;
         }
     }
 }

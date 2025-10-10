@@ -17,9 +17,9 @@ namespace SecureVault.Interaction.Api.Features.Sync.Services
             _userConnectionManager = userConnectionManager;
         }
 
-        public async Task NotifyClientsForSync(Guid userId)
+        public async Task NotifyClientsForSync(Guid userId, string originDeviceId)
         {
-            var connections = _userConnectionManager.GetConnections(userId);
+            var connections = _userConnectionManager.GetConnections(userId, originDeviceId);
 
             if (connections is not null && connections.Any())
             {

@@ -2,8 +2,8 @@
 {
     public interface IUserConnectionManager
     {
-        void AddConnection(Guid userId, string connectionId);
+        void AddConnection(Guid userId, string connectionId, string deviceId);
         Guid? RemoveConnection(string connectionId);
-        IReadOnlyList<string> GetConnections(Guid userId);
+        IReadOnlyList<string> GetConnections(Guid userId, string? deviceIdToExclude = null);
     }
 }
