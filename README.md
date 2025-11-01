@@ -35,7 +35,7 @@ This project is a modern password and 2FA code manager application focused on se
 * **Cross-Platform Support:** A single codebase for Windows and Android with .NET MAUI Blazor.
 * **Real-Time Synchronization:** Changes made on one device are instantly reflected on your other devices (via SignalR).
 * **Secure QR Code Login:** Log in securely and encrypted by scanning a QR code with your mobile device, without entering your password.
-* **Offline Access:** Your vault data is stored locally using SQLite, so you can access it even without an internet connection.
+* **Offline Access:** Your vault data is stored locally in a secure and **encrypted Realm database**, so you can access it even without an internet connection.
 * **Open Source:** Fully transparent and community-auditable code.
 
 ---
@@ -50,9 +50,9 @@ The architecture is built on modern design patterns and technologies to ensure s
 | ✍️ **End-to-End Encryption (E2EE)** | All vault data is encrypted on the client side with **AES-256 (GCM)** before being sent to the server. This ensures data remains confidential even if the server is compromised.     |
 | 🔑 **Secure Login with QR Code** | A temporary and secure encryption channel is established between devices using **ECDH (Elliptic Curve Diffie-Hellman)** key exchange. Session information is transmitted over this channel with E2EE. |
 | 🌐 **Cross-Platform Client** | A single codebase developed using **.NET MAUI Blazor** targets both mobile (Android) and desktop (Windows) platforms, offering a consistent UI and native performance.              |
-| 🧩 **Microservices-Based Backend** | The backend consists of independent services (Identity, Vault, Interaction). Inter-service communication is managed by **Ocelot API Gateway**, service discovery by **Consul**, and asynchronous messaging by **RabbitMQ**. |
+| 🧩 **Microservices-Based Backend** | The backend consists of independent services (Identity, Vault, Interaction). In the development environment, service orchestration, discovery, and telemetry are provided by **.NET Aspire**. API Gateway functionality is managed using **YARP (Yet Another Reverse Proxy)**. |
 | 🔄 **Real-Time Data Streaming** | **SignalR** establishes a bidirectional, persistent connection between clients and the server, enabling instant delivery of data changes to all devices.                                 |
-| 💾 **Hybrid Data Storage** | On the client side, data is stored in an **SQLite** database for offline access. On the server side, **PostgreSQL** and **MongoDB** are used based on service needs.                   |
+| 💾 **Hybrid Data Storage** | On the client side, data is stored in an **encrypted Realm database** for offline access. On the server side, **PostgreSQL** and **MongoDB** are used based on service needs. |
 
 ---
 
@@ -62,10 +62,10 @@ The architecture is built on modern design patterns and technologies to ensure s
 The project consists of independent components, each responsible for a specific function:
 
 * **MAUI Blazor Client:** The cross-platform application that the user interacts with, running on Windows and Android. All cryptographic operations happen here.
-* **Ocelot API Gateway:** A central gateway that receives requests from the outside world, performs authentication and authorization checks, and routes requests to the appropriate microservice.
+* **YARP API Gateway:** A central gateway that receives requests from the outside world, performs authentication and authorization checks, and routes requests to the appropriate microservice.
 * **Identity Service:** Responsible for user registration, authentication, session management, and general user data. It uses PostgreSQL as its database.
 * **Vault Service:** Responsible for storing the user's encrypted vault data (passwords, 2FA codes, etc.). It uses MongoDB as its database.
-* **Interaction Service:** Manages real-time communication between devices (with SignalR) and asynchronous events (via RabbitMQ). QR code login and instant data synchronization are handled by this service.
+* **Interaction Service:** Manages real-time communication between devices (with SignalR). QR code login and instant data synchronization are handled by this service.
 
 ## Cryptographic Flows
 The security model is designed to ensure that only the user can access their own data.
@@ -93,61 +93,53 @@ The security model is designed to ensure that only the user can access their own
     * The Provider device encrypts the user's `Encryption Key` and `Private Key` with this `shared secret` and sends it to the Requester device.
     * The Requester decrypts the encrypted package with its own `shared secret` to obtain the necessary keys for logging in and completes the standard authentication flow.
 
-4. **Real-Time Synchronization Flow
-    * When a user adds, updates, or deletes vault data on a device, the change is saved to the local SQLite database and also sent encrypted to the Vault service.
-    * After saving the data, the Vault service publishes an event like "UserActivityOccurred" to **RabbitMQ**.
-    * The **Interaction service** listens for this event from RabbitMQ.
-    * When it catches the event, it sends a "SyncRequired" notification via **SignalR** to all other active devices of the relevant user.
-    * Other clients that receive this notification pull the latest changes from the server to update their local databases.
-
 ---
 
 ### ⚙️ Technology Stack
 
 This project uses a modern and robust technology stack to achieve its goals.
 
-| Category               | Technology / Library      | Purpose                                                                   |
-| :--------------------- | :------------------------ | :------------------------------------------------------------------------ |
-| **Backend** | **.NET 9, ASP.NET Core** | The main framework for building high-performance, modern APIs.            |
-|                        | **MediatR** | To implement the CQRS pattern and separate business logic into commands/queries. |
-|                        | **Ocelot** | API Gateway; request routing, rate limiting, and centralized management.  |
-| **Frontend** | **.NET MAUI Blazor** | Cross-platform (Windows, Android) client application framework.           |
-|                        | **MudBlazor** | A rich component library for creating a clean and responsive UI.          |
-| **Data & Cache** | **PostgreSQL** | The primary database for relational and JSONB data.                       |
-|                        | **MongoDB** | NoSQL document database for the Vault service.                            |
-|                        | **SQLite** | Client-side local database.                                               |
-|                        | **Entity Framework Core** | ORM; type-safe, object-oriented interaction with the database.            |
-|                        | **Redis** | High-performance cache service; for challenges and temporary session data. |
-| **Messaging & Real-time** | **RabbitMQ** | Asynchronous, event-driven communication between microservices.           |
-|                        | **SignalR** | Real-time data synchronization and messaging between devices.             |
-| **API Communication** | **Refit** | Type-safe REST client for .NET, simplifies API calls.                     |
-| **Logging & Monitoring** | **Serilog** | Flexible and configurable structured logging library.                     |
-|                        | **Seq** | Centralized log collection and analysis server, integrated with Serilog.  |
-| **DevOps** | **Docker, Docker Compose**| Containerization; consistent development and deployment environments.     |
-|                        | **Consul** | Service Discovery; for microservices to find each other in a dynamic environment. |
-| **Security** | **BouncyCastle** | Advanced cryptography operations (especially ECDSA signing).              |
-|                        | **Argon2id** | Strong password hashing; brute-force resistant Master Key derivation.     |
-|                        | **AES-256 (GCM)** | Modern, authenticated symmetric encryption for end-to-end data encryption.|
-|                        | **JWT (JSON Web Token)** | Secure and stateless session management (Access & Refresh Tokens).        |
-| **QR Code Operations** | **ZXing.Net.MAUI** | Client-side QR code reading and scanning.                                 |
-|                        | **QRCoder & SkiaSharp** | QR code generation and rendering.                                         |
+| Category | Technology / Library | Purpose |
+| :--- | :--- | :--- |
+| **Backend** | **.NET 9, ASP.NET Core** | The main framework for building high-performance, modern APIs. |
+| | **MediatR** | To implement the CQRS pattern and separate business logic into commands/queries. |
+| | **YARP (Yet Another Reverse Proxy)** | API Gateway; request routing, rate limiting, and centralized management. |
+| **Frontend**| **.NET MAUI Blazor** | Cross-platform (Windows, Android) client application framework. |
+| | **MudBlazor** | A rich component library for creating a clean and responsive UI. |
+| **Data & Cache**| **PostgreSQL** | The primary database for relational and JSONB data. |
+| | **MongoDB** | NoSQL document database for the Vault service. |
+| | **Realm** | Client-side encrypted, local, and reactive database. |
+| | **Entity Framework Core** | ORM; type-safe, object-oriented interaction with the database. |
+| | **Redis** | High-performance cache service; for challenges and temporary session data. |
+| **Messaging & Real-time** | **SignalR** | Real-time data synchronization and messaging between devices. |
+| **API Communication** | **Refit** | Type-safe REST client for .NET, simplifies API calls. |
+| **Logging & Monitoring** | **Serilog** | Flexible and configurable structured logging library. |
+| | **Seq** | Centralized log collection and analysis server, integrated with Serilog. |
+| **DevOps & Orchestration** | **.NET Aspire** | Service orchestration, discovery, and telemetry for the development environment. |
+| | **Docker** | Containerization; running services in an isolated environment. |
+| **Security** | **BouncyCastle** | Advanced cryptography operations (especially ECDSA signing). |
+| | **Argon2id** | Strong password hashing; brute-force resistant Master Key derivation. |
+| | **AES-256 (GCM)** | Modern, authenticated symmetric encryption for end-to-end data encryption.|
+| | **JWT (JSON Web Token)** | Secure and stateless session management (Access & Refresh Tokens). |
+| **QR Code Operations** | **ZXing.Net.MAUI** | Client-side QR code reading and scanning. |
+| | **QRCoder & SkiaSharp** | QR code generation and rendering. |
 
 ---
 
 ### 🚀 Project Roadmap
 
-| Feature                     | Description                                                                       | Status                     |
-| :-------------------------- | :-------------------------------------------------------------------------------- | :------------------------- |
-| Zero-Knowledge Authentication | Proof-based login system without sending passwords to the server.                 | ✅ **Completed** |
-| End-to-End Encryption       | Encryption of vault data on the device before it reaches the server.              | ✅ **Completed** |
-| 2FA Vault (TOTP/HOTP)       | Add and list 2FA codes by scanning a QR code, uploading an image, or manual entry. | ✅ **Completed** |
-| Secure Login with QR Code   | Secure login via an E2EE channel using ECDH.                                      | ✅ **Completed** |
-| Real-Time Synchronization   | Instant data sync between devices (with SignalR).                                 | ✅ **Completed** |
-| Offline Mode (Local DB)     | Client-side SQLite for offline data access.                                       | ✅ **Completed** |
-| Advanced Session Management | List active sessions and terminate them remotely.                                 | ✅ **Completed** |
-| Recovery Key                | A secure mechanism for data recovery in case of a forgotten password.             | 🚧 **In Progress** |
-| Edit Vault Data             | Update existing password and 2FA entries.                                         | 🚧 **In Progress** |
-| Autofill                    | Autofill passwords and codes on mobile and in browsers.                           | 💡 **Under Consideration** |
+| Feature | Description | Status |
+| :--- | :--- | :--- |
+| Zero-Knowledge Authentication | Proof-based login system without sending passwords to the server. | ✅ **Completed** |
+| End-to-End Encryption | Encryption of vault data on the device before it reaches the server. | ✅ **Completed** |
+| 2FA Vault (TOTP/HOTP) | Add and list 2FA codes by scanning a QR code, uploading an image, or manual entry. | ✅ **Completed** |
+| Secure Login with QR Code | Secure login via an E2EE channel using ECDH. | ✅ **Completed** |
+| Real-Time Synchronization | Instant data sync between devices (with SignalR). | ✅ **Completed** |
+| Offline Mode (Local DB) | Client-side **Realm** for offline data access. | ✅ **Completed** |
+| Advanced Session Management | List active sessions and terminate them remotely. | ✅ **Completed** |
+| Recovery Key | A secure mechanism for data recovery in case of a forgotten password. | 🚧 **In Progress** |
+| Edit Vault Data | Update existing password and 2FA entries. | 🚧 **In Progress** |
+| Autofill | Autofill passwords and codes on mobile and in browsers. | 💡 **Under Consideration** |
 
 ---
 
@@ -167,55 +159,46 @@ Follow the steps below to run the project on your local machine.
     cd securevault
     ```
 
-2.  **Set Up Environment Variables:**
-    In the project's root directory, copy the `.env.example` file to create a new file named `.env`. This file contains sensitive information like database connection strings and JWT keys, which will be used by `docker-compose.yml`.
-    Edit the `.env` file with your own settings.
+2.  **Set Up AppHost User Secrets:**
+* In Visual Studio, right-click on the `src/aspire/SecureVaultAppHost` project.
+* Select **Manage User Secrets**.
+* Paste the following content into the opened `secrets.json` file, modifying the values for your setup:
 
-    ```bash
-    cp .env.example .env
-    # Open and edit the .env file with a text editor
+    ```json
+    {
+      "Parameters:vault-db-password": "your-secure-mongo-password-123",
+      "Parameters:seqpassword": "your-seq-admin-password",
+      "Parameters:redis-cache-password": "your-secure-redis-password-xyz",
+      "Parameters:postgresusername": "your-postgre-user-name",
+      "Parameters:postgrespassword": "your-postgre-password",
+      "JwtSettings:RefreshTokenKey": "your-super-secret-64-byte-refresh-key-goes-here",
+      "JwtSettings:Key": "your-super-secret-64-byte-jwt-key-goes-here"
+    }
     ```
-    **Example `.env` file content:**
-    ```env
-    # PostgreSQL Settings (for Identity service)
-    DB_USER=postgres
-    DB_PASSWORD=postgre_super_secret_password
-    DB_NAME=securevault_identity_dev
-    DB_HOST=postgres-db
-    
-    # MongoDB Settings (for Vault service)
-    MONGO_INITDB_ROOT_USERNAME=mongoadmin
-    MONGO_INITDB_ROOT_PASSWORD=mongo_super_secret_password
-    MONGO_DB_NAME=securevault_vault_dev
-    MONGO_HOST=mongo-db
-    
-    # RabbitMQ Settings
-    RABBITMQ_USER=guest
-    RABBITMQ_PASS=guest
-    
-    # JWT Settings (Should be at least 32 random characters)
-    JWT_KEY=ChangeThisToARandomlyGenerated64ByteBase64Key=
-    JWT_REFRESH_KEY=AlsoChangeThisToAnotherRandomlyGenerated64ByteBase64Key=
-    
-    # Seq Settings (Centralized Log Server)
-    SEQ_PASSWORD=your_secret_seq_api_key_or_password
-    ```
+3.  **Configure Client (MAUI) Settings:**
+* Open the `appsettings.json` file in the `src/client/SecureVault.App` directory.
+* Paste the following content and, **very importantly**, replace `your-device-name-here` with your actual machine name.
 
-3.  **Launch with Docker:**
-    Run the following command in the project's root directory.
-    ```bash
-    docker-compose up -d --build
+    ```json
+    {
+      "ApiSettings": {
+        "BaseUrl": "https://your-device-name-here:7202/",
+        "DevMachineName": "your-device-name-here"
+      }
+    }
     ```
+    > **⚠️ Important Note:** You must replace the `your-device-name-here` value in `appsettings.json` with the hostname shown in the .NET Aspire Dashboard for the API Gateway (YARP) URL (e.g., `https://desktop-1234abcd:7202/`). If Aspire uses a different port than `7202`, update that as well.
 
-4.  **Check the Status of Services:**
-    Ensure all services are in the `Up` or `healthy` state.
-    ```bash
-    docker-compose ps
-    ```
+4.  **Launch the Application with Aspire:**
+Start the `AppHost` project (e.g., from Visual Studio or using `dotnet run` from the `src/aspire/SecureVaultAppHost` directory).
+  ```bash
+      cd src/aspire/SecureVaultAppHost
+      dotnet run
+  ```
 
-5.  **Run the Application:**
-    * **API Gateway:** Accessible at `https://localhost:7202`.
-    * **MAUI Client:** Open the `src/clients/SecureVault.App` project in Visual Studio and run it for your desired platform (Windows or Android).
+5.  **Monitor the Aspire Dashboard:** The .NET Aspire Dashboard will launch automatically in your default browser. You can monitor the logs and status of all microservices, databases (PostgreSQL, MongoDB, Redis), and the client application from this dashboard.
+
+6.  **Run the MAUI Client:** Open the `src/client/SecureVault.App` project in Visual Studio and run it for your desired platform (Windows or Android). The client will automatically connect to the services managed by Aspire, thanks to the settings you configured in Step 3.
 
 ---
 
