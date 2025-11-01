@@ -57,9 +57,9 @@ Mimari, güvenlik, ölçeklenebilirlik ve esneklik sağlamak amacıyla modern ta
 | ✍️ **Uçtan Uca Şifreleme (E2EE)** | Tüm kasa verileri, sunucuya gönderilmeden önce istemci tarafında **AES-256 (GCM)** ile şifrelenir. Bu, sunucu ele geçirilse bile verilerin gizli kalmasını sağlar. |
 | 🔑 **QR Kod ile Güvenli Oturum Açma** | Cihazlar arasında **ECDH (Elliptic Curve Diffie-Hellman)** anahtar değişimi kullanılarak geçici ve güvenli bir şifreleme kanalı oluşturulur. Oturum bilgileri bu kanal üzerinden E2EE ile iletilir. |
 | 🌐 **Platformlar Arası İstemci** | **.NET MAUI Blazor** kullanılarak geliştirilen tek bir kod tabanı, hem mobil (Android) hem de masaüstü (Windows) platformlarını hedefleyerek tutarlı bir arayüz ve yerel performans sunar. |
-| 🧩 **Mikroservis Tabanlı Backend** | Arka uç, birbirinden bağımsız servislerden (Identity, Vault, Interaction) oluşur. Servisler arası iletişim **Ocelot API Gateway**, servis keşfi için **Consul** ve asenkron mesajlaşma için **RabbitMQ** ile yönetilir. |
+| 🧩 **Mikroservis Tabanlı Backend** | Arka uç, birbirinden bağımsız servislerden (Identity, Vault, Interaction) oluşur. Geliştirme ortamında servis orkestrasyonu, servis keşfi ve telemetri **.NET Aspire** ile sağlanır. API Gateway işlevselliği ise **YARP (Yet Another Reverse Proxy)** kullanılarak yönetilir. |
 | 🔄 **Gerçek Zamanlı Veri Akışı** | **SignalR**, istemciler ve sunucu arasında çift yönlü, kalıcı bir bağlantı kurarak veri değişikliklerinin anında tüm cihazlara iletilmesini sağlar. |
-| 💾 **Hibrit Veri Depolama** | İstemci tarafında veriler, çevrimdışı erişim için bir **SQLite** veritabanında saklanır. Sunucu tarafında ise servis ihtiyacına göre **PostgreSQL** ve **MongoDB** kullanılır. |
+| 💾 **Hibrit Veri Depolama** | İstemci tarafında veriler, çevrimdışı erişim için **şifreli bir Realm veritabanında** saklanır. Sunucu tarafında ise servis ihtiyacına göre **PostgreSQL** ve **MongoDB** kullanılır. |
 
 ---
 
@@ -69,10 +69,10 @@ Mimari, güvenlik, ölçeklenebilirlik ve esneklik sağlamak amacıyla modern ta
 Proje, her biri belirli bir işlevden sorumlu olan bağımsız bileşenlerden oluşur:
 
 * **MAUI Blazor Client:** Kullanıcının etkileşimde bulunduğu, Windows ve Android üzerinde çalışan platformlar arası uygulama. Tüm kriptografik işlemler burada gerçekleşir.
-* **Ocelot API Gateway:** Dış dünyadan gelen istekleri karşılayan, kimlik doğrulama ve yetkilendirme kontrolleri yapan ve istekleri ilgili mikroservise yönlendiren merkezi bir ağ geçididir.
+* **YARP API Gateway:** Dış dünyadan gelen istekleri karşılayan, kimlik doğrulama ve yetkilendirme kontrolleri yapan ve istekleri ilgili mikroservise yönlendiren merkezi bir ağ geçididir.
 * **Identity Service:** Kullanıcı kaydı, kimlik doğrulama, oturum yönetimi ve genel kullanıcı verilerinden sorumludur. Veritabanı olarak PostgreSQL kullanır.
 * **Vault Service:** Kullanıcının şifrelenmiş kasa verilerini (parolalar, 2FA kodları vb.) depolamaktan sorumludur. Veritabanı olarak MongoDB kullanır.
-* **Interaction Service:** Cihazlar arası gerçek zamanlı iletişimi (SignalR ile) ve asenkron olayları (RabbitMQ üzerinden) yönetir. QR kod ile giriş ve anlık veri senkronizasyonu bu servis üzerinden sağlanır.
+* **Interaction Service:** Cihazlar arası gerçek zamanlı iletişimi (SignalR ile) yönetir. QR kod ile giriş ve anlık veri senkronizasyonu bu servis üzerinden sağlanır.
 
 ## Kriptografik Akışlar
 Güvenlik modeli, yalnızca kullanıcının kendi verilerine erişebilmesini sağlamak üzere tasarlanmıştır.
@@ -100,13 +100,6 @@ Güvenlik modeli, yalnızca kullanıcının kendi verilerine erişebilmesini sa�
    * Provider cihaz, kullanıcının `Encryption Key` ve `Private Key`'ini bu `shared secret` ile şifreleyerek Requester cihaza gönderir.
    * Requester, şifreli paketi kendi `shared secret`'ı ile çözerek oturum açmak için gerekli anahtarlara sahip olur ve standart kimlik doğrulama akışını tamamlar.
 
-4. **Gerçek Zamanlı Senkronizasyon Akışı**
-   * Bir kullanıcı cihazında kasa verisi eklediğinde, güncellediğinde veya sildiğinde, bu değişiklik hem yerel SQLite veritabanına kaydedilir hem de şifrelenerek Vault servisine gönderilir.
-   * Vault servisi, veriyi kaydettikten sonra **RabbitMQ**'ya "UserActivityOccurred" gibi bir olay (event) yayınlar.
-   * **Interaction servisi**, bu olayı RabbitMQ üzerinden dinler.
-   * Olayı yakaladığında, ilgili kullanıcının diğer tüm aktif cihazlarına **SignalR** üzerinden "SyncRequired" (Senkronizasyon Gerekli) bildirimi gönderir.
-   * Bu bildirimi alan diğer istemciler, sunucudan en son değişiklikleri çekerek yerel veritabanlarını günceller.
-
 ---
 
 ### ⚙️ Teknoloji Yığını
@@ -117,21 +110,20 @@ Bu proje, hedeflerine ulaşmak için modern ve sağlam bir teknoloji yığını 
 | :--- | :--- | :--- |
 | **Backend** | **.NET 9, ASP.NET Core** | Yüksek performanslı, modern API'ler oluşturmak için kullanılan ana çatı. |
 | | **MediatR** | CQRS desenini uygulamak ve iş mantığını komut/sorgulara ayırmak. |
-| | **Ocelot** | API Gateway; istek yönlendirme, rate limiting ve merkezi yönetim. |
+| | **YARP (Yet Another Reverse Proxy)** | API Gateway; istek yönlendirme, rate limiting ve merkezi yönetim. |
 | **Frontend**| **.NET MAUI Blazor** | Platformlar arası (Windows, Android) istemci uygulaması çatısı. |
 | | **MudBlazor** | Temiz ve duyarlı bir arayüz oluşturmak için zengin bileşen kütüphanesi. |
 | **Veri & Cache**| **PostgreSQL** | İlişkisel ve JSONB verileri için ana veritabanı. |
 | | **MongoDB** | Vault servisi için NoSQL belge veritabanı. |
-| | **SQLite** | İstemci tarafında yerel veritabanı. |
+| | **Realm** | İstemci tarafında şifreli, yerel ve reaktif veritabanı. |
 | | **Entity Framework Core** | ORM; veritabanı ile nesneye yönelik, güvenli etkileşim. |
 | | **Redis** | Yüksek performanslı cache servisi; "challenge" ve geçici oturum verileri için. |
-| **Mesajlaşma & Real-time** | **RabbitMQ** | Mikroservisler arası asenkron, olay tabanlı iletişim. |
-| | **SignalR** | Cihazlar arası gerçek zamanlı veri senkronizasyonu ve mesajlaşma. |
+| **Mesajlaşma & Real-time** | **SignalR** | Cihazlar arası gerçek zamanlı veri senkronizasyonu ve mesajlaşma. |
 | **API İletişimi** | **Refit** | .NET için tip güvenli REST istemcisi, API çağrılarını basitleştirir. |
 | **Logging & Monitoring** | **Serilog** | Esnek ve yapılandırılabilir, yapısal loglama kütüphanesi. |
 | | **Seq** | SSerilog ile entegre çalışan, merkezi log toplama ve analiz sunucusu. |
-| **DevOps** | **Docker, Docker Compose** | Konteynerleştirme; tutarlı geliştirme ve dağıtım ortamları. |
-| | **Consul** | Service Discovery; mikroservislerin dinamik bir ortamda birbirini bulması. |
+| **DevOps & Orkestrasyon** | **.NET Aspire** | Geliştirme ortamı için servis orkestrasyonu, keşfi ve telemetri. |
+| | **Docker** | Konteynerleştirme; servisleri izole bir ortamda çalıştırma. |
 | **Güvenlik** | **BouncyCastle** | Gelişmiş kriptografi işlemleri (özellikle ECDSA imzalama). |
 | | **Argon2id** | Güçlü parola hashleme; kaba kuvvet saldırılarına dayanıklı Master Key türetme. |
 | | **AES-256 (GCM)** | Uçtan uca veri şifrelemesi için doğrulanmış, modern simetrik şifreleme. |
@@ -174,55 +166,57 @@ Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin.
     cd securevault
     ```
 
-2.  **Ortam Değişkenlerini Ayarlayın:**
-   Projenin ana dizininde bulunan .env.example dosyasını kopyalayarak `.env` adında yeni bir dosya oluşturun. Bu dosya, `docker-compose.yml` tarafından kullanılacak olan veritabanı bağlantı bilgileri ve JWT anahtarları gibi hassas bilgileri içerir.
-`.env` dosyasını kendi ayarlarınıza göre düzenleyin.
-
-    ```bash
-    cp .env.example .env
-    # .env dosyasını bir metin düzenleyici ile açıp düzenleyin
-    ```
-    **.env dosyası içeriği örneği:**
-    ```env
-    # PostgreSQL Ayarları (Identity servisi için)
-    DB_USER=postgres
-    DB_PASSWORD=postgre_super_secret_password
-    DB_NAME=securevault_identity_dev
-    DB_HOST=postgres-db
-    
-    # MongoDB Ayarları (Vault servisi için)
-    MONGO_INITDB_ROOT_USERNAME=mongoadmin
-    MONGO_INITDB_ROOT_PASSWORD=mongo_super_secret_password
-    MONGO_DB_NAME=securevault_vault_dev
-    MONGO_HOST=mongo-db
-    
-    # RabbitMQ Ayarları
-    RABBITMQ_USER=guest
-    RABBITMQ_PASS=guest
-    
-    # JWT Ayarları (En az 32 rastgele karakter olmalı)
-    JWT_KEY=ChangeThisToARandomlyGenerated64ByteBase64Key=
-    JWT_REFRESH_KEY=AlsoChangeThisToAnotherRandomlyGenerated64ByteBase64Key=
-    
-    # Seq Ayarları (Merkenzi Log Sunucusu)
-    SEQ_PASSWORD=your_secret_seq_api_key_or_password
+2.  **AppHost Gizli Anahtarlarını (User Secrets) Ayarlayın:**
+    * Visual Studio'da `src/aspire/SecureVaultAppHost` projesine sağ tıklayın.
+    * **Manage User Secrets** (Kullanıcı Gizli Anahtarlarını Yönet) seçeneğini seçin.
+    * Açılan `secrets.json` dosyasına aşağıdaki içeriği kendiniz için değiştirerek ekleyin:
+    ```json
+    {
+      "Parameters:vault-db-password": "your-secure-mongo-password-123",
+      "Parameters:seqpassword": "your-seq-admin-password",
+      "Parameters:redis-cache-password": "your-secure-redis-password-xyz",
+      "Parameters:postgresusername": "your-postgre-user-name",
+      "Parameters:postgrespassword": "your-postgre-password",
+      "JwtSettings:RefreshTokenKey": "your-super-secret-64-byte-refresh-key-goes-here",
+      "JwtSettings:Key": "your-super-secret-64-byte-jwt-key-goes-here",
+    }
     ```
 
-3.  **Docker ile Başlatın:**
-    Projenin ana dizininde aşağıdaki komutu çalıştırın.
-    ```bash
-    docker-compose up -d --build
+3.  **İstemci (MAUI) Ayarlarını Yapılandırın:**
+    * `src/client/SecureVault.App` dizinindeki `appsettings.json` dosyasını açın.
+    * Aşağıdaki içeriği yapıştırın ve **çok önemli olarak** `your-device-name-here` kısımlarını kendi makine adınızla değiştirin.
+    ```json
+    {
+      "ApiSettings": {
+        "BaseUrl": "https://your-device-name-here:7202/",
+        "DevMachineName": "your-device-name-here"
+      },
+      "SignalRSettings": {
+        "HubPath": "/interaction/hubs/synchub"
+      },
+      "QrCodeSettings": {
+        "HubPath": "/interaction/hubs/qrlogin"
+      },
+      "exclude": [
+        "**/bin",
+        "**/bower_components",
+        "**/jspm_packages",
+        "**/node_modules",
+        "**/obj",
+        "**/platforms"
+      ]
+    }
     ```
+    > **⚠️ Önemli Not:** `appsettings.json` dosyasındaki `your-device-name-here` değerini, .NET Aspire Dashboard'da API Gateway (YARP) için gösterilen URL'deki ana bilgisayar adı (örn: `https://desktop-1234abcd:7202/`) ile değiştirmelisiniz. Aspire'ın kullandığı port (`7202`) farklıysa onu da güncellemelisiniz.
 
-4.  **Servislerin Durumunu Kontrol Edin:**
-    Tüm servislerin `Up` veya `healthy` durumunda olduğundan emin olun.
-    ```bash
-    docker-compose ps
-    ```
+4.  **Uygulamayı Aspire ile Başlatın:**
+    Projenin `AppHost`'unu başlatın:
 
-5.  **Uygulamayı Çalıştırın:**
-    * **API Gateway:** `https://localhost:7202` adresinden erişilebilir.
-    * **MAUI Client:** `src/clients/SecureVault.App` projesini Visual Studio'da açıp istediğiniz platform (Windows veya Android) için çalıştırın.
+5.  **Aspire Dashboard'u İzleyin:**
+    .NET Aspire Dashboard'u otomatik olarak başlayacak ve varsayılan tarayıcınızda açılacaktır. Bu dashboard üzerinden tüm mikroservislerin, veritabanlarının (PostgreSQL, MongoDB, Redis) ve istemci uygulamasının log'larını ve durumunu canlı olarak izleyebilirsiniz.
+
+6.  **MAUI Client'ı Çalıştırın:**
+    `src/client/SecureVault.App` projesini Visual Studio'da açıp istediğiniz platform (Windows veya Android) için çalıştırın. İstemci, 3. adımda yaptığınız ayarlar sayesinde Aspire tarafından yönetilen servislere otomatik olarak bağlanacaktır.
 
 ---
 
