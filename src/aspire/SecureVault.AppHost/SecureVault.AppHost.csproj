@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.5.0" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>508b6b2a-4f37-4605-9a33-d9e5384aaa54</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.5.0" />
+    <PackageReference Include="Aspire.Hosting.MongoDB" Version="9.5.2" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="9.5.2" />
+    <PackageReference Include="Aspire.Hosting.Redis" Version="9.5.2" />
+  </ItemGroup>
+
+    <ItemGroup>
+    <ProjectReference Include="..\..\gateways\SecureVault.ApiGateway\SecureVault.ApiGateway.csproj" />
+    <ProjectReference Include="..\..\services\Identity\SecureVault.Identity.Api\SecureVault.Identity.Api.csproj" />
+    <ProjectReference Include="..\..\services\Interaction\SecureVault.Interaction.Api\SecureVault.Interaction.Api.csproj" />
+    <ProjectReference Include="..\..\services\Vault\SecureVault.Vault.Api\SecureVault.Vault.Api.csproj" />
+    <ProjectReference Include="..\SecureVault.ServiceDefaults\SecureVault.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>

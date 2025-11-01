@@ -37,15 +37,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.Vault.Api", "sr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.Shared.Result", "src\shared\SecureVault.Shared.Result\SecureVault.Shared.Result.csproj", "{88D7ACE5-91CC-4FFB-ABEA-DBF71CF3D0A0}"
 EndProject
-Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{81DDED9D-158B-E303-5F62-77A2896D2A5A}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.App", "src\clients\SecureVault.App\SecureVault.App.csproj", "{1412509E-33D6-43E1-96FC-293512F65722}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
-		.env = .env
-		.env.example = .env.example
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.Identity.Application.Contracts", "src\services\Identity\SecureVault.Identity.Application.Contracts\SecureVault.Identity.Application.Contracts.csproj", "{B210EE93-622B-4D93-9EFB-A74AE67D87E9}"
@@ -63,6 +59,12 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Interaction", "Interaction", "{2B999332-100D-486A-AF35-EC374E350C54}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.Interaction.Api", "src\services\Interaction\SecureVault.Interaction.Api\SecureVault.Interaction.Api.csproj", "{A71F685A-EE11-4B1F-9069-132D540BF882}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "aspire", "aspire", "{0315B06E-4B23-4EAF-0D14-44CB6CBC27ED}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.AppHost", "src\aspire\SecureVault.AppHost\SecureVault.AppHost.csproj", "{A97F9CF0-2039-4E0D-9D2B-527AAA3FAFFB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVault.ServiceDefaults", "src\aspire\SecureVault.ServiceDefaults\SecureVault.ServiceDefaults.csproj", "{F0D5075A-22D1-43E5-9BAF-1B2AE0EC7F44}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -152,14 +154,6 @@ Global
 		{88D7ACE5-91CC-4FFB-ABEA-DBF71CF3D0A0}.Release|Any CPU.Build.0 = Release|Any CPU
 		{88D7ACE5-91CC-4FFB-ABEA-DBF71CF3D0A0}.Release|x64.ActiveCfg = Release|Any CPU
 		{88D7ACE5-91CC-4FFB-ABEA-DBF71CF3D0A0}.Release|x64.Build.0 = Release|Any CPU
-		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Debug|x64.Build.0 = Debug|Any CPU
-		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|x64.ActiveCfg = Release|Any CPU
-		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|x64.Build.0 = Release|Any CPU
 		{1412509E-33D6-43E1-96FC-293512F65722}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1412509E-33D6-43E1-96FC-293512F65722}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1412509E-33D6-43E1-96FC-293512F65722}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
@@ -226,6 +220,22 @@ Global
 		{A71F685A-EE11-4B1F-9069-132D540BF882}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A71F685A-EE11-4B1F-9069-132D540BF882}.Release|x64.ActiveCfg = Release|Any CPU
 		{A71F685A-EE11-4B1F-9069-132D540BF882}.Release|x64.Build.0 = Release|Any CPU
+		{A97F9CF0-2039-4E0D-9D2B-527AAA3FAFFB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A97F9CF0-2039-4E0D-9D2B-527AAA3FAFFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A97F9CF0-2039-4E0D-9D2B-527AAA3FAFFB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A97F9CF0-2039-4E0D-9D2B-527AAA3FAFFB}.Debug|x64.Build.0 = Debug|Any CPU
+		{A97F9CF0-2039-4E0D-9D2B-527AAA3FAFFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A97F9CF0-2039-4E0D-9D2B-527AAA3FAFFB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A97F9CF0-2039-4E0D-9D2B-527AAA3FAFFB}.Release|x64.ActiveCfg = Release|Any CPU
+		{A97F9CF0-2039-4E0D-9D2B-527AAA3FAFFB}.Release|x64.Build.0 = Release|Any CPU
+		{F0D5075A-22D1-43E5-9BAF-1B2AE0EC7F44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F0D5075A-22D1-43E5-9BAF-1B2AE0EC7F44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F0D5075A-22D1-43E5-9BAF-1B2AE0EC7F44}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F0D5075A-22D1-43E5-9BAF-1B2AE0EC7F44}.Debug|x64.Build.0 = Debug|Any CPU
+		{F0D5075A-22D1-43E5-9BAF-1B2AE0EC7F44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F0D5075A-22D1-43E5-9BAF-1B2AE0EC7F44}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F0D5075A-22D1-43E5-9BAF-1B2AE0EC7F44}.Release|x64.ActiveCfg = Release|Any CPU
+		{F0D5075A-22D1-43E5-9BAF-1B2AE0EC7F44}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -256,6 +266,9 @@ Global
 		{AA24BF45-7410-4A3E-8EDC-16F313DBE79B} = {ED07848C-E7B8-4F49-B0A6-DBF1DD66702D}
 		{2B999332-100D-486A-AF35-EC374E350C54} = {E6F40B5C-2068-4169-B22D-3D2640C12962}
 		{A71F685A-EE11-4B1F-9069-132D540BF882} = {2B999332-100D-486A-AF35-EC374E350C54}
+		{0315B06E-4B23-4EAF-0D14-44CB6CBC27ED} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{A97F9CF0-2039-4E0D-9D2B-527AAA3FAFFB} = {0315B06E-4B23-4EAF-0D14-44CB6CBC27ED}
+		{F0D5075A-22D1-43E5-9BAF-1B2AE0EC7F44} = {0315B06E-4B23-4EAF-0D14-44CB6CBC27ED}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {039ECE7C-A251-471C-97FE-A49A8FA647C7}

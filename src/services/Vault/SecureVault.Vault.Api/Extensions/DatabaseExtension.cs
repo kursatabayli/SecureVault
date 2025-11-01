@@ -4,25 +4,25 @@ namespace SecureVault.Vault.Api.Extensions
 {
     public static class DatabaseExtension
     {
-        public static IServiceCollection AddMongoDbConfiguration(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddMongoDbConfiguration(this IServiceCollection services, IHostApplicationBuilder builder)
         {
-            var mongoDbSettings = configuration.GetSection("MongoDbSettings").Get<MongoDbSettings>();
+            builder.AddMongoDBClient("vault-db");
 
-            services.AddSingleton<IMongoClient>(sp => new MongoClient(mongoDbSettings.ConnectionString));
+            services.AddScoped(sp =>
+                  {
+                      var client = sp.GetRequiredService<IMongoClient>();
 
-            services.AddScoped<IMongoDatabase>(sp =>
-            {
-                var client = sp.GetRequiredService<IMongoClient>();
-                return client.GetDatabase(mongoDbSettings.DatabaseName);
-            });
+                      var dbName = builder.Configuration.GetValue<string>("MongoDbSettings:DatabaseName");
+
+                      if (string.IsNullOrEmpty(dbName))
+                      {
+                          throw new InvalidOperationException("'MongoDbSettings:DatabaseName' ayarı yapılandırılmamış. " + "Bunu appsettings.json'a veya AppHost'a eklediğinizden emin olun.");
+                      }
+
+                      return client.GetDatabase(dbName);
+                  });
 
             return services;
         }
-    }
-
-    public class MongoDbSettings
-    {
-        public string ConnectionString { get; set; }
-        public string DatabaseName { get; set; }
     }
 }
