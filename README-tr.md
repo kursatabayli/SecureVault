@@ -167,9 +167,10 @@ Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin.
     ```
 
 2.  **AppHost Gizli Anahtarlarını (User Secrets) Ayarlayın:**
-    * Visual Studio'da `src/aspire/SecureVaultAppHost` projesine sağ tıklayın.
-    * **Manage User Secrets** (Kullanıcı Gizli Anahtarlarını Yönet) seçeneğini seçin.
-    * Açılan `secrets.json` dosyasına aşağıdaki içeriği kendiniz için değiştirerek ekleyin:
+* Visual Studio'da `src/aspire/SecureVaultAppHost` projesine sağ tıklayın.
+* **Manage User Secrets** (Kullanıcı Gizli Anahtarlarını Yönet) seçeneğini seçin.
+* Açılan `secrets.json` dosyasına aşağıdaki içeriği kendiniz için değiştirerek ekleyin:
+
     ```json
     {
       "Parameters:vault-db-password": "your-secure-mongo-password-123",
@@ -183,40 +184,29 @@ Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin.
     ```
 
 3.  **İstemci (MAUI) Ayarlarını Yapılandırın:**
-    * `src/client/SecureVault.App` dizinindeki `appsettings.json` dosyasını açın.
-    * Aşağıdaki içeriği yapıştırın ve **çok önemli olarak** `your-device-name-here` kısımlarını kendi makine adınızla değiştirin.
+* `src/client/SecureVault.App` dizinindeki `appsettings.json` dosyasını açın.
+* Aşağıdaki içeriği yapıştırın ve **çok önemli olarak** `your-device-name-here` kısımlarını kendi makine adınızla değiştirin.
+
     ```json
     {
       "ApiSettings": {
         "BaseUrl": "https://your-device-name-here:7202/",
         "DevMachineName": "your-device-name-here"
-      },
-      "SignalRSettings": {
-        "HubPath": "/interaction/hubs/synchub"
-      },
-      "QrCodeSettings": {
-        "HubPath": "/interaction/hubs/qrlogin"
-      },
-      "exclude": [
-        "**/bin",
-        "**/bower_components",
-        "**/jspm_packages",
-        "**/node_modules",
-        "**/obj",
-        "**/platforms"
-      ]
+      }
     }
     ```
     > **⚠️ Önemli Not:** `appsettings.json` dosyasındaki `your-device-name-here` değerini, .NET Aspire Dashboard'da API Gateway (YARP) için gösterilen URL'deki ana bilgisayar adı (örn: `https://desktop-1234abcd:7202/`) ile değiştirmelisiniz. Aspire'ın kullandığı port (`7202`) farklıysa onu da güncellemelisiniz.
 
 4.  **Uygulamayı Aspire ile Başlatın:**
-    Projenin `AppHost`'unu başlatın:
+Projenin `AppHost`'unu Visual Studio veya komut satırı ile başlatın:
+  ```bash
+      cd src/aspire/SecureVaultAppHost
+      dotnet run
+  ```
 
-5.  **Aspire Dashboard'u İzleyin:**
-    .NET Aspire Dashboard'u otomatik olarak başlayacak ve varsayılan tarayıcınızda açılacaktır. Bu dashboard üzerinden tüm mikroservislerin, veritabanlarının (PostgreSQL, MongoDB, Redis) ve istemci uygulamasının log'larını ve durumunu canlı olarak izleyebilirsiniz.
+5.  **Aspire Dashboard'u İzleyin:** .NET Aspire Dashboard'u otomatik olarak başlayacak ve varsayılan tarayıcınızda açılacaktır. Bu dashboard üzerinden tüm mikroservislerin, veritabanlarının (PostgreSQL, MongoDB, Redis) ve istemci uygulamasının log'larını ve durumunu canlı olarak izleyebilirsiniz.
 
-6.  **MAUI Client'ı Çalıştırın:**
-    `src/client/SecureVault.App` projesini Visual Studio'da açıp istediğiniz platform (Windows veya Android) için çalıştırın. İstemci, 3. adımda yaptığınız ayarlar sayesinde Aspire tarafından yönetilen servislere otomatik olarak bağlanacaktır.
+6.  **MAUI Client'ı Çalıştırın:** `src/client/SecureVault.App` projesini Visual Studio'da açıp istediğiniz platform (Windows veya Android) için çalıştırın. İstemci, 3. adımda yaptığınız ayarlar sayesinde Aspire tarafından yönetilen servislere otomatik olarak bağlanacaktır.
 
 ---
 
