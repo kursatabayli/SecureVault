@@ -2,13 +2,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using RabbitMQ.Client;
 using SecureVault.Identity.Api.Extensions;
 using SecureVault.Identity.Api.MiddleWares;
 using SecureVault.Identity.Application;
 using SecureVault.Identity.Infrastructure.Context;
 using SecureVault.Identity.Infrastructure.Helpers;
-using SecureVault.Shared.RabbitMQ.Options;
 using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
@@ -30,7 +28,7 @@ namespace SecureVault.Identity.Api
 
             try
             {
-                Log.Information("Uygulama baþlatýlýyor.");
+                Log.Information("Uygulama baï¿½latï¿½lï¿½yor.");
 
                 var builder = WebApplication.CreateBuilder(args);
 
@@ -102,14 +100,6 @@ namespace SecureVault.Identity.Api
                     };
                 });
 
-
-                builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
-                var rabbitMqSettings = builder.Configuration.GetSection("RabbitMq").Get<RabbitMqOptions>();
-                builder.Services.AddSingleton<IConnectionFactory>(sp => new ConnectionFactory
-                {
-                    Uri = new Uri(rabbitMqSettings.Uri),
-                });
-
                 builder.Services.AddAuthorization();
 
                 var app = builder.Build();
@@ -145,7 +135,7 @@ namespace SecureVault.Identity.Api
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, "Uygulama baþlatýlýrken kritik bir hata oluþtu.");
+                Log.Fatal(ex, "Uygulama baï¿½latï¿½lï¿½rken kritik bir hata oluï¿½tu.");
             }
             finally
             {

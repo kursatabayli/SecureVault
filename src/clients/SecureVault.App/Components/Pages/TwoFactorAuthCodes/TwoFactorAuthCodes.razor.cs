@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
 using MudBlazor;
-using SecureVault.App.Application.Services;
 using SecureVault.App.Models.TwoFactorAuthCodeModels;
 using SecureVault.App.Resources.Localization;
 using SecureVault.App.Services;
@@ -36,7 +35,6 @@ namespace SecureVault.App.Components.Pages.TwoFactorAuthCodes
         {
             OtpService.OnTick += OnTotpTick;
             await OtpService.InitializeAsync();
-            UINotificationService.OnVaultDataChangedAsync += HandleItemAdded;
         }
 
         private async Task OnTotpTick() => await InvokeAsync(StateHasChanged);
@@ -46,7 +44,6 @@ namespace SecureVault.App.Components.Pages.TwoFactorAuthCodes
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", item.CurrentCode);
             Snackbar.Add(Localizer[SharedResources.Copied], Severity.Success, config => { config.VisibleStateDuration = 2000; });
         }
-        private async Task HandleItemAdded() => await OtpService.InitializeAsync();
         private Color GetProgressColor(int timeLeft) => timeLeft <= 5 ? Color.Error : Color.Primary;
         private string FormatCode(string code)
         {
@@ -59,7 +56,6 @@ namespace SecureVault.App.Components.Pages.TwoFactorAuthCodes
         public void Dispose()
         {
             OtpService.OnTick -= OnTotpTick;
-            UINotificationService.OnVaultDataChangedAsync -= HandleItemAdded;
         }
     }
 }

@@ -5,12 +5,10 @@ services:
       context: .
       dockerfile: src/gateways/SecureVault.ApiGateway/Dockerfile
     ports:
-      - "7202:8081"
       - "5234:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_HTTP_PORTS=8080
-      - ASPNETCORE_HTTPS_PORTS=8081      
+      - ASPNETCORE_URLS=http://+:8080
       - JwtSettings__Key=${JWT_KEY}
       - JwtSettings__Issuer=securevault-identity-api
       - JwtSettings__Audience=securevault-apigateway
@@ -34,8 +32,6 @@ services:
       - JwtSettings__RefreshTokenKey=${JWT_REFRESH_KEY}
       - JwtSettings__Issuer=securevault-identity-api
       - JwtSettings__Audience=securevault-apigateway
-      - RabbitMq__Uri=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672
-      - RabbitMq__ExchangeName=user-activity-exchange
     networks:
       - securevault-net
     depends_on:
@@ -44,8 +40,6 @@ services:
       postgres-db:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      rabbitmq:
         condition: service_healthy
 
   securevault-vault-api:
@@ -61,8 +55,6 @@ services:
       - JwtSettings__Key=${JWT_KEY}
       - JwtSettings__Issuer=securevault-identity-api
       - JwtSettings__Audience=securevault-apigateway
-      - RabbitMq__Uri=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672
-      - RabbitMq__ExchangeName=user-activity-exchange
     networks:
       - securevault-net
     depends_on:
@@ -82,35 +74,11 @@ services:
       - JwtSettings__Key=${JWT_KEY}
       - JwtSettings__Issuer=securevault-identity-api
       - JwtSettings__Audience=securevault-apigateway
-      - RabbitMq__Uri=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672
-      - RabbitMq__UserName=${RABBITMQ_USER}
-      - RabbitMq__Password=${RABBITMQ_PASS}
-      - RabbitMq__ExchangeName=user-activity-exchange
     networks:
       - securevault-net
     depends_on:
       consul:
         condition: service_healthy  
-      rabbitmq:
-        condition: service_healthy
-
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS}
-    networks:
-      - securevault-net
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: always
 
   postgres-db:
     image: postgres:17

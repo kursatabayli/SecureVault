@@ -2,60 +2,79 @@
 using SecureVault.App.Application.Contracts.Abstractions.Api;
 using SecureVault.App.Application.Contracts.Abstractions.Persistence;
 using SecureVault.App.Application.Contracts.Abstractions.Sync;
-using SecureVault.App.Application.Contracts.Repositories;
 
 namespace SecureVault.App.Infrastructure.Services.Sync
 {
     public class BackgroundSyncService : IBackgroundSyncService
     {
         private readonly ILogger<BackgroundSyncService> _logger;
-        private readonly IEnumerable<ISyncProcessor> _syncProcessors;
-        private readonly IServiceProvider _serviceProvider;
-
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ISyncLock _syncLock;
         public BackgroundSyncService(
             ILogger<BackgroundSyncService> logger,
-            IEnumerable<ISyncProcessor> syncProcessors,
-            IServiceProvider serviceProvider)
+            IServiceScopeFactory scopeFactory,
+            ISyncLock syncLock)
         {
             _logger = logger;
-            _syncProcessors = syncProcessors;
-            _serviceProvider = serviceProvider;
+            _scopeFactory = scopeFactory;
+            _syncLock = syncLock;
         }
 
-        public async Task SynchronizeAsync(CancellationToken cancellationToken)
+        public async Task<bool> SynchronizeAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Tek seferlik senkronizasyon işlemi başlatılıyor...");
-
-            if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+            if (!await _syncLock.WaitAsync(TimeSpan.Zero, cancellationToken))
             {
-                _logger.LogWarning("İnternet bağlantısı olmadığından senkronizasyon işlemi atlandı.");
-                return;
+                _logger.LogInformation("Başka bir senkronizasyon işlemi (Login/Initial) zaten çalışıyor. Arka plan senkronizasyonu atlanıyor.");
+                return false;
             }
 
             try
             {
-                await PushLocalChangesAsync(cancellationToken);
+                _logger.LogInformation("Tek seferlik senkronizasyon işlemi başlatılıyor...");
 
-                if (cancellationToken.IsCancellationRequested) return;
+                if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+                {
+                    _logger.LogWarning("İnternet bağlantısı olmadığından senkronizasyon işlemi atlandı.");
+                    return false;
+                }
 
-                await PullServerChangesAsync(cancellationToken);
+                await using var scope = _scopeFactory.CreateAsyncScope();
+                var syncProcessors = scope.ServiceProvider.GetRequiredService<IEnumerable<ISyncProcessor>>();
+                await PushLocalChangesAsync(syncProcessors, cancellationToken);
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var pullResult = await PullServerChangesAsync(scope.ServiceProvider, cancellationToken);
+
+                if (!pullResult)
+                {
+                    _logger.LogWarning("Senkronizasyonun PULL adımı tamamlanamadı. İşlem başarısız.");
+                    return false;
+                }
 
                 _logger.LogInformation("Senkronizasyon işlemi başarıyla tamamlandı.");
+                return true;
             }
             catch (OperationCanceledException)
             {
                 _logger.LogWarning("Senkronizasyon işlemi iptal edildi.");
+                return false;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Senkronizasyon sırasında beklenmedik bir hata oluştu.");
+                return false;
+            }
+            finally
+            {
+                _syncLock.Release();
             }
         }
 
-        private async Task PushLocalChangesAsync(CancellationToken cancellationToken)
+        private async Task PushLocalChangesAsync(IEnumerable<ISyncProcessor> syncProcessors, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Lokal değişiklikler sunucuya gönderiliyor (PUSH)...");
-            foreach (var processor in _syncProcessors)
+            foreach (var processor in syncProcessors)
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -66,53 +85,54 @@ namespace SecureVault.App.Infrastructure.Services.Sync
             }
         }
 
-        private async Task PullServerChangesAsync(CancellationToken cancellationToken)
+        private async Task<bool> PullServerChangesAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Sunucudaki değişiklikler lokale çekiliyor (PULL)...");
 
-            await using var scope = _serviceProvider.CreateAsyncScope();
-            var storageService = scope.ServiceProvider.GetRequiredService<IStorageService>();
-            var vaultItemService = scope.ServiceProvider.GetRequiredService<IVaultItemService>();
-            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-            var syncDataProcessor = scope.ServiceProvider.GetRequiredService<ISyncDataProcessor>();
+            var storageService = serviceProvider.GetRequiredService<IStorageService>();
+            var vaultItemService = serviceProvider.GetRequiredService<IVaultItemService>();
+            var syncDataProcessor = serviceProvider.GetRequiredService<ISyncDataProcessor>();
+            var lastSyncTimestamp = storageService.GetLastSyncDate();
+            var syncData = (lastSyncTimestamp == DateTimeOffset.MinValue)
+                ? await vaultItemService.GetUserVaultAsync(cancellationToken)
+                : await vaultItemService.GetVaultItemByLastSyncTimeAsync(lastSyncTimestamp, cancellationToken);
 
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                var lastSyncTimestamp = storageService.GetLastSyncDate();
-                var syncData = (lastSyncTimestamp == DateTimeOffset.MinValue)
-                    ? await vaultItemService.GetUserVaultAsync(cancellationToken)
-                    : await vaultItemService.GetVaultItemByLastSyncTimeAsync(lastSyncTimestamp, cancellationToken);
 
-                if (cancellationToken.IsCancellationRequested) return;
 
                 if (!syncData.IsSuccess)
                 {
                     _logger.LogWarning("Sunucudan güncellemeler çekilemedi: {Error}", syncData.Error.Message);
-                    return;
+                    return false;
                 }
                 if (syncData.Value is null || !syncData.Value.Any())
                 {
                     _logger.LogInformation("Sunucuda yeni bir değişiklik bulunmuyor.");
-                    return;
+                    return true;
                 }
 
                 _logger.LogInformation("{Count} adet kayıt sunucudan alındı. Lokal veritabanı işleniyor...", syncData.Value.Count);
-                var processingResult = await syncDataProcessor.ProcessServerDataAsync(syncData.Value, unitOfWork);
+                var processingResult = await syncDataProcessor.ProcessServerDataAsync(syncData.Value);
 
                 if (processingResult.IsSuccess)
                 {
                     var maxUpdatedAt = syncData.Value.Max(x => x.UpdatedAt);
                     storageService.SetLastSyncDate(maxUpdatedAt);
                     _logger.LogInformation("Lokal veritabanı başarıyla güncellendi. Yeni senkronizasyon zamanı: {Timestamp}", maxUpdatedAt);
+                    return true;
                 }
                 else
                 {
                     _logger.LogError("Sunucudan gelen veriler işlenirken hata oluştu: {Error}", processingResult.Error.Message);
+                    return false;
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Sunucu güncellemeleri çekilirken kritik bir hata oluştu.");
+                return false;
             }
         }
     }

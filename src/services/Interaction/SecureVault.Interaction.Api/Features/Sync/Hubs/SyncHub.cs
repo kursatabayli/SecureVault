@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using SecureVault.Interaction.Api.Features.Sync.Contracts;
+using System.Collections.Concurrent;
 using System.Security.Claims;
 
 namespace SecureVault.Interaction.Api.Features.Sync.Hubs
@@ -8,70 +8,112 @@ namespace SecureVault.Interaction.Api.Features.Sync.Hubs
     [Authorize]
     public class SyncHub : Hub
     {
-        private readonly IUserConnectionManager _userConnectionManager;
         private readonly ILogger<SyncHub> _logger;
-
-        public SyncHub(IUserConnectionManager userConnectionManager, ILogger<SyncHub> logger)
+        private static readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _activeDevicesByUser = new();
+        public SyncHub(ILogger<SyncHub> logger)
         {
-            _userConnectionManager = userConnectionManager;
             _logger = logger;
         }
 
         public override Task OnConnectedAsync()
         {
             var userId = GetUserIdFromContext();
-            var deviceId = GetDeviceIdFromContext();
-            var connectionId = Context.ConnectionId; 
-            _userConnectionManager.AddConnection(userId, connectionId, deviceId);
-            _logger.LogInformation("Kullanıcı bağlandı. UserId: {UserId}, ConnectionId: {ConnectionId}", userId, connectionId);
+            if (string.IsNullOrEmpty(userId))
+            {
+                Context.Abort();
+                return Task.CompletedTask;
+            }
+            Groups.AddToGroupAsync(Context.ConnectionId, userId);
+            _logger.LogInformation("Client connected: {ConnectionId}, User: {UserId}", Context.ConnectionId, userId);
             return base.OnConnectedAsync();
         }
-
-        public override Task OnDisconnectedAsync(Exception? exception)
+        public async Task NotifySyncRequired()
         {
-            var connectionId = Context.ConnectionId;
-            var userId = _userConnectionManager.RemoveConnection(connectionId);
-
-            if (userId.HasValue)
+            var userId = GetUserIdFromContext();
+            if (string.IsNullOrEmpty(userId))
             {
-                if (exception is not null)
-                {
-                    _logger.LogWarning(exception, "Kullanıcı bağlantısı bir hata ile kesildi. UserId: {UserId}, ConnectionId: {ConnectionId}", userId.Value, connectionId);
-                }
-                else
-                {
-                    _logger.LogInformation("Kullanıcı bağlantısı kesildi. UserId: {UserId}, ConnectionId: {ConnectionId}", userId.Value, connectionId);
-                }
-            }
-            else
-            {
-                _logger.LogWarning("Takip edilmeyen bir bağlantı kesildi. ConnectionId: {ConnectionId}", connectionId);
+                return;
             }
 
-            return base.OnDisconnectedAsync(exception);
+            _logger.LogInformation("Sync notification received from: {ConnectionId}, User: {UserId}. Notifying others in group.", Context.ConnectionId, userId);
+
+            await Clients.OthersInGroup(userId).SendAsync("SyncRequired");
         }
 
-        private Guid GetUserIdFromContext()
+        public async Task RegisterActiveDevice(string uniqueDeviceId)
+        {
+            var userId = GetUserIdFromContext();
+            var connectionId = Context.ConnectionId;
+
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(uniqueDeviceId))
+            {
+                _logger.LogWarning("RegisterActiveDevice failed: Missing UserId or DeviceId. User: {UserId}, Device: {DeviceId}", userId, uniqueDeviceId);
+                return;
+            }
+
+            Context.Items["UniqueDeviceId"] = uniqueDeviceId;
+
+            var userDevices = _activeDevicesByUser.GetOrAdd(userId, _ => new ConcurrentDictionary<string, byte>());
+            if (userDevices.TryAdd(uniqueDeviceId, 0))
+            {
+                _logger.LogInformation("Device registered: User {UserId}, Device {DeviceId}, Connection {ConnectionId}", userId, uniqueDeviceId, connectionId);
+            }
+
+            await BroadcastActiveDeviceList(userId);
+        }
+
+        public override async Task OnDisconnectedAsync(Exception? exception)
+        {
+            var userId = GetUserIdFromContext();
+            if (string.IsNullOrEmpty(userId))
+            {
+                await base.OnDisconnectedAsync(exception);
+                return;
+            }
+
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, userId);
+            _logger.LogInformation("Client disconnected: {ConnectionId}, User: {UserId}", Context.ConnectionId, userId);
+
+            if (Context.Items.TryGetValue("UniqueDeviceId", out var deviceIdObj) && deviceIdObj is string uniqueDeviceId)
+            {
+                if (_activeDevicesByUser.TryGetValue(userId, out var userDevices))
+                {
+                    if (userDevices.TryRemove(uniqueDeviceId, out _))
+                    {
+                        _logger.LogInformation("Device unregistered: User {UserId}, Device {DeviceId}", userId, uniqueDeviceId);
+                    }
+
+                    if (userDevices.IsEmpty)
+                    {
+                        _activeDevicesByUser.TryRemove(userId, out _);
+                    }
+                }
+            }
+
+            await BroadcastActiveDeviceList(userId);
+
+            await base.OnDisconnectedAsync(exception);
+        }
+
+        private async Task BroadcastActiveDeviceList(string userId)
+        {
+            if (string.IsNullOrEmpty(userId)) return;
+
+            List<string> activeDeviceIds = new List<string>();
+
+            if (_activeDevicesByUser.TryGetValue(userId, out var userDevices))
+            {
+                activeDeviceIds = userDevices.Keys.ToList();
+            }
+
+            _logger.LogDebug("Broadcasting active device list for User {UserId}: {DeviceCount} devices.", userId, activeDeviceIds.Count);
+            await Clients.Group(userId).SendAsync("ActiveDevicesUpdated", activeDeviceIds);
+        }
+
+        private string? GetUserIdFromContext()
         {
             var userIdClaim = Context.User?.Claims.FirstOrDefault(c => c.Type == "sub" || c.Type == ClaimTypes.NameIdentifier);
-
-            if (userIdClaim is null || !Guid.TryParse(userIdClaim.Value, out var userId))
-            {
-                throw new InvalidOperationException("Geçerli bir kullanıcı kimliği bulunamadı.");
-            }
-            return userId;
-        }
-
-        private string GetDeviceIdFromContext()
-        {
-            var httpContext = Context.GetHttpContext();
-            var deviceId = httpContext?.Request.Headers["X-Device-Id"].ToString();
-
-            if (string.IsNullOrEmpty(deviceId))
-            {
-                throw new InvalidOperationException("Geçerli bir cihaz kimliği ('X-Device-ID' header) bulunamadı.");
-            }
-            return deviceId;
+            return userIdClaim?.Value;
         }
     }
 }

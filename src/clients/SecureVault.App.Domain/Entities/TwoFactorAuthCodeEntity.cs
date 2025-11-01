@@ -1,75 +1,51 @@
-﻿using SecureVault.App.Domain.Enums;
-using System.ComponentModel.DataAnnotations;
+﻿using Realms;
+using SecureVault.App.Domain.Enums;
 
 namespace SecureVault.App.Domain.Entities
 {
-    public class TwoFactorAuthCodeEntity : ISynchronizableEntity
+    public partial class TwoFactorAuthCodeEntity : IRealmObject, ISynchronizableEntity
     {
-        [Key]
-        public Guid Id { get; private set; }
-        public string Issuer { get; private set; }
-        public string AccountName { get; private set; }
-        public string SecretKey { get; private set; }
-        public OtpType Type { get; private set; }
-        public int Digits { get; private set; }
-        public int Period { get; private set; }
-        public long Counter { get; private set; }
-        public OtpAlgorithm Algorithm { get; private set; }
-        public int Version { get; private set; }
-        public DateTimeOffset CreatedAt { get; private set; }
-        public DateTimeOffset UpdatedAt { get; private set; }
-        public bool IsDeleted { get; private set; }
-        public bool IsSynced { get; private set; }
-        public TwoFactorAuthCodeEntity() { }
+        [PrimaryKey]
+        public Guid Id { get; set; }
+        public string Issuer { get; set; } = string.Empty;
+        public string AccountName { get; set; } = string.Empty;
+        public string SecretKey { get; set; } = string.Empty;
+        public int TypeRaw { get; set; }
+        public int AlgorithmRaw { get; set; }
 
-        public static TwoFactorAuthCodeEntity Create(
-            Guid? id,
-            string issuer,
-            string accountName,
-            string secretKey,
-            OtpType type,
-            int digits,
-            int period,
-            long counter,
-            OtpAlgorithm algorithm,
-            int? version,
-            DateTimeOffset? createdAt,
-            DateTimeOffset? updatedAt)
+        [Ignored]
+        public OtpType Type
         {
-            var actualCreatedAt = createdAt ?? DateTimeOffset.UtcNow;
-            return new TwoFactorAuthCodeEntity
-            {
-                Id = id ?? Guid.NewGuid(),
-                Issuer = issuer,
-                AccountName = accountName,
-                SecretKey = secretKey,
-                Type = type,
-                Digits = digits,
-                Period = period,
-                Counter = counter,
-                Algorithm = algorithm,
-                Version = version ?? 1,
-                CreatedAt = actualCreatedAt,
-                UpdatedAt = updatedAt ?? actualCreatedAt,
-                IsDeleted = false,
-                IsSynced = false
-            };
+            get => (OtpType)TypeRaw;
+            set => TypeRaw = (int)value;
         }
 
-        public void Update(
-            string issuer,
-            string accountName,
-            long counter,
-            int version,
-            DateTimeOffset updatedAt)
+        [Ignored]
+        public OtpAlgorithm Algorithm
         {
-            Issuer = issuer;
-            AccountName = accountName;
-            Counter = counter;
-            Version = version;
-            UpdatedAt = updatedAt;
+            get => (OtpAlgorithm)AlgorithmRaw;
+            set => AlgorithmRaw = (int)value;
+        }
+        public int Digits { get; set; }
+        public int Period { get; set; }
+        public long Counter { get; set; }
+        public int Version { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset UpdatedAt { get; set; }
+        public bool IsDeleted { get; set; }
+        public bool IsSynced { get; set; }
+
+        public TwoFactorAuthCodeEntity()
+        {
+            Id = Guid.NewGuid();
+            Version = 1;
+            CreatedAt = DateTimeOffset.UtcNow;
+            UpdatedAt = CreatedAt;
+            IsDeleted = false;
             IsSynced = false;
         }
+
+        
 
         public void MarkAsDeleted()
         {

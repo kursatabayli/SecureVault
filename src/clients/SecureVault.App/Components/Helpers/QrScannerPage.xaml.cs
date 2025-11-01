@@ -24,6 +24,12 @@ public partial class QrScannerPage : ContentPage
             await Navigation.PopModalAsync();
         });
     }
+
+    private async void CancelButton_Clicked(object sender, EventArgs e)
+    {
+        barcodeReader.IsDetecting = false;
+        await Navigation.PopModalAsync();
+    }
     protected override bool OnBackButtonPressed()
     {
         _taskCompletionSource.TrySetResult(null);

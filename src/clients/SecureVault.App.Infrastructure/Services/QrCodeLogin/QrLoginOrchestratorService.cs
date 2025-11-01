@@ -73,8 +73,8 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
             try
             {
                 await SetState(QrSessionState.CreatingChannel, "Oturum kanalı oluşturuluyor...");
-                _channelId = await _interactionService.CreateQrLoginChannelAsync(cancellationToken);
-
+                var result = await _interactionService.CreateQrLoginChannelAsync(cancellationToken);
+                _channelId = result.Value;
                 if (string.IsNullOrEmpty(_channelId))
                     throw new InvalidOperationException("Sunucudan kanal ID'si alınamadı.");
 

@@ -4,5 +4,6 @@
     {
         Task ConnectAsync(CancellationToken cancellationToken);
         Task DisconnectAsync();
+        Task NotifySyncRequiredAsync(CancellationToken cancellationToken = default);
     }
 }

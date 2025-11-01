@@ -1,18 +1,18 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Refit;
 using SecureVault.App.Application.Contracts.Abstractions.Api;
+using SecureVault.App.Application.Contracts.Abstractions.Database;
 using SecureVault.App.Application.Contracts.Abstractions.Device;
 using SecureVault.App.Application.Contracts.Abstractions.Persistence;
 using SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin;
 using SecureVault.App.Application.Contracts.Abstractions.Sync;
 using SecureVault.App.Application.Contracts.Repositories;
 using SecureVault.App.Domain.Entities;
-using SecureVault.App.Infrastructure.Context;
 using SecureVault.App.Infrastructure.Helpers;
 using SecureVault.App.Infrastructure.HttpHandlers;
 using SecureVault.App.Infrastructure.Repositories;
 using SecureVault.App.Infrastructure.Services.Api;
+using SecureVault.App.Infrastructure.Services.Database;
 using SecureVault.App.Infrastructure.Services.Device;
 using SecureVault.App.Infrastructure.Services.QrCodeLogin;
 using SecureVault.App.Infrastructure.Services.QrCodeLogin.MessageHandlers;
@@ -40,40 +40,42 @@ namespace SecureVault.App.Infrastructure
             //device
             services.AddScoped<IDeviceInfoService, DeviceInfoService>();
             //persistence
+
+            services.AddSingleton(Preferences.Default);
+            services.AddSingleton(SecureStorage.Default);
             services.AddScoped<IStorageService, StorageService>();
             //http handlers
             services.AddTransient<DeviceHeadersHandler>();
             services.AddTransient<AuthTokenHandler>();
             services.AddTransient<AddBearerTokenHandler>();
             services.AddTransient<PollyResiliencyHandler>();
-            services.AddSingleton<IHttpHandlerPipelineBuilder, HttpHandlerPipelineBuilder>();   
+            services.AddSingleton<IHttpHandlerPipelineBuilder, HttpHandlerPipelineBuilder>();
 
             //repositories
             services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
             services.AddScoped<IPasswordRepository, PasswordRepository>();
             services.AddScoped<ITwoFactorAuthCodeRepository, TwoFactorAuthCodeRepository>();
 
-            //unit of work
-            services.AddScoped<IUnitOfWork, UnitOfWork>();
-
 
             //db context
-            string dbPath = Path.Combine(FileSystem.AppDataDirectory, "securevault.db3");
-            services.AddDbContext<SecureVaultDbContext>(options => options.UseSqlite($"Filename={dbPath}"));
+            services.AddScoped<IRealmService, RealmService>();
+            services.AddSingleton<IDatabaseManager, DatabaseManager>();
 
             //sync services
             services.AddSingleton(Connectivity.Current);
             services.AddSingleton<IBackgroundSyncService, BackgroundSyncService>();
-            services.AddTransient<ISyncProcessor, SyncProcessor<PasswordEntity>>();
-            services.AddTransient<ISyncProcessor, SyncProcessor<TwoFactorAuthCodeEntity>>();
-            services.AddSingleton<PasswordSyncHandler>();
-            services.AddSingleton<IEntityDataProcessor>(sp => sp.GetRequiredService<PasswordSyncHandler>());
-            services.AddSingleton<IEntityPayloadFactory<PasswordEntity>>(sp => sp.GetRequiredService<PasswordSyncHandler>());
-            services.AddSingleton<TwoFactorAuthSyncHandler>();
-            services.AddSingleton<IEntityDataProcessor>(sp => sp.GetRequiredService<TwoFactorAuthSyncHandler>());
-            services.AddSingleton<IEntityPayloadFactory<TwoFactorAuthCodeEntity>>(sp => sp.GetRequiredService<TwoFactorAuthSyncHandler>());
-            services.AddSingleton<ISyncDataProcessor, SyncDataProcessor>();
+            services.AddScoped<ISyncDataProcessor, SyncDataProcessor>();
+            services.AddScoped<ISyncProcessor, SyncProcessor<PasswordEntity>>();
+            services.AddScoped<ISyncProcessor, SyncProcessor<TwoFactorAuthCodeEntity>>();
+            services.AddScoped<PasswordSyncHandler>();
+            services.AddScoped<TwoFactorAuthSyncHandler>();
+            services.AddScoped<IEntityDataProcessor>(sp => sp.GetRequiredService<PasswordSyncHandler>());
+            services.AddScoped<IEntityDataProcessor>(sp => sp.GetRequiredService<TwoFactorAuthSyncHandler>());
+            services.AddScoped<IEntityPayloadFactory<PasswordEntity>>(sp => sp.GetRequiredService<PasswordSyncHandler>());
+            services.AddScoped<IEntityPayloadFactory<TwoFactorAuthCodeEntity>>(sp => sp.GetRequiredService<TwoFactorAuthSyncHandler>());
             services.AddSingleton<ISyncConnectionService, SyncConnectionService>();
+            services.AddSingleton<ISyncLock, SyncLock>();
+            services.AddSingleton<IActiveSessionTracker, ActiveSessionTracker>();
 
             //qr code login
             services.AddScoped<IQrLoginOrchestrator, QrLoginOrchestratorService>();

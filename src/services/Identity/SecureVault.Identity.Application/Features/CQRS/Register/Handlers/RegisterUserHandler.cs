@@ -6,8 +6,6 @@ using SecureVault.Identity.Application.Contracts.Services;
 using SecureVault.Identity.Application.Features.CQRS.Register.Commands;
 using SecureVault.Identity.Application.Messages;
 using SecureVault.Identity.Domain.Entities;
-using SecureVault.Shared.Contracts.Events;
-using SecureVault.Shared.RabbitMQ.Contracts;
 using SecureVault.Shared.Result;
 
 namespace SecureVault.Identity.Application.Features.CQRS.Register.Handlers

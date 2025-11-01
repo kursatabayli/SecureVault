@@ -1,8 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @implements IDisposable
-
 @using SecureVault.App.Application.Contracts.Abstractions.UI
-@using SecureVault.App.Infrastructure.Helpers.Data
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="true" />
 <MudPopoverProvider />
@@ -15,17 +13,20 @@
         <Authorized>
             <MudHidden Breakpoint="Breakpoint.SmAndUp" Invert="true">
                 <MudAppBar Elevation="1" Dense="true" Fixed="true">
-                    <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleDrawer" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+                        OnClick="ToggleDrawer" />
                     <MudSpacer />
                 </MudAppBar>
 
-                <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2" Variant="DrawerVariant.Mini">
+                <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2"
+                    Variant="DrawerVariant.Mini">
                     <NavMenu />
                 </MudDrawer>
             </MudHidden>
 
             <MudMainContent>
-                <MudOverlay Visible="_drawerOpen" OnClick='() => _drawerOpen = false' DarkBackground="false" ZIndex="1100" />
+                <MudOverlay Visible="_drawerOpen" OnClick='() => _drawerOpen = false' DarkBackground="false"
+                    ZIndex="1100" />
                 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-8 pb-16">
                     @Body
                 </MudContainer>
@@ -76,7 +77,7 @@
             var currentPath = currentUri.AbsolutePath;
 
             if (!string.Equals(currentPath, "/login", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(currentPath, "/logout", StringComparison.OrdinalIgnoreCase))
+            !string.Equals(currentPath, "/logout", StringComparison.OrdinalIgnoreCase))
             {
                 await InvokeAsync(() => NavigationManager.NavigateTo("/logout"));
             }

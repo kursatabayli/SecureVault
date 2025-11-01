@@ -6,7 +6,6 @@ using Nager.PublicSuffix.RuleParsers;
 using Nager.PublicSuffix.RuleProviders;
 using SecureVault.App.Application.Contracts.Abstractions.UI;
 using SecureVault.App.Auth;
-using SecureVault.App.Infrastructure.Helpers.Data;
 using SecureVault.App.Services;
 
 namespace SecureVault.App
@@ -19,11 +18,10 @@ namespace SecureVault.App
             services.AddSingleton<CustomAuthStateProvider>();
             services.AddSingleton<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
             services.AddSingleton<IAuthenticationStateNotifier>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
-            services.AddSingleton<IOtpService, OtpService>();
+            services.AddScoped<IOtpService, OtpService>();
             services.AddScoped<IQrCodeScannerService, QrCodeScannerService>();
             services.AddScoped<ITwoFactorAuthCodeCreationService, TwoFactorAuthCodeCreationService>();
             services.AddScoped<IQrCodeGenerateService, QrCodeGenerateService>();
-            services.AddScoped<DatabaseManager>();
 
             services.AddSingleton<IDomainParser>(serviceProvider =>
             {

@@ -5,7 +5,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 using SecureVault.App.Application.Features.CQRS.Auth.Commands;
-using SecureVault.App.Infrastructure.Helpers.Data;
 using SecureVault.App.Models.LoginModels;
 using SecureVault.App.Resources.Localization;
 
@@ -22,12 +21,7 @@ namespace SecureVault.App.Components.Pages.Auth
         [Inject] private ISnackbar Snackbar { get; set; } = null!;
         [Inject] private NavigationManager NavigationManager { get; set; } = null!;
         [Inject] private ILogger<Login> Logger { get; set; } = null!;
-        [Inject] private DatabaseManager DbManager { get; set; } = null!;
 
-        protected override async Task OnInitializedAsync()
-        {
-            await DbManager.EnsureDatabaseIsReadyAsync();
-        }
         private async Task Submit()
         {
             if (form is null) return;

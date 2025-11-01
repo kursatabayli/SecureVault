@@ -19,7 +19,8 @@ namespace SecureVault.App.Application.Features.CQRS.TwoFactorAuthCodes.Handlers
 
         public async Task<List<TwoFactorAuthCodeResult>> Handle(GetAllTwoFactorAuthCodeQuery request, CancellationToken cancellationToken)
         {
-            var twoFactorAuthCodeEntities = await _twoFactorAuthCodeRepository.GetAllAsync();
+            var twoFactorAuthCodeQuery = await _twoFactorAuthCodeRepository.GetAllAsync();
+            var twoFactorAuthCodeEntities = twoFactorAuthCodeQuery.ToList();
             return _mapper.Map<List<TwoFactorAuthCodeResult>>(twoFactorAuthCodeEntities);
         }
     }

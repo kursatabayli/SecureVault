@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\shared\SecureVault.Shared.RabbitMQ\SecureVault.Shared.RabbitMQ.csproj" />
     <ProjectReference Include="..\SecureVault.Vault.Domain\SecureVault.Vault.Domain.csproj" />
   </ItemGroup>
 

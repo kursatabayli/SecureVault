@@ -11,38 +11,50 @@ namespace SecureVault.App.Application.Features.CQRS.Passwords.Handlers
 {
     public class CreatePasswordHandler : IRequestHandler<CreatePasswordCommand, Result>
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IPasswordRepository _passwordRepository;
         private readonly ILogger<CreatePasswordHandler> _logger;
         private readonly IBackgroundSyncService _backgroundSyncService;
+        private readonly ISyncConnectionService _syncConnectionService;
 
         public CreatePasswordHandler(
-            IUnitOfWork unitOfWork,
+            IPasswordRepository passwordRepository,
             ILogger<CreatePasswordHandler> logger,
-            IBackgroundSyncService backgroundSyncService)
+            IBackgroundSyncService backgroundSyncService,
+            ISyncConnectionService syncConnectionService)
         {
-            _unitOfWork = unitOfWork;
+            _passwordRepository = passwordRepository;
             _logger = logger;
             _backgroundSyncService = backgroundSyncService;
+            _syncConnectionService = syncConnectionService;
         }
 
         public async Task<Result> Handle(CreatePasswordCommand request, CancellationToken cancellationToken)
         {
-            var passwordEntity = PasswordEntity.Create(
-                null,
-                request.SiteName,
-                request.SiteUrl,
-                request.Username,
-                request.Password,
-                request.Notes,
-                null, null, null);
+            var passwordEntity = new PasswordEntity
+            {
+                SiteName = request.SiteName,
+                SiteUrl = request.SiteUrl,
+                Username = request.Username,
+                Password = request.Password,
+                Notes = request.Notes,
+            };
 
             try
             {
-                await _unitOfWork.Passwords.AddAsync(passwordEntity);
-                await _unitOfWork.CompleteAsync();
+                await _passwordRepository.AddAsync(passwordEntity);
+
                 _logger.LogInformation("Parola ID:{Id} yerel veritabanına başarıyla kaydedildi. Senkronizasyon bekleniyor.", passwordEntity.Id);
 
-                await _backgroundSyncService.SynchronizeAsync(cancellationToken);
+                var result = await _backgroundSyncService.SynchronizeAsync(cancellationToken);
+                if (result)
+                {
+                    _logger.LogInformation("Parola ID:{Id} için arka plan senkronizasyonu başarıyla tamamlandı.", passwordEntity.Id);
+                    await _syncConnectionService.NotifySyncRequiredAsync(cancellationToken);
+                }
+                else
+                {
+                    _logger.LogWarning("Parola ID:{Id} için arka plan senkronizasyonu başarısız oldu veya atlandı.", passwordEntity.Id);
+                }
                 return Result.Success();
             }
             catch (Exception ex)
@@ -52,59 +64,5 @@ namespace SecureVault.App.Application.Features.CQRS.Passwords.Handlers
                 return Result.Failure(error);
             }
         }
-
-        //public async Task<Result> Handle(CreatePasswordCommand request, CancellationToken cancellationToken)
-        //{
-        //    var mappedPasswordDto = _mapper.Map<PasswordDto>(request);
-
-        //    var passwordEntity = PasswordEntity.Create(
-        //        null,
-        //        request.SiteName,
-        //        request.SiteUrl,
-        //        request.Username,
-        //        request.Password,
-        //        request.Notes,
-        //        null,
-        //        null,
-        //        null);
-
-        //    var encryptionKey = await _storageService.GetEncryptionKeyAsByteAsync();
-        //    var encryptedData = _cryptoService.Encrypt(mappedPasswordDto, encryptionKey);
-        //    CreateVaultItemDto createVaultItemDto = new()
-        //    {
-        //        Id = passwordEntity.Id,
-        //        ItemType = ItemType.Password,
-        //        EncryptedData = encryptedData,
-        //        CreatedAt = passwordEntity.CreatedAt,
-        //    };
-        //    var lastSyncDate = _storageService.GetLastSyncDate();
-        //    _storageService.SetLastSyncDate(passwordEntity.UpdatedAt);
-        //    var remoteResult = await _vaultItemService.CreateVaultItem(createVaultItemDto);
-
-        //    if (!remoteResult.IsSuccess)
-        //    {
-        //        _logger.LogWarning("Uzak sunucuya parola kaydı başarısız oldu: {Error}", remoteResult.Error.Message);
-        //        _storageService.SetLastSyncDate(lastSyncDate);
-        //        return remoteResult;
-        //    }
-
-        //    _logger.LogInformation("Parola uzak sunucuya başarıyla kaydedildi.");
-
-        //    try
-        //    {
-        //        await _unitOfWork.Passwords.AddAsync(passwordEntity);
-        //        await _unitOfWork.CompleteAsync();
-        //        _logger.LogInformation("Parola yerel veritabanına başarıyla kaydedildi.");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Sunucuya kayıt başarılı olmasına rağmen yerel veritabanına kayıt sırasında hata oluştu. Veri tutarsızlığı olabilir!");
-        //        var error = new Error("LOCAL_DB_SAVE_FAILED", "Veri sunucuya kaydedildi ancak yerel depolamada bir sorun oluştu.");
-        //        _storageService.SetLastSyncDate(lastSyncDate);
-        //        return Result.Failure(error);
-        //    }
-
-        //    return Result.Success();
-        //}
     }
 }

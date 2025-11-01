@@ -31,6 +31,15 @@ namespace SecureVault.App.Infrastructure.Services.Api
         [Delete("/vault/api/VaultItem/{id}")]
         Task<IApiResponse> DeleteVaultItemAsync(Guid id, CancellationToken cancellationToken);
 
+        [Post("/vault/api/VaultItem/batch")]
+        Task<IApiResponse> CreateVaultItemsAsync([Body] IList<CreateVaultItemDto> vaultItemPayload, CancellationToken cancellationToken);
+
+        [Put("/vault/api/VaultItem/batch")]
+        Task<IApiResponse> UpdateVaultItemsAsync([Body] IList<UpdateVaultItemDto> payload, CancellationToken cancellationToken);
+
+        [Delete("/vault/api/VaultItem/batch")]
+        Task<IApiResponse> DeleteVaultItemsAsync([Body] IList<Guid> id, CancellationToken cancellationToken);
+
         [Get("/vault/api/VaultItem/sync")]
         Task<IReadOnlyCollection<VaultItemDto>> GetVaultItemByLastSyncTimeAsync([Query] DateTimeOffset lastUpdateTime, CancellationToken cancellationToken);
 

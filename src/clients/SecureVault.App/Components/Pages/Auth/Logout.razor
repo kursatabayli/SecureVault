@@ -1,18 +1,19 @@
 ﻿@page "/logout"
 @attribute [AllowAnonymous]
 @using MediatR
+@using SecureVault.App.Application.Contracts.Abstractions.Database
 @using SecureVault.App.Application.Features.CQRS.Auth.Commands
-@using SecureVault.App.Infrastructure.Helpers.Data
 
 @code {
     [Inject] private IMediator Mediator { get; set; }
     [Inject] private NavigationManager NavigationManager { get; set; }
-    [Inject] private DatabaseManager DbManager { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        await Mediator.Send(new LogoutCommand());
-        await DbManager.ResetDatabaseAsync();
-        NavigationManager.NavigateTo("/login", true);
+        var result = await Mediator.Send(new LogoutCommand());
+        if (result.IsSuccess)
+            NavigationManager.NavigateTo("/login", true);
+        else
+            NavigationManager.NavigateTo("/", true);
     }
 }

@@ -203,5 +203,102 @@ namespace SecureVault.App.Infrastructure.Services.Api
                 return Result<IReadOnlyCollection<VaultItemDto>>.Failure(new Error("Client.UnexpectedError", "Beklenmedik bir hata oluştu."));
             }
         }
+
+        public async Task<Result> CreateVaultItemsAsync(IList<CreateVaultItemDto> createVaultItemDto, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var response = await _secureVaultApi.CreateVaultItemsAsync(createVaultItemDto, cancellationToken);
+                return response.IsSuccessStatusCode
+                    ? Result.Success()
+                    : Result.Failure(await response.Error.GetContentAsAsync<Error>() ?? new Error("Client.CreationFailed", "Öğeler oluşturulamadı."));
+            }
+            catch (BrokenCircuitException)
+            {
+                _logger.LogError("Devre açık. Kasa öğeleri oluşturulamadı.");
+                return Result.Failure(new Error("Service.Unavailable", "Servis geçici olarak kullanılamıyor."));
+            }
+            catch (ApiException ex)
+            {
+                _logger.LogError(ex, "Kasa öğeleri oluşturulurken API hatası oluştu.");
+                var error = await ex.GetContentAsAsync<Error>();
+                return Result.Failure(error ?? new Error("Api.RequestFailed", "Öğeler oluşturulamadı."));
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Kasa öğeleri oluşturulurken ağ hatası oluştu.");
+                return Result.Failure(new Error("Service.ConnectionError", "Sunucuya bağlanılamadı."));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Kasa öğeleri oluşturulurken beklenmedik bir hata oluştu.");
+                return Result.Failure(new Error("Client.UnexpectedError", "Beklenmedik bir hata oluştu."));
+            }
+        }
+
+        public async Task<Result> UpdateVaultItemsAsync(IList<UpdateVaultItemDto> UpdateEncryptedData, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var response = await _secureVaultApi.UpdateVaultItemsAsync(UpdateEncryptedData, cancellationToken);
+                return response.IsSuccessStatusCode
+                    ? Result.Success()
+                    : Result.Failure(await response.Error.GetContentAsAsync<Error>() ?? new Error("Client.UpdateFailed", "Öğeler güncellenemedi."));
+            }
+            catch (BrokenCircuitException)
+            {
+                _logger.LogError("Devre açık. Kasa öğeleri güncellenemedi.");
+                return Result.Failure(new Error("Service.Unavailable", "Servis geçici olarak kullanılamıyor."));
+            }
+            catch (ApiException ex)
+            {
+                _logger.LogError(ex, "Kasa öğeleri güncellenirken API hatası oluştu.");
+                var error = await ex.GetContentAsAsync<Error>();
+                return Result.Failure(error ?? new Error("Api.RequestFailed", "Öğeler güncellenemedi."));
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Kasa öğeleri güncellenirken ağ hatası oluştu.");
+                return Result.Failure(new Error("Service.ConnectionError", "Sunucuya bağlanılamadı."));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Kasa öğeleri güncellenirken beklenmedik bir hata oluştu.");
+                return Result.Failure(new Error("Client.UnexpectedError", "Beklenmedik bir hata oluştu."));
+            }
+
+        }
+
+        public async Task<Result> DeleteVaultItemsAsync(IList<Guid> ids, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var response = await _secureVaultApi.DeleteVaultItemsAsync(ids, cancellationToken);
+                return response.IsSuccessStatusCode
+                    ? Result.Success()
+                    : Result.Failure(await response.Error.GetContentAsAsync<Error>() ?? new Error("Client.DeletionFailed", "Öğeler silinemedi."));
+            }
+            catch (BrokenCircuitException)
+            {
+                _logger.LogError("Devre açık. Kasa öğeleri silinemedi.");
+                return Result.Failure(new Error("Service.Unavailable", "Servis geçici olarak kullanılamıyor."));
+            }
+            catch (ApiException ex)
+            {
+                _logger.LogError(ex, "Kasa öğeleri silinirken API hatası oluştu.");
+                var error = await ex.GetContentAsAsync<Error>();
+                return Result.Failure(error ?? new Error("Api.RequestFailed", "Öğeler silinemedi."));
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Kasa öğeleri silinirken ağ hatası oluştu.");
+                return Result.Failure(new Error("Service.ConnectionError", "Sunucuya bağlanılamadı."));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Kasa öğeleri silinirken beklenmedik bir hata oluştu.");
+                return Result.Failure(new Error("Client.UnexpectedError", "Beklenmedik bir hata oluştu."));
+            }
+        }
     }
 }

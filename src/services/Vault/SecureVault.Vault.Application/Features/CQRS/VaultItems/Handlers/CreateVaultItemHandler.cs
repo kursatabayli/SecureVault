@@ -1,8 +1,6 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using SecureVault.Shared.Contracts.Events;
-using SecureVault.Shared.RabbitMQ.Contracts;
 using SecureVault.Shared.Result;
 using SecureVault.Vault.Application.Contracts.Repositories;
 using SecureVault.Vault.Application.Features.CQRS.VaultItems.Commands;
@@ -16,13 +14,11 @@ namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
         private readonly IVaultItemsRepository _repository;
         private readonly ILogger<CreateVaultItemHandler> _logger;
         private readonly IStringLocalizer<ReturnMessages> _returnMessages;
-        private readonly IEventPublisher _eventPublisher;
-        public CreateVaultItemHandler(IVaultItemsRepository repository, ILogger<CreateVaultItemHandler> logger, IStringLocalizer<ReturnMessages> returnMessages, IEventPublisher eventPublisher)
+        public CreateVaultItemHandler(IVaultItemsRepository repository, ILogger<CreateVaultItemHandler> logger, IStringLocalizer<ReturnMessages> returnMessages)
         {
             _repository = repository;
             _logger = logger;
             _returnMessages = returnMessages;
-            _eventPublisher = eventPublisher;
         }
 
         public async Task<Result> Handle(CreateVaultItemCommand request, CancellationToken cancellationToken)
@@ -39,9 +35,6 @@ namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
                 );
 
                 await _repository.AddAsync(vaultItem);
-
-                var itemUpdatedEvent = new UserActivityOccurredIntegrationEvent(vaultItem.UserId, request.LastUpdatedByDeviceId);
-                await _eventPublisher.PublishAsync(itemUpdatedEvent, "vault.item.created", cancellationToken);
 
                 return Result.Success();
             }

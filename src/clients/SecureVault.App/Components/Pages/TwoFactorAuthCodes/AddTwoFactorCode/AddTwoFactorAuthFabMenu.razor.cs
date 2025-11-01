@@ -5,8 +5,8 @@ namespace SecureVault.App.Components.Pages.TwoFactorAuthCodes.AddTwoFactorCode
 {
     public partial class AddTwoFactorAuthFabMenu : ComponentBase
     {
-        [Parameter] public EventCallback OnItemAdded { get; set; }
-        [Inject] private IDialogService DialogService { get; set; }
+        [Inject] private IDialogService DialogService { get; set; } = default!;
+        [Inject] private ISnackbar Snackbar { get; set; } = default!;
         private bool isFabMenuOpen = false;
         private void ToggleFabMenu()
         {
@@ -16,8 +16,8 @@ namespace SecureVault.App.Components.Pages.TwoFactorAuthCodes.AddTwoFactorCode
         {
             var dialog = await DialogService.ShowAsync<AddTwoFactorCodeWithQr>();
             var result = await dialog.Result;
-            if (!result.Canceled)
-                await OnItemAdded.InvokeAsync();
+            if (!result.Canceled && result.Data is bool success && success)
+                Snackbar.Add("İki faktörlü kimlik doğrulama kodu başarıyla eklendi.", Severity.Success);
 
             isFabMenuOpen = false;
         }
@@ -25,8 +25,8 @@ namespace SecureVault.App.Components.Pages.TwoFactorAuthCodes.AddTwoFactorCode
         {
             var dialog = await DialogService.ShowAsync<AddTwoFactorCodeManuel>();
             var result = await dialog.Result;
-            if (!result.Canceled)
-                await OnItemAdded.InvokeAsync();
+            if (!result.Canceled && result.Data is bool success && success)
+                Snackbar.Add("İki faktörlü kimlik doğrulama kodu başarıyla eklendi.", Severity.Success);
 
             isFabMenuOpen = false;
         }
@@ -36,9 +36,9 @@ namespace SecureVault.App.Components.Pages.TwoFactorAuthCodes.AddTwoFactorCode
             var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
             var dialog = await DialogService.ShowAsync<AddTwoFactorCodeWithQrCodeImage>("Resimden QR Kod ile Ekle", options);
             var result = await dialog.Result;
+            if (!result.Canceled && result.Data is bool success && success)
+                Snackbar.Add("İki faktörlü kimlik doğrulama kodu başarıyla eklendi.", Severity.Success);
 
-            if (!result.Canceled)
-                await OnItemAdded.InvokeAsync();
             isFabMenuOpen = false;
         }
 

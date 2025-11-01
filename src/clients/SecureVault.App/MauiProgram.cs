@@ -25,11 +25,14 @@ namespace SecureVault.App
             var a = Assembly.GetExecutingAssembly();
             using var stream = a.GetManifestResourceStream("SecureVault.App.appsettings.json");
 
-            var config = new ConfigurationBuilder()
-                        .AddJsonStream(stream)
-                        .Build();
+            if (stream != null)
+            {
+                var config = new ConfigurationBuilder()
+                            .AddJsonStream(stream)
+                            .Build();
 
-            builder.Configuration.AddConfiguration(config);
+                builder.Configuration.AddConfiguration(config);
+            }
             builder.Services.AddMauiBlazorWebView();
 
             builder.Services.AddLocalization();

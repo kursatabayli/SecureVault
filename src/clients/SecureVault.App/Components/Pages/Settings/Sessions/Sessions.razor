@@ -6,7 +6,8 @@
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
     <MudPaper Elevation="0" Class="pa-4 rounded-lg">
         <MudText Typo="Typo.h4" GutterBottom="true">Oturum Yönetimi</MudText>
-        <MudText Color="Color.Secondary" Class="mb-6">Aktif oturumlarınızı buradan görüntüleyebilir ve sonlandırabilirsiniz.</MudText>
+        <MudText Color="Color.Secondary" Class="mb-6">Aktif oturumlarınızı buradan görüntüleyebilir ve
+            sonlandırabilirsiniz.</MudText>
 
         @if (_isLoading)
         {
@@ -33,15 +34,15 @@
                                 </CardHeaderAvatar>
                                 <CardHeaderContent>
                                     <MudText Typo="Typo.body1" Class="d-flex align-center">
-                                        @if (IsCurrentSession(session) || IsRecentlyActive(session))
+                                        @if (IsCurrentSession(session) || IsActuallyActive(session))
                                         {
                                             <span class="active-indicator"></span>
                                         }
                                         @FormatDeviceName(session.DeviceDetails)
-                                    </MudText>                                    
+                                    </MudText>
                                     <MudText Typo="Typo.body2">@session.DeviceDetails.OperatingSystem</MudText>
                                 </CardHeaderContent>
-                                <CardHeaderActions >
+                                <CardHeaderActions>
                                     <MudHidden Breakpoint="Breakpoint.Xs" Invert="false">
                                         @DisplayStatusChip(session)
                                     </MudHidden>
@@ -53,24 +54,25 @@
                                     @DisplayStatusChip(session)
                                 </MudHidden>
                                 <MudText><b>IP Adresi:</b> @session.IpAddress</MudText>
-                                <MudText><b>Son Kullanım:</b> @FormatLastUsed(session.LastUsedAt)</MudText>
+                                <MudText><b>Son Kullanım:</b> @(IsCurrentSession(session) || IsActuallyActive(session) ? "Şimdi" :
+                                                                FormatLastUsed(session.LastUsedAt))</MudText>
                             </MudCardContent>
                             <MudCardActions>
                                 @if (session.ExpiresAt < DateTimeOffset.UtcNow)
                                 {
-                                    <MudChip T="string" Icon="@Icons.Material.Filled.TimerOff" Label="true" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">Süresi Doldu</MudChip>
+                                    <MudChip T="string" Icon="@Icons.Material.Filled.TimerOff" Label="true" Color="Color.Default"
+                                        Size="Size.Small" Variant="Variant.Outlined">Süresi Doldu</MudChip>
                                 }
                                 else if (session.IsRevoked)
                                 {
-                                    <MudChip T="string" Icon="@Icons.Material.Filled.Check" Label="true" Color="Color.Warning" Size="Size.Small" Variant="Variant.Outlined">Sonlandırıldı</MudChip>
+                                    <MudChip T="string" Icon="@Icons.Material.Filled.Check" Label="true" Color="Color.Warning"
+                                        Size="Size.Small" Variant="Variant.Outlined">Sonlandırıldı</MudChip>
                                 }
                                 else if (!IsCurrentSession(session))
                                 {
-                                    <MudButton Variant="Variant.Filled"
-                                               Color="Color.Error"
-                                               Size="Size.Small"
-                                               OnClick="@(() => ShowRevokeConfirmation(session))"
-                                               Disabled="@(_revokingSessionId == session.Id)">
+                                    <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Small"
+                                        OnClick="@(() => ShowRevokeConfirmation(session))"
+                                        Disabled="@(_revokingSessionId == session.Id)">
                                         @if (_revokingSessionId == session.Id)
                                         {
                                             <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
@@ -93,24 +95,23 @@
 
 
 <MudStack class="fab-container">
-    <MudFab StartIcon="@Icons.Material.Filled.Add"
-            OnClick="OpenAuthorizeDeviceDialog"
-            Size="Size.Medium"
-            Color="Color.Primary" />
+    <MudFab StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAuthorizeDeviceDialog" Size="Size.Medium"
+        Color="Color.Primary" />
 </MudStack>
 
 
 @code {
 
-    private RenderFragment DisplayStatusChip(UserSessionsModel session) => 
+    private RenderFragment DisplayStatusChip(UserSessionsModel session) =>
     @<MudItem class="mb-2">
-        @if (IsCurrentSession(session))
-        {
-            <MudChip T="string" Label="true" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">Mevcut</MudChip>
-        }
-        else if (IsRecentlyActive(session))
-        {
-            <MudChip T="string" Label="true" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">Şu anda aktif</MudChip>
-        }
-    </MudItem>;
+@if (IsCurrentSession(session))
+    {
+    <MudChip T="string" Label="true" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">Mevcut</MudChip>
+    }
+    else if (IsActuallyActive(session))
+    {
+    <MudChip T="string" Label="true" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">Şu anda aktif
+    </MudChip>
+    }
+</MudItem>;
 }

@@ -3,7 +3,10 @@ using MediatR;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OtpNet;
+using Realms;
+using SecureVault.App.Application.Contracts.Repositories;
 using SecureVault.App.Application.Features.CQRS.TwoFactorAuthCodes.Queries;
+using SecureVault.App.Domain.Entities;
 using SecureVault.App.Domain.Enums;
 using SecureVault.App.Models.TwoFactorAuthCodeModels;
 using SecureVault.App.Resources.Localization;
@@ -12,23 +15,25 @@ using OtpType = SecureVault.App.Domain.Enums.OtpType;
 
 namespace SecureVault.App.Services
 {
-    public class OtpService : IOtpService
+    public class OtpService : IOtpService, IDisposable
     {
-        private readonly IMediator _mediator;
+        private readonly ITwoFactorAuthCodeRepository _twoFactorAuthCodeRepository;
         private readonly IMapper _mapper;
         private readonly IStringLocalizer<SharedResources> _localizer;
         private readonly ILogger<OtpService> _logger;
         private readonly List<OtpViewModel> _displayItems = [];
         private readonly CancellationTokenSource _cts = new();
+        private IRealmCollection<TwoFactorAuthCodeEntity> _liveCollection;
+        private IDisposable _notificationToken;
         public bool IsLoading { get; private set; } = true;
         public Error? InitializationError { get; private set; }
         public event Func<Task>? OnTick;
         public IReadOnlyList<OtpViewModel> Items => _displayItems.AsReadOnly();
         private bool _isLoopStarted = false;
         private Task? _updateLoopTask;
-        public OtpService(IMediator mediator, IMapper mapper, IStringLocalizer<SharedResources> localizer, ILogger<OtpService> logger)
+        public OtpService(ITwoFactorAuthCodeRepository twoFactorAuthCodeRepository, IMapper mapper, IStringLocalizer<SharedResources> localizer, ILogger<OtpService> logger)
         {
-            _mediator = mediator;
+            _twoFactorAuthCodeRepository = twoFactorAuthCodeRepository;
             _mapper = mapper;
             _localizer = localizer;
             _logger = logger;
@@ -42,7 +47,11 @@ namespace SecureVault.App.Services
 
             try
             {
-                await LoadDataAndGenerateInitialCodes();
+                _liveCollection = await _twoFactorAuthCodeRepository.GetLiveCollectionAsync();
+
+                _notificationToken = _liveCollection.SubscribeForNotifications(OnDataChanged);
+
+                LoadDataAndGenerateInitialCodes(_liveCollection);
             }
             catch (Exception ex)
             {
@@ -61,26 +70,35 @@ namespace SecureVault.App.Services
                 _isLoopStarted = true;
             }
         }
-
+        private async void OnDataChanged(IRealmCollection<TwoFactorAuthCodeEntity> sender, ChangeSet? changes)
+        {
+            try
+            {
+                LoadDataAndGenerateInitialCodes(sender);
+                await InvokeOnTickAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Realm veri değişikliği işlenirken hata oluştu.");
+            }
+        }
         public OtpViewModel? GetItem(Guid id)
         {
             return _displayItems.FirstOrDefault(i => i.Model.Id == id);
         }
 
-        private async Task LoadDataAndGenerateInitialCodes()
+        private void LoadDataAndGenerateInitialCodes(IRealmCollection<TwoFactorAuthCodeEntity> data)
         {
-            var result = await _mediator.Send(new GetAllTwoFactorAuthCodeQuery());
-            if (result is null)
-                return;
-            var twoFactorAuthModel = _mapper.Map<List<TwoFactorAuthCodeModel>>(result);
+            var twoFactorAuthModel = _mapper.Map<List<TwoFactorAuthCodeModel>>(data);
+
             _displayItems.Clear();
             _displayItems.AddRange(twoFactorAuthModel.Select(model => new OtpViewModel { Model = model }));
 
             foreach (var item in _displayItems)
             {
-                item.OtpGenerator = OtpService.CreateOtpGenerator(item.Model);
+                item.OtpGenerator = CreateOtpGenerator(item.Model);
                 GenerateNewCode(item);
-                OtpService.UpdateTimeLeft(item);
+                UpdateTimeLeft(item);
             }
         }
 
@@ -149,14 +167,26 @@ namespace SecureVault.App.Services
             {
                 item.CurrentCode = totpGenerator.ComputeTotp();
             }
-            else if (item.OtpGenerator is Hotp)
+            else if (item.OtpGenerator is Hotp hotpGenerator)
             {
-                item.CurrentCode = _localizer[SharedResources.Text_ClickToGenerate];
+                if (item.Model.Counter > 0)
+                {
+                    item.CurrentCode = hotpGenerator.ComputeHOTP(item.Model.Counter);
+                }
+                else
+                {
+                    item.CurrentCode = _localizer[SharedResources.Text_ClickToGenerate];
+                }
             }
         }
         private static Otp? CreateOtpGenerator(TwoFactorAuthCodeModel model)
         {
             var secretKeyBytes = Base32Encoding.ToBytes(model.SecretKey);
+            if (secretKeyBytes == null || secretKeyBytes.Length == 0)
+            {
+                Console.WriteLine($"ID'si {model.Id} olan TOTP kaydının secretKey'i boş veya geçersiz. Bu kayıt atlanıyor.");
+                return null;
+            }
             var hashMode = model.Algorithm switch
             {
                 OtpAlgorithm.SHA256 => OtpHashMode.Sha256,
@@ -171,40 +201,25 @@ namespace SecureVault.App.Services
                 _ => null
             };
         }
-        public async Task GenerateHotpCodeAsync(Guid itemId)
+        public async Task<Result> GenerateHotpCodeAsync(Guid itemId)
         {
-            var item = _displayItems.FirstOrDefault(i => i.Model.Id == itemId);
-
-            if (item is null || item.OtpGenerator is not Hotp hotpGenerator)
-            {
-                _logger.LogWarning("HOTP code generation requested for a non-HOTP or non-existent item with ID {ItemId}", itemId);
-                return;
-            }
-
             try
             {
-                item.CurrentCode = hotpGenerator.ComputeHOTP(item.Model.Counter);
-                item.HasError = false;
+                var entity = await _twoFactorAuthCodeRepository.GetByIdAsync(itemId);
+                if (entity is null || entity.Type != OtpType.HOTP)
+                {
+                    return Result.Failure(new Error("Otp.NotHotp", "Öğe HOTP değil."));
+                }
 
-                item.Model.Counter++;
+                entity.Counter++;
+                await _twoFactorAuthCodeRepository.UpdateAsync(entity);
 
-                //var updateResult = await _vaultItemService.UpdateVaultItem(item.Model);
-                //if (!updateResult.IsSuccess)
-                //{
-                //    _logger.LogError("Failed to update HOTP counter for item {ItemId}: {Error}", itemId, updateResult.Error);
-                //    item.HasError = true;
-                //    item.CurrentCode = _localizer[SharedResources.Text_Error_General];
-                //}
+                return Result.Success();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error generating HOTP code for item {ItemId}", itemId);
-                item.HasError = true;
-                item.CurrentCode = _localizer[SharedResources.Text_Error_General];
-            }
-            finally
-            {
-                await InvokeOnTickAsync();
+                _logger.LogError(ex, "HOTP sayacı güncellenirken hata oluştu: {ItemId}", itemId);
+                return Result.Failure(new Error("Otp.UpdateFailed", ex.Message));
             }
         }
 
@@ -231,13 +246,17 @@ namespace SecureVault.App.Services
         public async ValueTask DisposeAsync()
         {
             if (_cts.IsCancellationRequested) return;
-
+            _notificationToken?.Dispose();
             _cts.Cancel();
             if (_updateLoopTask != null)
             {
                 await _updateLoopTask;
             }
             _cts.Dispose();
+        }
+        public void Dispose()
+        {
+            DisposeAsync().AsTask().Wait();
         }
     }
 }

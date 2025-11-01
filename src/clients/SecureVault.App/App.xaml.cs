@@ -5,44 +5,69 @@ namespace SecureVault.App
 {
     public partial class App : MauiApplication
     {
-        private readonly IAppLifecycleManager _lifecycleManager;
+        private readonly IServiceProvider _serviceProvider;
+        private IAppLifecycleManager? _lifecycleManager;
 
-        public App(IAppLifecycleManager lifecycleManager)
+        public App(IServiceProvider serviceProvider)
         {
             InitializeComponent();
-            MainPage = new MainPage();
-
-            _lifecycleManager = lifecycleManager;
-            _lifecycleManager.Initialize();
+            _serviceProvider = serviceProvider;
         }
 
-        protected override async void OnStart()
+        protected override void OnStart()
         {
             base.OnStart();
-            await _lifecycleManager.OnStart();
+
         }
 
         protected override async void OnSleep()
         {
             base.OnSleep();
-            await _lifecycleManager.OnSleep();
+            if (_lifecycleManager != null)
+            {
+                await _lifecycleManager.OnSleep();
+            }
         }
 
         protected override async void OnResume()
         {
             base.OnResume();
-            await _lifecycleManager.OnResume();
+            if (_lifecycleManager != null)
+            {
+                await _lifecycleManager.OnResume();
+            }
         }
 
         protected override Window CreateWindow(IActivationState? activationState)
         {
-            var window = base.CreateWindow(activationState);
+            var window = new Window
+            {
+                Page = new MainPage(),
+                Title = "Secure Vault"
+            };
+
+            window.Created += async (s, e) =>
+                        {
+                            try
+                            {
+                                _lifecycleManager = _serviceProvider.GetRequiredService<IAppLifecycleManager>();
+
+                                _lifecycleManager.Initialize();
+                                await _lifecycleManager.OnStart();
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"FATAL ERROR during AppLifecycleManager setup: {ex}");
+                            }
+                        };
 
             window.Destroying += async (s, e) =>
             {
-                await _lifecycleManager.OnDestroying();
+                if (_lifecycleManager != null)
+                {
+                    await _lifecycleManager.OnDestroying();
+                }
             };
-            window.Title = "Secure Vault";
 
             return window;
         }

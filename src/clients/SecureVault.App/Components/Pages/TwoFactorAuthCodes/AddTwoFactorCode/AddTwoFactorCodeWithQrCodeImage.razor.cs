@@ -29,6 +29,20 @@ namespace SecureVault.App.Components.Pages.TwoFactorAuthCodes.AddTwoFactorCode
                 return;
             }
 
+            MemoryStream imageMemoryStream;
+            try
+            {
+                imageMemoryStream = new MemoryStream();
+                await file.OpenReadStream(MaxFileSize).CopyToAsync(imageMemoryStream);
+                imageMemoryStream.Position = 0;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Dosya okunurken JS Interop hatası oluştu.");
+                Snackbar.Add("Dosya okunurken bir hata oluştu. Lütfen tekrar deneyin.", Severity.Error);
+                return;
+            }
+
             _isProcessing = true;
             _statusMessage = "Resim işleniyor ve QR kod aranıyor...";
             StateHasChanged();
@@ -36,39 +50,26 @@ namespace SecureVault.App.Components.Pages.TwoFactorAuthCodes.AddTwoFactorCode
 
             try
             {
-                byte[] buffer;
-                try
+                using (imageMemoryStream)
+                using (var bitmap = SKBitmap.Decode(imageMemoryStream))
                 {
-                    await using var memoryStream = new MemoryStream();
-                    await file.OpenReadStream(MaxFileSize).CopyToAsync(memoryStream);
-                    buffer = memoryStream.ToArray();
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Dosya okunurken JS Interop hatası oluştu.");
-                    Snackbar.Add("Dosya okunurken bir hata oluştu. Lütfen tekrar deneyin.", Severity.Error);
-                    return;
-                }
+                    if (bitmap == null)
+                    {
+                        Snackbar.Add("Geçersiz resim formatı veya bozuk dosya.", Severity.Error);
+                        return;
+                    }
 
-                using var imageStream = new MemoryStream(buffer);
-                using var bitmap = SKBitmap.Decode(imageStream);
+                    var reader = new BarcodeReader();
+                    var result = reader.Decode(bitmap);
 
-                if (bitmap == null)
-                {
-                    Snackbar.Add("Geçersiz resim formatı veya bozuk dosya.", Severity.Error);
-                    return;
-                }
-
-                var reader = new BarcodeReader();
-                var result = reader.Decode(bitmap);
-
-                if (result != null && !string.IsNullOrWhiteSpace(result.Text))
-                {
-                    await ProcessAndSubmitUriAsync(result.Text);
-                }
-                else
-                {
-                    Snackbar.Add("Resimde geçerli bir QR kod bulunamadı.", Severity.Error);
+                    if (result != null && !string.IsNullOrWhiteSpace(result.Text))
+                    {
+                        await ProcessAndSubmitUriAsync(result.Text);
+                    }
+                    else
+                    {
+                        Snackbar.Add("Resimde geçerli bir QR kod bulunamadı.", Severity.Error);
+                    }
                 }
             }
             catch (Exception ex)
@@ -78,11 +79,8 @@ namespace SecureVault.App.Components.Pages.TwoFactorAuthCodes.AddTwoFactorCode
             }
             finally
             {
-                if (_isProcessing)
-                {
-                    _isProcessing = false;
-                    StateHasChanged();
-                }
+                _isProcessing = false;
+                StateHasChanged();
             }
         }
 

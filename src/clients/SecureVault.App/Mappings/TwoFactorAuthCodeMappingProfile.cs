@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using SecureVault.App.Application.Features.CQRS.TwoFactorAuthCodes.Commands;
 using SecureVault.App.Application.Features.CQRS.TwoFactorAuthCodes.Results;
+using SecureVault.App.Domain.Entities;
 using SecureVault.App.Models.TwoFactorAuthCodeModels;
 
 namespace SecureVault.App.Mappings
@@ -9,6 +10,7 @@ namespace SecureVault.App.Mappings
     {
         public TwoFactorAuthCodeMappingProfile()
         {
+            CreateMap<TwoFactorAuthCodeEntity, TwoFactorAuthCodeModel>();
             CreateMap<TwoFactorAuthCodeResult, TwoFactorAuthCodeModel>();
             CreateMap<TwoFactorAuthCodeModel, CreateTwoFactorAuthCodeCommand>();
         }
