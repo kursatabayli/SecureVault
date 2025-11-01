@@ -1,69 +1,31 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Realms;
 
 namespace SecureVault.App.Domain.Entities
 {
-    public class PasswordEntity : ISynchronizableEntity
+    public partial class PasswordEntity : IRealmObject, ISynchronizableEntity
     {
-        [Key]
-        public Guid Id { get; private set; }
-        public string SiteName { get; private set; }
-        public string SiteUrl { get; private set; }
-        public string Username { get; private set; }
-        public string Password { get; private set; }
-        public string? Notes { get; private set; }
-        public int Version { get; private set; }
-        public DateTimeOffset CreatedAt { get; private set; }
-        public DateTimeOffset UpdatedAt { get; private set; }
-        public bool IsDeleted { get; private set; }
-        public bool IsSynced { get; private set; }
-        public PasswordEntity() { }
-
-        public static PasswordEntity Create(
-            Guid? id,
-            string siteName,
-            string siteUrl,
-            string username,
-            string password,
-            string? notes,
-            int? version,
-            DateTimeOffset? createdAt,
-            DateTimeOffset? updatedAt)
+        [PrimaryKey]
+        public Guid Id { get; set; }
+        public string SiteName { get; set; } = string.Empty;
+        public string SiteUrl { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string? Notes { get; set; }
+        public int Version { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset UpdatedAt { get; set; }
+        public bool IsDeleted { get; set; }
+        public bool IsSynced { get; set; }
+        public PasswordEntity()
         {
-            var actualCreatedAt = createdAt ?? DateTimeOffset.UtcNow;
-            return new PasswordEntity
-            {
-                Id = id ?? Guid.NewGuid(),
-                SiteName = siteName,
-                SiteUrl = siteUrl,
-                Username = username,
-                Password = password,
-                Notes = notes,
-                Version = version ?? 1,
-                CreatedAt = actualCreatedAt,
-                UpdatedAt = updatedAt ?? actualCreatedAt,
-                IsDeleted = false,
-                IsSynced = false
-            };
-        }
-
-        public void Update(
-            string siteName,
-            string siteUrl,
-            string username,
-            string password,
-            string? notes,
-            int version,
-            DateTimeOffset updatedAt)
-        {
-            SiteName = siteName;
-            SiteUrl = siteUrl;
-            Username = username;
-            Password = password;
-            Notes = notes;
-            Version = version;
-            UpdatedAt = updatedAt;
+            Id = Guid.NewGuid();
+            Version = 1;
+            CreatedAt = DateTimeOffset.UtcNow;
+            UpdatedAt = CreatedAt;
+            IsDeleted = false;
             IsSynced = false;
         }
+        
 
         public void MarkAsDeleted()
         {

@@ -8,7 +8,17 @@ namespace SecureVault.App.Services
         public async Task<string> ScanAsync()
         {
             var tcs = new TaskCompletionSource<string>();
-            await MauiApplication.Current.MainPage.Navigation.PushModalAsync(new QrScannerPage(tcs));
+            var mainPage = MauiApplication.Current?.Windows.FirstOrDefault()?.Page;
+            if (mainPage != null)
+            {
+                await mainPage.Navigation.PushModalAsync(new QrScannerPage(tcs));
+            }
+            else
+            {
+                tcs.SetException(new InvalidOperationException("Ana uygulama penceresi (MainPage) bulunamadı."));
+                // tcs.SetResult(null); 
+            }
+
             return await tcs.Task;
         }
     }

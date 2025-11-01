@@ -10,6 +10,9 @@ namespace SecureVault.App.Application.Contracts.Abstractions.Api
         Task<Result> CreateVaultItemAsync(CreateVaultItemDto createVaultItemDto, CancellationToken cancellationToken);
         Task<Result> UpdateVaultItemAsync(UpdateVaultItemDto UpdateEncryptedData, CancellationToken cancellationToken);
         Task<Result> DeleteVaultItemAsync(Guid id, CancellationToken cancellationToken);
+        Task<Result> CreateVaultItemsAsync(IList<CreateVaultItemDto> createVaultItemDto, CancellationToken cancellationToken);
+        Task<Result> UpdateVaultItemsAsync(IList<UpdateVaultItemDto> UpdateEncryptedData, CancellationToken cancellationToken);
+        Task<Result> DeleteVaultItemsAsync(IList<Guid> ids, CancellationToken cancellationToken);
         Task<Result<IReadOnlyCollection<VaultItemDto>>> GetVaultItemByLastSyncTimeAsync(DateTimeOffset lastUpdateTime, CancellationToken cancellationToken);
     }
 }

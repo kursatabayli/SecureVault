@@ -9,7 +9,7 @@ namespace SecureVault.App.Services
         bool IsLoading { get; }
         Error? InitializationError { get; }
         IReadOnlyList<OtpViewModel> Items { get; }
-        Task GenerateHotpCodeAsync(Guid itemId);
+        Task<Result> GenerateHotpCodeAsync(Guid itemId);
         Task InitializeAsync();
 
         OtpViewModel? GetItem(Guid id);

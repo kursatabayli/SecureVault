@@ -2,6 +2,6 @@
 {
     public interface IBackgroundSyncService
     {
-        Task SynchronizeAsync(CancellationToken cancellationToken);
+        Task<bool> SynchronizeAsync(CancellationToken cancellationToken);
     }
 }

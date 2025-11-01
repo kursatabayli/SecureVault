@@ -1,6 +1,6 @@
 ﻿namespace SecureVault.App.Domain.Enums
 {
-    public enum OtpAlgorithm 
+    public enum OtpAlgorithm : int
     { 
         SHA1, 
         SHA256, 

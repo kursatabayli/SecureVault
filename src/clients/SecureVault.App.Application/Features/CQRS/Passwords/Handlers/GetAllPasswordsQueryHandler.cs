@@ -19,7 +19,8 @@ namespace SecureVault.App.Application.Features.CQRS.Passwords.Handlers
 
         public async Task<List<PasswordResult>> Handle(GetAllPasswordsQuery request, CancellationToken cancellationToken)
         {
-            var passwordEntities = await _passwordRepository.GetAllAsync();
+            var passwordQuery = await _passwordRepository.GetAllAsync();
+            var passwordEntities = passwordQuery.ToList();
             return _mapper.Map<List<PasswordResult>>(passwordEntities);
         }
     }

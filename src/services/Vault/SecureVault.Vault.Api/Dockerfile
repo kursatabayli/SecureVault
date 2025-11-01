@@ -13,6 +13,11 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["src/services/Vault/SecureVault.Vault.Api/SecureVault.Vault.Api.csproj", "src/services/Vault/SecureVault.Vault.Api/"]
+COPY ["src/services/Vault/SecureVault.Vault.Application/SecureVault.Vault.Application.csproj", "src/services/Vault/SecureVault.Vault.Application/"]
+COPY ["src/shared/SecureVault.Shared.Result/SecureVault.Shared.Result.csproj", "src/shared/SecureVault.Shared.Result/"]
+COPY ["src/services/Vault/SecureVault.Vault.Application.Contracts/SecureVault.Vault.Application.Contracts.csproj", "src/services/Vault/SecureVault.Vault.Application.Contracts/"]
+COPY ["src/services/Vault/SecureVault.Vault.Domain/SecureVault.Vault.Domain.csproj", "src/services/Vault/SecureVault.Vault.Domain/"]
+COPY ["src/services/Vault/SecureVault.Vault.Infrastructure/SecureVault.Vault.Infrastructure.csproj", "src/services/Vault/SecureVault.Vault.Infrastructure/"]
 RUN dotnet restore "./src/services/Vault/SecureVault.Vault.Api/SecureVault.Vault.Api.csproj"
 COPY . .
 WORKDIR "/src/src/services/Vault/SecureVault.Vault.Api"

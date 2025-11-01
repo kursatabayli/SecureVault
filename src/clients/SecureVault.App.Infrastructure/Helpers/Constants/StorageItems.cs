@@ -12,7 +12,8 @@
         public const string DpopKey = "DPoPKey";
         public const string IsAuthenticated = "IsAuthenticated";
         public const string CurrentUserEmail = "CurrentUserEmail";
-
+        public const string DbEncryptionKey = "DbEncryptionKey";
+        public const string DbPathKey = "DbPathKey";
         public const string LastSyncDateKey = "LastSyncDate";
     }
 }

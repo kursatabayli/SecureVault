@@ -1,11 +1,11 @@
 ﻿using AutoMapper;
-using MediatR;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
 using MudBlazor;
-using SecureVault.App.Application.Features.CQRS.Passwords.Queries;
-using SecureVault.App.Application.Services;
+using Realms;
+using SecureVault.App.Application.Contracts.Repositories;
+using SecureVault.App.Domain.Entities;
 using SecureVault.App.Models.PassowordModels;
 using SecureVault.App.Resources.Localization;
 
@@ -17,6 +17,8 @@ namespace SecureVault.App.Components.Pages.Passwords
         private bool isLoading = true;
         private string? loadError = null;
         private string searchString = "";
+        private IRealmCollection<PasswordEntity> _liveData;
+        private IDisposable _notificationToken;
 
         private IEnumerable<IGrouping<string, PasswordViewModel>> filteredAndGroupedItems =>
             _allItems
@@ -28,7 +30,7 @@ namespace SecureVault.App.Components.Pages.Passwords
                 .GroupBy(item => item.Model.SiteName)
                 .OrderBy(group => group.Key);
 
-        [Inject] private IMediator Mediator { get; set; } = default!;
+        [Inject] private IPasswordRepository Repository { get; set; } = default!;
         [Inject] private IMapper Mapper { get; set; } = default!;
         [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
         [Inject] private ISnackbar Snackbar { get; set; } = default!;
@@ -36,22 +38,30 @@ namespace SecureVault.App.Components.Pages.Passwords
 
         protected override async Task OnInitializedAsync()
         {
-            await InitializePasswords();
-            UINotificationService.OnVaultDataChangedAsync += HandleItemAdded;
+            isLoading = true;
+            try
+            {
+                _liveData = await Repository.GetLiveCollectionAsync();
+                MapDataToViewModel(_liveData);
+                _notificationToken = _liveData.SubscribeForNotifications(OnDataChanged);
+                isLoading = false;
+            }
+            catch (Exception ex)
+            {
+                loadError = $"Veri yüklenemedi: {ex.Message}";
+                isLoading = false;
+            }
+        }
+        private void OnDataChanged(IRealmCollection<PasswordEntity> sender, ChangeSet? changes)
+        {
+            MapDataToViewModel(sender);
+            InvokeAsync(StateHasChanged);
         }
 
-        private async Task InitializePasswords()
+        private void MapDataToViewModel(IRealmCollection<PasswordEntity> data)
         {
-            isLoading = true;
-            loadError = string.Empty;
-            var result = await Mediator.Send(new GetAllPasswordsQuery());
-            if (result is not null)
-            {
-                var passwordModel = Mapper.Map<List<PasswordModel>>(result);
-                _allItems = [.. passwordModel.Select(model => new PasswordViewModel { Model = model })];
-            }
-
-            isLoading = false;
+            var passwordModel = Mapper.Map<List<PasswordModel>>(data);
+            _allItems = [.. passwordModel.Select(model => new PasswordViewModel { Model = model })];
         }
 
         private void TogglePasswordVisibility(PasswordViewModel item)
@@ -78,15 +88,10 @@ namespace SecureVault.App.Components.Pages.Passwords
 
             return $"https://{url}";
         }
-        private async Task HandleItemAdded()
-        {
-            await InitializePasswords();
-            await InvokeAsync(StateHasChanged);
-        }
 
         public void Dispose()
         {
-            UINotificationService.OnVaultDataChangedAsync -= HandleItemAdded;
+            _notificationToken?.Dispose();
         }
     }
 }

@@ -1,5 +1,5 @@
 ﻿@code {
-    [Inject] private NavigationManager NavigationManager { get; set; }
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     protected override void OnInitialized() => NavigationManager.NavigateTo("/login");
 }

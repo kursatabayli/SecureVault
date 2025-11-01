@@ -4,6 +4,7 @@ namespace SecureVault.App.Application.Contracts.Abstractions.Persistence
 {
     public interface IStorageService
     {
+        //Secure Storage
         Task<string?> GetAccessTokenAsync();
         Task<string?> GetRefreshTokenAsync();
         DateTime? GetAccessTokenExpiration();
@@ -15,6 +16,8 @@ namespace SecureVault.App.Application.Contracts.Abstractions.Persistence
         Task SetUniqueDeviceIdAsync(string id);
         Task SetTokensAsync(AuthResponseDto authResponseDto);
         Task SetKeysAsync(byte[] privateKey, byte[] encryptionKey);
+        Task<byte[]> GetOrCreateDbKeyAsync();
+        Task<string?> GetOrCreateDbPathAsync();
 
         //Preferences
         void SetEmail(string email);

@@ -14,7 +14,6 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.9" />
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\..\..\shared\SecureVault.Shared.Result\SecureVault.Shared.Result.csproj" />
 		<ProjectReference Include="..\SecureVault.Identity.Application.Contracts\SecureVault.Identity.Application.Contracts.csproj" />
 	</ItemGroup>
 	<ItemGroup>

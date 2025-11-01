@@ -92,7 +92,7 @@
                                                     </MudText>
                                                 </div>
                                                 <MudStack AlignItems="AlignItems.End">
-                                                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@((e) => HandleItemClick(item))" Title="Yeni kod üret" />
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@((e) => HandleItemClick(item))" title="Yeni kod üret" />
                                                     <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Medium" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
                                                         <MudMenuItem Icon="@Icons.Material.Filled.Edit" Disabled="true">Düzenle</MudMenuItem>
                                                         <MudMenuItem Icon="@Icons.Material.Filled.Delete" Disabled="true">Sil</MudMenuItem>
@@ -115,5 +115,5 @@
     </MudPaper>
 </MudContainer>
 
-<AddTwoFactorAuthFabMenu OnItemAdded="HandleItemAdded" />
+<AddTwoFactorAuthFabMenu />
 

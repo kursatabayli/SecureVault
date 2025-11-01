@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using RabbitMQ.Client;
-using SecureVault.Shared.RabbitMQ.Options;
 using SecureVault.Vault.Api.Extensions;
 using SecureVault.Vault.Api.Helpers;
 using SecureVault.Vault.Api.MiddleWares;
@@ -24,7 +22,7 @@ namespace SecureVault.Vault.Api
 
             try
             {
-                Log.Information("Uygulama baþlatýlýyor.");
+                Log.Information("Uygulama baï¿½latï¿½lï¿½yor.");
 
                 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,12 +60,6 @@ namespace SecureVault.Vault.Api
                     };
                 });
 
-                builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
-                var rabbitMqSettings = builder.Configuration.GetSection("RabbitMq").Get<RabbitMqOptions>();
-                builder.Services.AddSingleton<IConnectionFactory>(sp => new ConnectionFactory
-                {
-                    Uri = new Uri(rabbitMqSettings.Uri),
-                });
                 builder.Services.AddAuthorization();
                 builder.Services.AddConsul(builder.Configuration);
 
@@ -94,7 +86,7 @@ namespace SecureVault.Vault.Api
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, "Uygulama baþlatýlýrken kritik bir hata oluþtu.");
+                Log.Fatal(ex, "Uygulama baï¿½latï¿½lï¿½rken kritik bir hata oluï¿½tu.");
             }
             finally
             {

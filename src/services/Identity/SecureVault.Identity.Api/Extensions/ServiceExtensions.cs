@@ -3,9 +3,6 @@ using SecureVault.Identity.Application.Contracts.Services;
 using SecureVault.Identity.Application.Services;
 using SecureVault.Identity.Infrastructure.Repositories;
 using SecureVault.Identity.Infrastructure.Services;
-using SecureVault.Shared.RabbitMQ.Connector;
-using SecureVault.Shared.RabbitMQ.Contracts;
-using SecureVault.Shared.RabbitMQ.Implementations;
 
 namespace SecureVault.Identity.Api.Extensions
 {
@@ -28,12 +25,6 @@ namespace SecureVault.Identity.Api.Extensions
             //Application Services
             services.AddScoped<IUserSessionService, UserSessionService>();
             services.AddScoped<ITokenValidationService, TokenValidationService>();
-
-            //RabbitMQ
-            services.AddSingleton<IRabbitMqConnection, RabbitMqConnection>();
-            services.AddScoped<IEventPublisher, RabbitMqEventPublisher>();
-            services.AddHostedService<RabbitMqConnector>();
-
 
             return services;
         }

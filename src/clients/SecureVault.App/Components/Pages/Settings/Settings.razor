@@ -4,16 +4,18 @@
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
     <MudPaper Elevation="0" Class="pa-4 rounded-lg">
         <MudText Typo="Typo.h4" GutterBottom="true">Ayarlar</MudText>
-        <MudText Color="Color.Secondary" Class="mb-6">Hesap ayarlarınızı, tercihlerinizi ve güvenlik seçeneklerinizi yönetin.</MudText>
-        
-        <MudList T="string" Clickable="true">
-            
+        <MudText Color="Color.Secondary" Class="mb-6">Hesap ayarlarınızı, tercihlerinizi ve güvenlik seçeneklerinizi
+            yönetin.</MudText>
+
+        <MudList T="string" ReadOnly="true">
+
             <MudListItem Href="/profile">
                 <div class="d-flex align-center">
                     <MudIcon Icon="@Icons.Material.Filled.Person" Color="Color.Primary" Class="mr-4" />
                     <div class="flex-grow-1">
                         <MudText><b>Profil</b></MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Kişisel bilgilerinizi ve tercihlerinizi yönetin.</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Kişisel bilgilerinizi ve tercihlerinizi
+                            yönetin.</MudText>
                     </div>
                     <MudIcon Icon="@Icons.Material.Filled.ChevronRight" />
                 </div>
@@ -26,7 +28,8 @@
                     <MudIcon Icon="@Icons.Material.Filled.DevicesOther" Color="Color.Info" Class="mr-4" />
                     <div class="flex-grow-1">
                         <MudText><b>Oturum Yönetimi</b></MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Aktif cihaz oturumlarınızı görüntüleyin ve sonlandırın.</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Aktif cihaz oturumlarınızı görüntüleyin ve
+                            sonlandırın.</MudText>
                     </div>
                     <MudIcon Icon="@Icons.Material.Filled.ChevronRight" />
                 </div>
@@ -39,7 +42,8 @@
                     <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Warning" Class="mr-4" />
                     <div class="flex-grow-1">
                         <MudText><b>Güvenlik</b></MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Şifrenizi değiştirin ve iki faktörlü doğrulamayı yönetin.</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Şifrenizi değiştirin ve iki faktörlü
+                            doğrulamayı yönetin.</MudText>
                     </div>
                     <MudIcon Icon="@Icons.Material.Filled.ChevronRight" />
                 </div>
@@ -56,7 +60,7 @@
                     </div>
                 </div>
             </MudListItem>
-            
+
         </MudList>
 
     </MudPaper>

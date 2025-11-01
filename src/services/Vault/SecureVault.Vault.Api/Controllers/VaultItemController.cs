@@ -92,6 +92,54 @@ namespace SecureVault.Vault.Api.Controllers
                 return BadRequest(result.Error);
         }
 
+        [HttpPost("batch")]
+        public async Task<IActionResult> CreateMany([FromBody] IEnumerable<CreateVaultItemDto> createVaultItemDtos)
+        {
+            var items = createVaultItemDtos.Select(dto => new CreateVaultItemCommand(
+                dto.Id,
+                CurrentUserId,
+                dto.ItemType,
+                dto.EncryptedData,
+                dto.CreatedAt,
+                UniqueDeviceId
+            ));
+
+            var result = await _mediator.Send(new CreateVaultItemListCommand(items));
+
+            if (result.IsSuccess)
+                return Ok();
+            else
+                return BadRequest(result.Error);
+        }
+
+        [HttpPut("batch")]
+        public async Task<IActionResult> UpdateMany([FromBody] IEnumerable<UpdateVaultItemDto> updateVaultItemDtos)
+        {
+            var items = updateVaultItemDtos.Select(item => new UpdateVaultItemCommand(
+                item.Id,
+                CurrentUserId,
+                item.EncryptedData,
+                item.UpdatedAt,
+                UniqueDeviceId));
+
+            var result = await _mediator.Send(new UpdateVaultItemListCommand(items));
+            if (result.IsSuccess)
+                return Ok(result);
+            else
+                return BadRequest(result.Error);
+        }
+
+        [HttpDelete("batch")]
+        public async Task<IActionResult> DeleteMany(IEnumerable<Guid> ids)
+        {
+            var items = new DeleteVaultItemListCommand(ids, CurrentUserId, UniqueDeviceId);
+            var result = await _mediator.Send(items);
+            if (result.IsSuccess)
+                return Ok();
+            else
+                return BadRequest(result.Error);
+        }
+
         private string UniqueDeviceId => Request.Headers["X-Device-Id"].FirstOrDefault();
         private Guid CurrentUserId
         {

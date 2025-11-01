@@ -1,8 +1,10 @@
-﻿using AutoMapper;
+﻿using System.Threading.Tasks;
+using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using SecureVault.App.Application.Contracts.Abstractions.Persistence;
+using SecureVault.App.Application.Contracts.Abstractions.Sync;
 using SecureVault.App.Application.Features.CQRS.Sessions.Commands;
 using SecureVault.App.Application.Features.CQRS.Sessions.Queries;
 using SecureVault.App.Models.SessionModels;
@@ -10,13 +12,15 @@ using Color = MudBlazor.Color;
 
 namespace SecureVault.App.Components.Pages.Settings.Sessions
 {
-    public partial class Sessions : ComponentBase
+    public partial class Sessions : ComponentBase, IAsyncDisposable
     {
         [Inject] private IMediator Mediator { get; set; } = default!;
         [Inject] private IMapper Mapper { get; set; } = default!;
         [Inject] private ISnackbar Snackbar { get; set; } = default!;
         [Inject] private IDialogService DialogService { get; set; } = default!;
         [Inject] private IStorageService StorageService { get; set; } = default!;
+        [Inject] private IActiveSessionTracker ActiveSessionTracker { get; set; } = default!;
+        private IReadOnlySet<string> _activeDeviceIds = new HashSet<string>();
 
         private List<UserSessionsModel> _sessions = [];
         private bool _isLoading = true;
@@ -26,7 +30,15 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
         protected override async Task OnInitializedAsync()
         {
             _uniqueDeviceId = await StorageService.GetUniqueDeviceIdAsync();
+            _activeDeviceIds = ActiveSessionTracker.ActiveDeviceIds;
+            ActiveSessionTracker.OnChange += OnActiveSessionChange;
             await LoadSessionsAsync();
+        }
+        private async Task OnActiveSessionChange()
+        {
+            _activeDeviceIds = ActiveSessionTracker.ActiveDeviceIds;
+            await LoadSessionsAsync();
+            await InvokeAsync(StateHasChanged);
         }
 
         private async Task LoadSessionsAsync()
@@ -69,15 +81,14 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
                 await RevokeSession(session);
             }
         }
-
         private async Task RevokeSession(UserSessionsModel session)
         {
             _revokingSessionId = session.Id;
             StateHasChanged();
 
             var command = new RevokeUserSessionCommand { SessionId = session.Id };
-            var result = await Mediator.Send(command); 
-            
+            var result = await Mediator.Send(command);
+
             if (result.IsSuccess)
             {
                 session.IsRevoked = true;
@@ -93,12 +104,12 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
         }
 
         private bool IsCurrentSession(UserSessionsModel session) => session.DeviceDetails.UniqueDeviceId == _uniqueDeviceId;
-        private bool IsRecentlyActive(UserSessionsModel session)
+        private bool IsActuallyActive(UserSessionsModel session)
         {
             if (IsCurrentSession(session) || session.IsRevoked)
                 return false;
 
-            return session.LastUsedAt.HasValue && (DateTimeOffset.UtcNow - session.LastUsedAt.Value).TotalMinutes < 15;
+            return _activeDeviceIds.Contains(session.DeviceDetails.UniqueDeviceId);
         }
 
         private string GetDeviceIcon(DeviceDetailModel device)
@@ -139,6 +150,12 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
             var result = await dialog.Result;
             if (!result.Canceled)
                 await LoadSessionsAsync();
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            ActiveSessionTracker.OnChange -= OnActiveSessionChange;
+            return ValueTask.CompletedTask;
         }
     }
 }
