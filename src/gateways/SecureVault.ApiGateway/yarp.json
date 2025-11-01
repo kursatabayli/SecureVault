@@ -1,0 +1,91 @@
+{
+  "ReverseProxy": {
+    "Routes": {
+      "interaction-route": {
+        "ClusterId": "interaction-http-cluster",
+        "Match": {
+          "Path": "/interaction/{**everything}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathRemovePrefix": "/interaction"
+          }
+        ],
+        "Order": 2
+      },
+      "identity-route": {
+        "ClusterId": "identity-cluster",
+        "Match": {
+          "Path": "/identity/{**everything}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "Transforms": [
+          {
+            "RequestHeader": "X-Forwarded-For",
+            "Set": "{RemoteIpAddress}"
+          },
+          {
+            "PathRemovePrefix": "/identity"
+          }
+        ],
+        "Order": 2
+      },
+      "vault-route": {
+        "ClusterId": "vault-cluster",
+        "Match": {
+          "Path": "/vault/{**everything}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathRemovePrefix": "/vault"
+          }
+        ],
+        "AuthorizationPolicy": "default",
+        "Order": 2
+      }
+    },
+    "Clusters": {
+      "identity-cluster": {
+        "LoadBalancingPolicy": "LeastRequests",
+        "Destinations": {
+          "destination1": {
+            "Address": "http://identityapi"
+          }
+        }
+      },
+      "vault-cluster": {
+        "LoadBalancingPolicy": "LeastRequests",
+        "Destinations": {
+          "destination1": {
+            "Address": "http://vaultapi"
+          }
+        }
+      },
+      "interaction-cluster": {
+        "LoadBalancingPolicy": "LeastRequests",
+        "Destinations": {
+          "destination1": {
+            "Address": "http://interactionapi"
+          }
+        }
+      }
+    }
+  }
+}

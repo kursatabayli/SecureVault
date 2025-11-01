@@ -25,34 +25,22 @@ namespace SecureVault.App
             var a = Assembly.GetExecutingAssembly();
             using var stream = a.GetManifestResourceStream("SecureVault.App.appsettings.json");
 
+            var configurationBuilder = new ConfigurationBuilder();
             if (stream != null)
             {
-                var config = new ConfigurationBuilder()
-                            .AddJsonStream(stream)
-                            .Build();
-
-                builder.Configuration.AddConfiguration(config);
+                configurationBuilder.AddJsonStream(stream);
             }
-            builder.Services.AddMauiBlazorWebView();
 
-            builder.Services.AddLocalization();
-            builder.Services.AddMudServices();
-            builder.Services.AddAppServices(builder.Configuration);
-            builder.Services.AddInfrastructureServices(builder.Configuration);
-            builder.Services.AddApplicationServices();
-            builder.Services.AddAuthorizationCore();
-            builder.Services.AddLocalization();
+            builder.Services.AddMauiBlazorWebView();
 
             builder.Services.AddSingleton<App>();
 
 #if DEBUG
             using var devStream = a.GetManifestResourceStream("SecureVault.App.appsettings.Development.json");
+
             if (devStream != null)
             {
-                var devConfig = new ConfigurationBuilder()
-                    .AddJsonStream(devStream)
-                    .Build();
-                builder.Configuration.AddConfiguration(devConfig);
+                configurationBuilder.AddJsonStream(devStream);
             }
             builder.Services.AddBlazorWebViewDeveloperTools();
 #if ANDROID
@@ -66,6 +54,17 @@ namespace SecureVault.App
 #endif
             builder.Logging.AddDebug();
 #endif
+
+            configurationBuilder.AddEnvironmentVariables();
+            builder.Configuration.AddConfiguration(configurationBuilder.Build());
+
+            builder.Services.AddLocalization();
+            builder.Services.AddMudServices();
+            builder.Services.AddAppServices();
+            builder.Services.AddApplicationServices();
+            builder.Services.AddInfrastructureServices(builder.Configuration);
+            builder.Services.AddAuthorizationCore();
+            builder.Services.AddLocalization();
 
             return builder.Build();
         }

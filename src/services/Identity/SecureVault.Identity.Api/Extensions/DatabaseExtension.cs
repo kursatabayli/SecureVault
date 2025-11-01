@@ -5,13 +5,15 @@ namespace SecureVault.Identity.Api.Extensions
 {
     public static class DatabaseExtension
     {
-        public static IServiceCollection AddDbContextConfiguration(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddDbContextConfiguration(
+                    this IServiceCollection services,
+                    IHostApplicationBuilder builder)
         {
-            services.AddDbContext<AppDbContext>(options =>
-                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"),
-                    sqlOptions => sqlOptions.EnableRetryOnFailure())
-                        .UseSnakeCaseNamingConvention()
-            );
+            builder.AddNpgsqlDbContext<AppDbContext>("identity-db",
+                configureDbContextOptions: options =>
+                {
+                    options.UseSnakeCaseNamingConvention();
+                });
 
             return services;
         }

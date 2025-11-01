@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.Extensions.Configuration;
 using Nager.PublicSuffix;
 using Nager.PublicSuffix.Models;
 using Nager.PublicSuffix.RuleParsers;
@@ -12,7 +11,7 @@ namespace SecureVault.App
 {
     public static class AppServiceRegistration
     {
-        public static IServiceCollection AddAppServices(this IServiceCollection services, IConfiguration config)
+        public static IServiceCollection AddAppServices(this IServiceCollection services)
         {
             services.AddSingleton<IAppLifecycleManager, AppLifecycleManager>();
             services.AddSingleton<CustomAuthStateProvider>();
