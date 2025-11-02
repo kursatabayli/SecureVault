@@ -52,7 +52,7 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
                 else
                     _loadError = result.Error.Message;
 
-                _sessions = [.. _sessions.OrderByDescending(s => IsCurrentSession(s)).ThenByDescending(s => s.LastUsedAt)];
+                _sessions = [.. _sessions.OrderByDescending(IsCurrentSession).ThenByDescending(s => s.LastUsedAt)];
             }
             catch (Exception ex)
             {
@@ -86,7 +86,7 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
             _revokingSessionId = session.Id;
             StateHasChanged();
 
-            var command = new RevokeUserSessionCommand { SessionId = session.Id };
+            var command = new RevokeUserSessionCommand { SessionId = session.Id, IsActiveNow = IsActuallyActive(session) };
             var result = await Mediator.Send(command);
 
             if (result.IsSuccess)

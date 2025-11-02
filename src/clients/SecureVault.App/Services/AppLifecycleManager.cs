@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using SecureVault.App.Application.Contracts.Abstractions.Interaction;
 using SecureVault.App.Application.Contracts.Abstractions.Persistence;
 using SecureVault.App.Application.Contracts.Abstractions.Sync;
 using SecureVault.App.Application.Contracts.Abstractions.UI;
@@ -8,7 +9,7 @@ namespace SecureVault.App.Services
     public class AppLifecycleManager : IAppLifecycleManager
     {
         private readonly IBackgroundSyncService _backgroundSyncService;
-        private readonly ISyncConnectionService _signalRService;
+        private readonly IInteractionConnectionService _interactionConnectionService;
         private readonly ILogger<AppLifecycleManager> _logger;
         private readonly IStorageService _storageService;
         private readonly IAuthenticationStateNotifier _authenticationStateNotifier;
@@ -21,13 +22,13 @@ namespace SecureVault.App.Services
 
         public AppLifecycleManager(
             IBackgroundSyncService backgroundSyncService,
-            ISyncConnectionService signalRService,
+            IInteractionConnectionService interactionConnectionService,
             ILogger<AppLifecycleManager> logger,
             IStorageService storageService,
             IAuthenticationStateNotifier authenticationStateNotifier)
         {
             _backgroundSyncService = backgroundSyncService;
-            _signalRService = signalRService;
+            _interactionConnectionService = interactionConnectionService;
             _logger = logger;
             _storageService = storageService;
             _authenticationStateNotifier = authenticationStateNotifier;
@@ -124,7 +125,7 @@ namespace SecureVault.App.Services
                 _appCts = new CancellationTokenSource();
             }
 
-            await _signalRService.ConnectAsync(_appCts.Token);
+            await _interactionConnectionService.ConnectAsync(_appCts.Token);
         }
 
         private async Task StopPersistentServicesAsync()
@@ -136,7 +137,7 @@ namespace SecureVault.App.Services
             if (_appCts != null && !_appCts.IsCancellationRequested)
                 _appCts.Cancel();
 
-            await _signalRService.DisconnectAsync();
+            await _interactionConnectionService.DisconnectAsync();
         }
 
         public async ValueTask DisposeAsync()

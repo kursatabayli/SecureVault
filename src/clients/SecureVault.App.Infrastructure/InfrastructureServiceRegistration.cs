@@ -3,6 +3,7 @@ using Refit;
 using SecureVault.App.Application.Contracts.Abstractions.Api;
 using SecureVault.App.Application.Contracts.Abstractions.Database;
 using SecureVault.App.Application.Contracts.Abstractions.Device;
+using SecureVault.App.Application.Contracts.Abstractions.Interaction;
 using SecureVault.App.Application.Contracts.Abstractions.Persistence;
 using SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin;
 using SecureVault.App.Application.Contracts.Abstractions.Sync;
@@ -14,6 +15,8 @@ using SecureVault.App.Infrastructure.Repositories;
 using SecureVault.App.Infrastructure.Services.Api;
 using SecureVault.App.Infrastructure.Services.Database;
 using SecureVault.App.Infrastructure.Services.Device;
+using SecureVault.App.Infrastructure.Services.Interaction;
+using SecureVault.App.Infrastructure.Services.Interaction.Handlers;
 using SecureVault.App.Infrastructure.Services.QrCodeLogin;
 using SecureVault.App.Infrastructure.Services.QrCodeLogin.MessageHandlers;
 using SecureVault.App.Infrastructure.Services.Storage;
@@ -73,9 +76,14 @@ namespace SecureVault.App.Infrastructure
             services.AddScoped<IEntityDataProcessor>(sp => sp.GetRequiredService<TwoFactorAuthSyncHandler>());
             services.AddScoped<IEntityPayloadFactory<PasswordEntity>>(sp => sp.GetRequiredService<PasswordSyncHandler>());
             services.AddScoped<IEntityPayloadFactory<TwoFactorAuthCodeEntity>>(sp => sp.GetRequiredService<TwoFactorAuthSyncHandler>());
-            services.AddSingleton<ISyncConnectionService, SyncConnectionService>();
             services.AddSingleton<ISyncLock, SyncLock>();
             services.AddSingleton<IActiveSessionTracker, ActiveSessionTracker>();
+
+            //interaction services
+            services.AddSingleton<IInteractionConnectionService, InteractionConnectionService>();
+            services.AddSingleton<ISignalRHubEventHandler, SyncRequiredHandler>();
+            services.AddSingleton<ISignalRHubEventHandler, ActiveDevicesUpdatedHandler>();
+            services.AddSingleton<ISignalRHubEventHandler, UserSessionRevokedHandler>();
 
             //qr code login
             services.AddScoped<IQrLoginOrchestrator, QrLoginOrchestratorService>();

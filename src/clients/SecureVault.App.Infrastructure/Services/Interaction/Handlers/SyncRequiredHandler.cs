@@ -1,0 +1,27 @@
+using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Logging;
+using SecureVault.App.Application.Contracts.Abstractions.Interaction;
+using SecureVault.App.Application.Contracts.Abstractions.Sync;
+
+namespace SecureVault.App.Infrastructure.Services.Interaction.Handlers;
+
+public class SyncRequiredHandler : ISignalRHubEventHandler
+{
+  private readonly ILogger<SyncRequiredHandler> _logger;
+  private readonly IBackgroundSyncService _backgroundSyncService;
+
+  public SyncRequiredHandler(ILogger<SyncRequiredHandler> logger, IBackgroundSyncService backgroundSyncService)
+  {
+    _logger = logger;
+    _backgroundSyncService = backgroundSyncService;
+  }
+
+  public void RegisterHandlers(HubConnection connection)
+  {
+    connection.On("SyncRequired", async () =>
+    {
+      _logger.LogInformation("Sunucudan 'SyncRequired' bildirimi alındı. Catch-Up Sync tetikleniyor.");
+      await _backgroundSyncService.SynchronizeAsync(CancellationToken.None);
+    });
+  }
+}

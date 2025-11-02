@@ -17,9 +17,14 @@ var seq = builder.AddContainer("seq", "datalust/seq", "latest")
 
 var postgresUsernameParameter = builder.AddParameter("postgresusername", secret: false);
 var postgresPasswordParameter = builder.AddParameter("postgrespassword", secret: true);
-var identityDb = builder.AddPostgres("identity-db").WithPassword(postgresPasswordParameter).WithUserName(postgresUsernameParameter);
+var identityDb = builder.AddPostgres("identity-db")
+                        .WithPassword(postgresPasswordParameter)
+                        .WithUserName(postgresUsernameParameter)
+                        .WithDataVolume();
+
 var redisCache = builder.AddRedis("redis-cache");
-var vaultDb = builder.AddMongoDB("vault-db");
+var vaultDb = builder.AddMongoDB("vault-db")
+                     .WithDataVolume();
 
 var identityApi = builder.AddProject<Projects.SecureVault_Identity_Api>("identityapi");
 var vaultApi = builder.AddProject<Projects.SecureVault_Vault_Api>("vaultapi");
@@ -45,7 +50,8 @@ vaultApi.WithReference(vaultDb)
         .WithEnvironment("Serilog__WriteTo__0__Args__serverUrl", seq.GetEndpoint("http"))
         .WithEnvironment("MongoDbSettings__DatabaseName", "securevault_db");
 
-interactionApi.WithEnvironment("JwtSettings__Key", jwtKey)
+interactionApi.WithReference(redisCache)
+              .WithEnvironment("JwtSettings__Key", jwtKey)
               .WithEnvironment("JwtSettings__Issuer", jwtIssuer)
               .WithEnvironment("JwtSettings__Audience", jwtAudience)
               .WithEnvironment("Serilog__WriteTo__0__Args__serverUrl", seq.GetEndpoint("http"))

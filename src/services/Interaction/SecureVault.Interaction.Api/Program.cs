@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using SecureVault.Interaction.Api.Extensions;
-using SecureVault.Interaction.Api.Features.QrLogin.Hubs;
-using SecureVault.Interaction.Api.Features.Sync.Hubs;
+using SecureVault.Interaction.Api.Features.Interaction;
+using SecureVault.Interaction.Api.Features.QrLogin;
 using SecureVault.Interaction.Api.Helpers;
 using Serilog;
 using System.Text;
@@ -32,8 +32,12 @@ namespace SecureVault.Interaction.Api
             builder.Services.AddOpenApi();
             builder.Services.AddLocalization();
 
+
+            builder.AddRedisClient("redis-cache");
+
             builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(nameof(JwtSettings)));
             var jwtSettings = builder.Configuration.GetSection(nameof(JwtSettings)).Get<JwtSettings>();
+
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -70,7 +74,7 @@ namespace SecureVault.Interaction.Api
                     });
             });
 
-            builder.Services.AddSignalR();
+            builder.Services.AddSignalR().AddStackExchangeRedis("redis-cache");
             builder.Services.AddAuthorization();
 
 
@@ -89,8 +93,8 @@ namespace SecureVault.Interaction.Api
             app.UseAuthorization();
             app.MapDefaultEndpoints();
             app.MapControllers();
-            app.MapHub<SyncHub>("/hubs/synchub");
-            app.MapHub<QrLoginHub>("/hubs/qrlogin");
+            app.MapHub<InteractionHub>("/hubs/interaction-hub");
+            app.MapHub<QrLoginHub>("/hubs/qr-login-hub");
 
             app.Run();
         }

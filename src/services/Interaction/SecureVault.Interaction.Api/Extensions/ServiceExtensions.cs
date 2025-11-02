@@ -1,4 +1,6 @@
-﻿using SecureVault.Interaction.Api.Features.QrLogin.Contracts;
+﻿using SecureVault.Interaction.Api.Features.Interaction.Contracts;
+using SecureVault.Interaction.Api.Features.Interaction.Services;
+using SecureVault.Interaction.Api.Features.QrLogin.Contracts;
 using SecureVault.Interaction.Api.Features.QrLogin.Services;
 
 namespace SecureVault.Interaction.Api.Extensions
@@ -7,8 +9,8 @@ namespace SecureVault.Interaction.Api.Extensions
     {
         public static IServiceCollection RegisterServices(this IServiceCollection services)
         {
-            services.AddMemoryCache();
-            services.AddScoped<IQrLoginChannelService, InMemoryQrLoginChannelService>();
+            services.AddScoped<IDevicePresenceService, RedisDevicePresenceService>();
+            services.AddScoped<IQrLoginChannelService, RedisQrLoginChannelService>();
 
             return services;
         }
