@@ -2,7 +2,7 @@
   "ReverseProxy": {
     "Routes": {
       "interaction-route": {
-        "ClusterId": "interaction-http-cluster",
+        "ClusterId": "interaction-cluster",
         "Match": {
           "Path": "/interaction/{**everything}",
           "Methods": [

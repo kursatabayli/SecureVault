@@ -98,21 +98,34 @@ namespace SecureVault.App.Infrastructure
                     ?? throw new InvalidOperationException("ApiSettings not found.");
 
             //refit
-            static HttpClientHandler configureHandler(string machineName) => new()
+            static HttpClientHandler configureHandler(string baseUrl)
             {
-                SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
-                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+                string devHost = string.Empty;
+                if (!string.IsNullOrEmpty(baseUrl) &&
+                        Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
                 {
-#if DEBUG
-                    if (message.RequestUri.Host.Equals(machineName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        Console.WriteLine($"[SSL-DEBUG] Certificate validation bypassed for local dev host: {machineName}");
-                        return true;
-                    }
-#endif
-                    return errors == SslPolicyErrors.None;
+                    devHost = baseUri.Host;
                 }
-            };
+
+                return new()
+                {
+                    SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
+                    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+                    {
+#if DEBUG
+                        // Kontrolü artık devHost üzerinden yap
+                        if (!string.IsNullOrEmpty(devHost) &&
+                            message.RequestUri.Host.Equals(devHost, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Console.WriteLine($"[SSL-DEBUG] Certificate validation bypassed for local dev host: {devHost}");
+                            return true;
+                        }
+#endif
+                        return errors == SslPolicyErrors.None;
+                    }
+                };
+            }
+
             RefitSettings refitSettings = new()
             {
                 ContentSerializer = new SystemTextJsonContentSerializer(new JsonSerializerOptions
@@ -131,14 +144,14 @@ namespace SecureVault.App.Infrastructure
                     .AddHttpMessageHandler<PollyResiliencyHandler>()
                     .AddHttpMessageHandler<DeviceHeadersHandler>()
                     .AddHttpMessageHandler<AuthTokenHandler>()
-                    .ConfigurePrimaryHttpMessageHandler(() => configureHandler(apiSettings.DevMachineName));
+                    .ConfigurePrimaryHttpMessageHandler(() => configureHandler(apiSettings.BaseUrl));
 
             services.AddRefitClient<ISecureVaultAnonymousApi>(refitSettings)
                     .ConfigureHttpClient(configureClient)
                     .AddHttpMessageHandler<PollyResiliencyHandler>()
                     .AddHttpMessageHandler<DeviceHeadersHandler>()
                     .AddHttpMessageHandler<AddBearerTokenHandler>()
-                    .ConfigurePrimaryHttpMessageHandler(() => configureHandler(apiSettings.DevMachineName));
+                    .ConfigurePrimaryHttpMessageHandler(() => configureHandler(apiSettings.BaseUrl));
 
             return services;
         }

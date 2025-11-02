@@ -7,11 +7,17 @@ namespace SecureVault.App.Infrastructure.HttpHandlers
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ApiSettings _apiSettings;
+        private readonly string _devHost;
 
         public HttpHandlerPipelineBuilder(IServiceProvider serviceProvider, IOptions<ApiSettings> apiSettings)
         {
             _serviceProvider = serviceProvider;
             _apiSettings = apiSettings.Value;
+            _devHost = string.Empty;
+            if (!string.IsNullOrEmpty(_apiSettings.BaseUrl) && Uri.TryCreate(_apiSettings.BaseUrl, UriKind.Absolute, out var baseUri))
+            {
+                _devHost = baseUri.Host;
+            }
         }
 
         public DelegatingHandler CreatePipeline()
@@ -21,10 +27,9 @@ namespace SecureVault.App.Infrastructure.HttpHandlers
                 ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
                 {
 #if DEBUG
-                    var machineName = _apiSettings.DevMachineName;
-                    if (!string.IsNullOrEmpty(machineName) && message.RequestUri.Host.Equals(machineName, StringComparison.OrdinalIgnoreCase))
+                    if (!string.IsNullOrEmpty(_devHost) && message.RequestUri.Host.Equals(_devHost, StringComparison.OrdinalIgnoreCase))
                     {
-                        Console.WriteLine($"[SSL-DEBUG] Certificate validation bypassed for {machineName} via PipelineBuilder.");
+                        Console.WriteLine($"[SSL-DEBUG] Certificate validation bypassed for {_devHost} via PipelineBuilder.");
                         return true;
                     }
 #endif
