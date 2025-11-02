@@ -1,31 +1,33 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SecureVault.App.Application.Contracts.Abstractions.Interaction;
 using SecureVault.App.Application.Contracts.Abstractions.Persistence;
-using SecureVault.App.Application.Contracts.Abstractions.Sync;
 using SecureVault.App.Infrastructure.Helpers;
 using SecureVault.App.Infrastructure.HttpHandlers;
 
-namespace SecureVault.App.Infrastructure.Services.Sync
+namespace SecureVault.App.Infrastructure.Services.Interaction
 {
-    public class SyncConnectionService : ISyncConnectionService
+    public class InteractionConnectionService : IInteractionConnectionService
     {
-        private readonly ILogger<SyncConnectionService> _logger;
-        private readonly IBackgroundSyncService _backgroundSyncService;
+        private readonly ILogger<InteractionConnectionService> _logger;
         private readonly IHttpHandlerPipelineBuilder _pipelineBuilder;
         private readonly IStorageService _storageService;
-        private readonly IActiveSessionTracker _activeSessionTracker;
+        private readonly IEnumerable<ISignalRHubEventHandler> _hubEventHandlers;
         private HubConnection _connection;
         private readonly string _hubUrl;
 
-        public SyncConnectionService(ILogger<SyncConnectionService> logger, IBackgroundSyncService backgroundSyncService, IHttpHandlerPipelineBuilder pipelineBuilder, IOptions<ApiSettings> apiSettings,
-            IOptions<SignalRSettings> signalRSettings, IStorageService storageService, IActiveSessionTracker activeSessionTracker)
+        public InteractionConnectionService(ILogger<InteractionConnectionService> logger,
+         IHttpHandlerPipelineBuilder pipelineBuilder,
+         IStorageService storageService,
+         IEnumerable<ISignalRHubEventHandler> hubEventHandlers,
+         IOptions<ApiSettings> apiSettings,
+         IOptions<SignalRSettings> signalRSettings)
         {
             _logger = logger;
-            _backgroundSyncService = backgroundSyncService;
             _pipelineBuilder = pipelineBuilder;
             _storageService = storageService;
-            _activeSessionTracker = activeSessionTracker;
+            _hubEventHandlers = hubEventHandlers;
             var baseUrl = new Uri(apiSettings.Value.BaseUrl);
             var fullHubUri = new Uri(baseUrl, signalRSettings.Value.HubPath);
             _hubUrl = fullHubUri.ToString();
@@ -47,17 +49,7 @@ namespace SecureVault.App.Infrastructure.Services.Sync
                 .WithAutomaticReconnect()
                 .Build();
 
-            _connection.On("SyncRequired", async () =>
-            {
-                _logger.LogInformation("Sunucudan 'SyncRequired' bildirimi alındı. Catch-Up Sync tetikleniyor.");
-                await _backgroundSyncService.SynchronizeAsync(CancellationToken.None);
-            });
-
-            _connection.On<List<string>>("ActiveDevicesUpdated", (deviceIds) =>
-            {
-                _logger.LogInformation("Aktif cihaz listesi güncellendi. {Count} cihaz aktif.", deviceIds.Count);
-                (_activeSessionTracker as ActiveSessionTracker)?.UpdateActiveDevices(deviceIds);
-            });
+            RegisterAllHandlers();
 
             try
             {
@@ -100,6 +92,31 @@ namespace SecureVault.App.Infrastructure.Services.Sync
             {
                 _logger.LogError(ex, "'NotifySyncRequired' bildirimi gönderilirken hata oluştu.");
             }
+        }
+
+        public async Task NotifyUserSessionRevokedAsync(string userDeviceId, CancellationToken cancellationToken = default)
+        {
+            if (_connection is null || _connection.State != HubConnectionState.Connected)
+            {
+                _logger.LogWarning("SignalR bağlantısı aktif değil. Oturum iptal bildirimi gönderilemedi.");
+                return;
+            }
+
+            try
+            {
+                await _connection.InvokeAsync("NotifyUserSessionRevoked", userDeviceId, cancellationToken);
+                _logger.LogInformation("Sunucuya 'NotifyUserSessionRevoked' bildirimi başarıyla gönderildi.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "'NotifyUserSessionRevoked' bildirimi gönderilirken hata oluştu.");
+            }
+        }
+
+        private void RegisterAllHandlers()
+        {
+            foreach (var handler in _hubEventHandlers)
+                handler.RegisterHandlers(_connection);
         }
 
 

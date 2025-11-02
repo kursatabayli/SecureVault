@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
+using SecureVault.App.Application.Contracts.Abstractions.Interaction;
 using SecureVault.App.Application.Contracts.Abstractions.Sync;
 using SecureVault.App.Application.Contracts.Repositories;
 using SecureVault.App.Application.Features.CQRS.TwoFactorAuthCodes.Commands;
@@ -13,18 +14,18 @@ namespace SecureVault.App.Application.Features.CQRS.TwoFactorAuthCodes.Handlers
         private readonly ITwoFactorAuthCodeRepository _repository;
         private readonly ILogger<CreateTwoFactorAuthCodeHandler> _logger;
         private readonly IBackgroundSyncService _backgroundSyncService;
-        private readonly ISyncConnectionService _syncConnectionService;
+        private readonly IInteractionConnectionService _interactionConnectionService;
 
         public CreateTwoFactorAuthCodeHandler(
             ITwoFactorAuthCodeRepository repository,
             ILogger<CreateTwoFactorAuthCodeHandler> logger,
             IBackgroundSyncService backgroundSyncService,
-            ISyncConnectionService syncConnectionService)
+            IInteractionConnectionService interactionConnectionService)
         {
             _repository = repository;
             _logger = logger;
             _backgroundSyncService = backgroundSyncService;
-            _syncConnectionService = syncConnectionService;
+            _interactionConnectionService = interactionConnectionService;
         }
 
         public async Task<Result> Handle(CreateTwoFactorAuthCodeCommand request, CancellationToken cancellationToken)
@@ -49,7 +50,7 @@ namespace SecureVault.App.Application.Features.CQRS.TwoFactorAuthCodes.Handlers
                 if (result)
                 {
                     _logger.LogInformation("2FA Kodu ID:{Id} için arka plan senkronizasyonu başarıyla tamamlandı.", twoFactorAuthCodeEntity.Id);
-                    await _syncConnectionService.NotifySyncRequiredAsync(cancellationToken);
+                    await _interactionConnectionService.NotifySyncRequiredAsync(cancellationToken);
                 }
                 else
                 {

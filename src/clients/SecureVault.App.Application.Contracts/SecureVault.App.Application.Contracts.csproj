@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.9" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <ProjectReference Include="..\..\shared\SecureVault.Shared.Result\SecureVault.Shared.Result.csproj" />
     <ProjectReference Include="..\SecureVault.App.Domain\SecureVault.App.Domain.csproj" />
   </ItemGroup>

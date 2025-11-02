@@ -1,6 +1,6 @@
-﻿using AutoMapper;
-using MediatR;
+﻿using MediatR;
 using Microsoft.Extensions.Logging;
+using SecureVault.App.Application.Contracts.Abstractions.Interaction;
 using SecureVault.App.Application.Contracts.Abstractions.Sync;
 using SecureVault.App.Application.Contracts.Repositories;
 using SecureVault.App.Application.Features.CQRS.Passwords.Commands;
@@ -14,18 +14,18 @@ namespace SecureVault.App.Application.Features.CQRS.Passwords.Handlers
         private readonly IPasswordRepository _passwordRepository;
         private readonly ILogger<CreatePasswordHandler> _logger;
         private readonly IBackgroundSyncService _backgroundSyncService;
-        private readonly ISyncConnectionService _syncConnectionService;
+        private readonly IInteractionConnectionService _interactionConnectionService;
 
         public CreatePasswordHandler(
             IPasswordRepository passwordRepository,
             ILogger<CreatePasswordHandler> logger,
             IBackgroundSyncService backgroundSyncService,
-            ISyncConnectionService syncConnectionService)
+            IInteractionConnectionService interactionConnectionService)
         {
             _passwordRepository = passwordRepository;
             _logger = logger;
             _backgroundSyncService = backgroundSyncService;
-            _syncConnectionService = syncConnectionService;
+            _interactionConnectionService = interactionConnectionService;
         }
 
         public async Task<Result> Handle(CreatePasswordCommand request, CancellationToken cancellationToken)
@@ -49,7 +49,7 @@ namespace SecureVault.App.Application.Features.CQRS.Passwords.Handlers
                 if (result)
                 {
                     _logger.LogInformation("Parola ID:{Id} için arka plan senkronizasyonu başarıyla tamamlandı.", passwordEntity.Id);
-                    await _syncConnectionService.NotifySyncRequiredAsync(cancellationToken);
+                    await _interactionConnectionService.NotifySyncRequiredAsync(cancellationToken);
                 }
                 else
                 {
