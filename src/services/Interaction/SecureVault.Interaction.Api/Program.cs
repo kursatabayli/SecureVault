@@ -5,6 +5,7 @@ using SecureVault.Interaction.Api.Features.Interaction;
 using SecureVault.Interaction.Api.Features.QrLogin;
 using SecureVault.Interaction.Api.Helpers;
 using Serilog;
+using StackExchange.Redis;
 using System.Text;
 
 namespace SecureVault.Interaction.Api
@@ -74,7 +75,16 @@ namespace SecureVault.Interaction.Api
                     });
             });
 
-            builder.Services.AddSignalR().AddStackExchangeRedis("redis-cache");
+            builder.Services.AddSignalR().AddStackExchangeRedis(options =>
+            {
+                var connectionString = builder.Configuration.GetConnectionString("redis-cache");
+
+                if (string.IsNullOrEmpty(connectionString))
+                    throw new InvalidOperationException("Redis bağlantı dizesi 'redis-cache' bulunamadı.");
+
+                options.Configuration = ConfigurationOptions.Parse(connectionString);
+                options.Configuration.AbortOnConnectFail = false;
+            });
             builder.Services.AddAuthorization();
 
 
