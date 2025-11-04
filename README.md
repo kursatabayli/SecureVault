@@ -177,22 +177,20 @@ Follow the steps below to run the project on your local machine.
     ```
 3.  **Configure Client (MAUI) Settings:**
 * Open the `appsettings.json` file in the `src/client/SecureVault.App` directory.
-* Paste the following content and, **very importantly**, replace `your-device-name-here` with your actual machine name.
+* Change the following content and, **very importantly**, replace `use-your-local-ip-with-gateway-port-or-use-forwarded-ports` with your actual local ip address with gateway port or use dev tunnels and forward a port.
 
     ```json
     {
       "ApiSettings": {
-        "BaseUrl": "https://your-device-name-here:7202/",
-        "DevMachineName": "your-device-name-here"
+        "BaseUrl": "https://use-your-local-ip-with-gateway-port-or-use-forwarded-ports/"
       }
     }
     ```
-    > **⚠️ Important Note:** You must replace the `your-device-name-here` value in `appsettings.json` with the hostname shown in the .NET Aspire Dashboard for the API Gateway (YARP) URL (e.g., `https://desktop-1234abcd:7202/`). If Aspire uses a different port than `7202`, update that as well.
 
 4.  **Launch the Application with Aspire:**
 Start the `AppHost` project (e.g., from Visual Studio or using `dotnet run` from the `src/aspire/SecureVaultAppHost` directory).
   ```bash
-      cd src/aspire/SecureVaultAppHost
+      cd src/aspire/SecureVault.AppHost
       dotnet run
   ```
 
