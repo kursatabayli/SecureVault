@@ -185,17 +185,15 @@ Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin.
 
 3.  **İstemci (MAUI) Ayarlarını Yapılandırın:**
 * `src/client/SecureVault.App` dizinindeki `appsettings.json` dosyasını açın.
-* Aşağıdaki içeriği yapıştırın ve **çok önemli olarak** `your-device-name-here` kısımlarını kendi makine adınızla değiştirin.
+* Aşağıdaki içeriği `use-your-local-ip-with-gateway-port-or-use-forwarded-ports` kısmını kendi makinenizin lokal ip adresi ve gateway portu ile değiştirin ya da dev tunnel kullanarak dışarıya bir port açın.
 
     ```json
     {
       "ApiSettings": {
-        "BaseUrl": "https://your-device-name-here:7202/",
-        "DevMachineName": "your-device-name-here"
+        "BaseUrl": "https://use-your-local-ip-with-gateway-port-or-use-forwarded-ports/",
       }
     }
     ```
-    > **⚠️ Önemli Not:** `appsettings.json` dosyasındaki `your-device-name-here` değerini, .NET Aspire Dashboard'da API Gateway (YARP) için gösterilen URL'deki ana bilgisayar adı (örn: `https://desktop-1234abcd:7202/`) ile değiştirmelisiniz. Aspire'ın kullandığı port (`7202`) farklıysa onu da güncellemelisiniz.
 
 4.  **Uygulamayı Aspire ile Başlatın:**
 Projenin `AppHost`'unu Visual Studio veya komut satırı ile başlatın:
