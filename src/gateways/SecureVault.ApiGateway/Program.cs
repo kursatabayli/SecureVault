@@ -1,8 +1,12 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry.Metrics;
 using SecureVault.ApiGateway.Helpers;
 using SecureVault.ApiGateway.MiddleWares;
 using Serilog;
+using Serilog.Enrichers.OpenTelemetry;
+using Serilog.Events;
 using System.Text;
 
 namespace SecureVault.ApiGateway
@@ -16,16 +20,29 @@ namespace SecureVault.ApiGateway
             builder.AddServiceDefaults();
 
             builder.Host.UseSerilog((context, services, configuration) => configuration
-                .ReadFrom.Configuration(context.Configuration)
                 .ReadFrom.Services(services)
+                .MinimumLevel.Information()
                 .Enrich.FromLogContext()
                 .Enrich.WithProperty("ApplicationName", "SecureVault.ApiGateway")
-                .Enrich.WithActivityId()
-                .Enrich.WithActivityTags());
+                .Enrich.WithOpenTelemetrySpanId()
+                .Enrich.WithOpenTelemetryTraceId()
+                .WriteTo.Console()
+                .WriteTo.Seq(
+                    builder.Configuration.GetConnectionString("seq"),
+                    restrictedToMinimumLevel: LogEventLevel.Information));
 
             Log.Information("Uygulama başlatılıyor.");
 
             builder.Services.AddServiceDiscovery();
+
+            builder.Services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                options.KnownProxies.Clear();
+                options.KnownNetworks.Clear();
+            });
+
+            builder.AddSeqEndpoint("seq");
 
             builder.AddRedisClient("redis-cache");
 
@@ -59,32 +76,17 @@ namespace SecureVault.ApiGateway
                             .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
                             .AddServiceDiscoveryDestinationResolver();
 
-            var origins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>();
-
-
-            builder.Services.AddCors(options =>
-            {
-                options.AddPolicy("SecureVaultApp",
-                    policyBuilder =>
-                    {
-                        policyBuilder.WithOrigins(origins ?? [])
-                                     .AllowAnyMethod()
-                                     .AllowAnyHeader()
-                                     .AllowCredentials()
-                                     .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
-                    });
-            });
-
             var app = builder.Build();
 
             app.UseSerilogRequestLogging();
+            app.UseForwardedHeaders();
             app.UseHttpsRedirection();
-            app.UseCors("SecureVaultApp");
             app.UseRouting();
             app.UseAuthentication();
             app.UseMiddleware<TokenBlacklistMiddleware>();
             app.UseAuthorization();
             app.UseWebSockets();
+            app.MapDefaultEndpoints();
             app.MapReverseProxy();
 
             app.Run();

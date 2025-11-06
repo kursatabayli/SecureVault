@@ -1,24 +1,6 @@
 {
   "ReverseProxy": {
     "Routes": {
-      "interaction-route": {
-        "ClusterId": "interaction-cluster",
-        "Match": {
-          "Path": "/interaction/{**everything}",
-          "Methods": [
-            "GET",
-            "POST",
-            "PUT",
-            "DELETE"
-          ]
-        },
-        "Transforms": [
-          {
-            "PathRemovePrefix": "/interaction"
-          }
-        ],
-        "Order": 2
-      },
       "identity-route": {
         "ClusterId": "identity-cluster",
         "Match": {
@@ -31,10 +13,6 @@
           ]
         },
         "Transforms": [
-          {
-            "RequestHeader": "X-Forwarded-For",
-            "Set": "{RemoteIpAddress}"
-          },
           {
             "PathRemovePrefix": "/identity"
           }
@@ -59,30 +37,48 @@
         ],
         "AuthorizationPolicy": "default",
         "Order": 2
+      },
+      "interaction-route": {
+        "ClusterId": "interaction-cluster",
+        "Match": {
+          "Path": "/interaction/{**everything}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathRemovePrefix": "/interaction"
+          }
+        ],
+        "Order": 2
       }
     },
     "Clusters": {
       "identity-cluster": {
-        "LoadBalancingPolicy": "LeastRequests",
+        "LoadBalancingPolicy": "PowerOfTwoChoices",
         "Destinations": {
           "destination1": {
-            "Address": "http://identityapi"
+            "Address": "http://identity-api"
           }
         }
       },
       "vault-cluster": {
-        "LoadBalancingPolicy": "LeastRequests",
+        "LoadBalancingPolicy": "PowerOfTwoChoices",
         "Destinations": {
           "destination1": {
-            "Address": "http://vaultapi"
+            "Address": "http://vault-api"
           }
         }
       },
       "interaction-cluster": {
-        "LoadBalancingPolicy": "LeastRequests",
+        "LoadBalancingPolicy": "PowerOfTwoChoices",
         "Destinations": {
           "destination1": {
-            "Address": "http://interactionapi"
+            "Address": "http://interaction-api"
           }
         }
       }

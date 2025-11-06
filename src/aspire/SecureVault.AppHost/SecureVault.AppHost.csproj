@@ -11,10 +11,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.5.0" />
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.5.2" />
+    <PackageReference Include="Aspire.Hosting.DevTunnels" Version="9.5.2-preview.1.25522.3" />
+    <PackageReference Include="Aspire.Hosting.Kubernetes" Version="9.5.2-preview.1.25522.3" />
     <PackageReference Include="Aspire.Hosting.MongoDB" Version="9.5.2" />
     <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="9.5.2" />
     <PackageReference Include="Aspire.Hosting.Redis" Version="9.5.2" />
+    <PackageReference Include="Aspire.Hosting.Seq" Version="9.5.2" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.OpenTelemetryCollector" Version="9.9.0" />
+
   </ItemGroup>
 
     <ItemGroup>

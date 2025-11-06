@@ -41,7 +41,7 @@ namespace SecureVault.Identity.Application.Features.CQRS.Register.Handlers
                 await _userRepository.AddAsync(newUser);
                 await _userRecoveryDataRepository.CreateAsync(newRecoveryData);
 
-                await _unitOfWork.SaveChangesWithTransactionAsync();
+                await _unitOfWork.SaveChangesAsync();
 
                 return Result.Success();
             }

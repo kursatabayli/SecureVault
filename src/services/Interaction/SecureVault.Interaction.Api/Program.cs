@@ -5,6 +5,8 @@ using SecureVault.Interaction.Api.Features.Interaction;
 using SecureVault.Interaction.Api.Features.QrLogin;
 using SecureVault.Interaction.Api.Helpers;
 using Serilog;
+using Serilog.Enrichers.OpenTelemetry;
+using Serilog.Events;
 using StackExchange.Redis;
 using System.Text;
 
@@ -19,12 +21,16 @@ namespace SecureVault.Interaction.Api
             builder.AddServiceDefaults();
 
             builder.Host.UseSerilog((context, services, configuration) => configuration
-                            .ReadFrom.Configuration(context.Configuration)
                             .ReadFrom.Services(services)
+                            .MinimumLevel.Information()
                             .Enrich.FromLogContext()
                             .Enrich.WithProperty("ApplicationName", "SecureVault.Interaction.Api")
-                            .Enrich.WithActivityId()
-                            .Enrich.WithActivityTags());
+                            .Enrich.WithOpenTelemetrySpanId()
+                            .Enrich.WithOpenTelemetryTraceId()
+                            .WriteTo.Console()
+                            .WriteTo.Seq(
+                                builder.Configuration.GetConnectionString("seq"),
+                                restrictedToMinimumLevel: LogEventLevel.Information));
 
             Log.Information("Uygulama başlatılıyor.");
 
@@ -33,6 +39,7 @@ namespace SecureVault.Interaction.Api
             builder.Services.AddOpenApi();
             builder.Services.AddLocalization();
 
+            builder.AddSeqEndpoint("seq");
 
             builder.AddRedisClient("redis-cache");
 

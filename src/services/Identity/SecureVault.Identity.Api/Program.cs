@@ -5,9 +5,9 @@ using SecureVault.Identity.Api.Extensions;
 using SecureVault.Identity.Application;
 using SecureVault.Identity.Infrastructure.Helpers;
 using Serilog;
-using System.Net;
+using Serilog.Enrichers.OpenTelemetry;
+using Serilog.Events;
 using System.Text;
-using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 
 namespace SecureVault.Identity.Api
 {
@@ -20,12 +20,16 @@ namespace SecureVault.Identity.Api
             builder.AddServiceDefaults();
 
             builder.Host.UseSerilog((context, services, configuration) => configuration
-                .ReadFrom.Configuration(context.Configuration)
                 .ReadFrom.Services(services)
+                .MinimumLevel.Information()
                 .Enrich.FromLogContext()
                 .Enrich.WithProperty("ApplicationName", "SecureVault.Identity.Api")
-                .Enrich.WithActivityId()
-                .Enrich.WithActivityTags());
+                .Enrich.WithOpenTelemetrySpanId()
+                .Enrich.WithOpenTelemetryTraceId()
+                .WriteTo.Console()
+                .WriteTo.Seq(
+                    builder.Configuration.GetConnectionString("seq"),
+                    restrictedToMinimumLevel: LogEventLevel.Information));
 
             Log.Information("Uygulama başlatılıyor.");
 
@@ -38,20 +42,11 @@ namespace SecureVault.Identity.Api
 
             builder.Services.Configure<ForwardedHeadersOptions>(options =>
             {
-                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
-                options.KnownNetworks.Clear();
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
                 options.KnownProxies.Clear();
-
-
-                var knownNetworks = builder.Configuration["ForwardedHeadersOptions:KnownNetworks"];
-                if (!string.IsNullOrEmpty(knownNetworks))
-                {
-                    var cidrParts = knownNetworks.Split('/');
-                    if (cidrParts.Length == 2 && IPAddress.TryParse(cidrParts[0], out var ipAddress) && int.TryParse(cidrParts[1], out var prefixLength))
-                        options.KnownNetworks.Add(new IPNetwork(ipAddress, prefixLength));
-                }
-                //options.KnownNetworks.Add(new IPNetwork(IPAddress.Parse("::ffff:172.22.0.0"), 112));
+                options.KnownNetworks.Clear();
             });
+            builder.AddSeqEndpoint("seq");
 
             builder.AddRedisClient("redis-cache");
 
