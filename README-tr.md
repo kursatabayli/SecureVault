@@ -117,11 +117,14 @@ Bu proje, hedeflerine ulaşmak için modern ve sağlam bir teknoloji yığını 
 | | **MongoDB** | Vault servisi için NoSQL belge veritabanı. |
 | | **Realm** | İstemci tarafında şifreli, yerel ve reaktif veritabanı. |
 | | **Entity Framework Core** | ORM; veritabanı ile nesneye yönelik, güvenli etkileşim. |
-| | **Redis** | Yüksek performanslı cache servisi; "challenge" ve geçici oturum verileri için. |
+| | **Redis** | Yüksek performanslı cache servisi. Ayrıca **SignalR Backplane** olarak ölçeklenebilir, gerçek zamanlı iletişim sağlar. |
 | **Mesajlaşma & Real-time** | **SignalR** | Cihazlar arası gerçek zamanlı veri senkronizasyonu ve mesajlaşma. |
 | **API İletişimi** | **Refit** | .NET için tip güvenli REST istemcisi, API çağrılarını basitleştirir. |
-| **Logging & Monitoring** | **Serilog** | Esnek ve yapılandırılabilir, yapısal loglama kütüphanesi. |
-| | **Seq** | SSerilog ile entegre çalışan, merkezi log toplama ve analiz sunucusu. |
+| **Gözlemlenebilirlik** | **OpenTelemetry** | Servisler arası telemetri verilerini (log, trace, metric) toplamak ve iletmek için standart. |
+| | **Serilog** | Esnek ve yapılandırılabilir, yapısal loglama kütüphanesi. |
+| | **Seq** | Serilog ve OpenTelemetry ile entegre çalışan, merkezi log toplama ve analiz sunucusu. |
+| | **Prometheus** | Servislerden metrikleri (ölçümleri) toplamak için zaman serisi veritabanı. |
+| | **Grafana** | Prometheus ve diğer kaynaklardan gelen metrikleri görselleştirmek için dashboard arayüzü. |
 | **DevOps & Orkestrasyon** | **.NET Aspire** | Geliştirme ortamı için servis orkestrasyonu, keşfi ve telemetri. |
 | | **Docker** | Konteynerleştirme; servisleri izole bir ortamda çalıştırma. |
 | **Güvenlik** | **BouncyCastle** | Gelişmiş kriptografi işlemleri (özellikle ECDSA imzalama). |
@@ -158,6 +161,8 @@ Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin.
 * [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 * [Docker ve Docker Compose](https://www.docker.com/products/docker-desktop/)
 * [Git](https://git-scm.com/)
+* [Dev Tunnels CLI](https://learn.microsoft.com/en-us/azure/developer/dev-tunnels/get-started?tabs=windows)
+* [.NET Aspire CLI](https://learn.microsoft.com/en-us/dotnet/aspire/cli/install) (Opsiyonel, Kubernetes manifestlerini oluşturmak için gereklidir)
 
 #### Kurulum Adımları
 1.  **Projeyi Klonlayın:**
@@ -167,44 +172,69 @@ Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin.
     ```
 
 2.  **AppHost Gizli Anahtarlarını (User Secrets) Ayarlayın:**
-* Visual Studio'da `src/aspire/SecureVaultAppHost` projesine sağ tıklayın.
+* Visual Studio'da `src/aspire/SecureVault.AppHost` projesine sağ tıklayın.
 * **Manage User Secrets** (Kullanıcı Gizli Anahtarlarını Yönet) seçeneğini seçin.
 * Açılan `secrets.json` dosyasına aşağıdaki içeriği kendiniz için değiştirerek ekleyin:
 
-    ```json
+  ```json
     {
       "Parameters:vault-db-password": "your-secure-mongo-password-123",
       "Parameters:seqpassword": "your-seq-admin-password",
-      "Parameters:redis-cache-password": "your-secure-redis-password-xyz",
-      "Parameters:postgresusername": "your-postgre-user-name",
-      "Parameters:postgrespassword": "your-postgre-password",
-      "JwtSettings:RefreshTokenKey": "your-super-secret-64-byte-refresh-key-goes-here",
-      "JwtSettings:Key": "your-super-secret-64-byte-jwt-key-goes-here",
+      "Parameters:redispassword": "your-main-redis-password",
+      "Parameters:redis-cache-password": "your-cache-redis-password",
+      "Parameters:postgresusername": "your-postgres-user",
+      "Parameters:postgrespassword": "your-postgres-password",
+      "Parameters:jwtrefreshkey": "your-super-secret-64-byte-refresh-key",
+      "Parameters:jwtkey": "your-super-secret-64-byte-jwt-key"
     }
     ```
 
 3.  **İstemci (MAUI) Ayarlarını Yapılandırın:**
-* `src/client/SecureVault.App` dizinindeki `appsettings.json` dosyasını açın.
-* Aşağıdaki içeriği `use-your-local-ip-with-gateway-port-or-use-forwarded-ports` kısmını kendi makinenizin lokal ip adresi ve gateway portu ile değiştirin ya da dev tunnel kullanarak dışarıya bir port açın.
+* `src/client/SecureVault.App` dizinindeki `appsettings.json` dosyasını açın. Bu dosyayı bir sonraki adımlarda alacağınız **Dev Tunnels** URL'si ile güncelleyeceksiniz.
+* Dosyanın içeriği aşağıdaki gibi olmalıdır:
 
     ```json
     {
       "ApiSettings": {
-        "BaseUrl": "https://use-your-local-ip-with-gateway-port-or-use-forwarded-ports/",
+        "BaseUrl": "https://replace-this-with-your-api-gateway-devtunnel/"
       }
     }
     ```
 
-4.  **Uygulamayı Aspire ile Başlatın:**
-Projenin `AppHost`'unu Visual Studio veya komut satırı ile başlatın:
-  ```bash
-      cd src/aspire/SecureVaultAppHost
-      dotnet run
-  ```
+4.  **Dev Tunnels'a Giriş Yapın ve Uygulamayı Başlatın:**
+* Ön gereksinimlerde kurduğunuz Dev Tunnels CLI'a bir Microsoft veya GitHub hesabı ile giriş yapın:
+    ```bash
+    devtunnel user login
+    ```
+* Projenin `AppHost`'unu Visual Studio veya komut satırı ile başlatın:
+    ```bash
+    cd src/aspire/SecureVault.AppHost
+    dotnet run
+    ```
 
-5.  **Aspire Dashboard'u İzleyin:** .NET Aspire Dashboard'u otomatik olarak başlayacak ve varsayılan tarayıcınızda açılacaktır. Bu dashboard üzerinden tüm mikroservislerin, veritabanlarının (PostgreSQL, MongoDB, Redis) ve istemci uygulamasının log'larını ve durumunu canlı olarak izleyebilirsiniz.
+5.  **Dev Tunnel URL'sini Alın ve Ayarlayın:**
+* .NET Aspire Dashboard'u otomatik olarak başlayacak ve varsayılan tarayıcınızda açılacaktır.
+* Dashboard'da, `public-gateway`  servisinizi bulun. Dev Tunnels entegrasyonu sayesinde bu servis için **genel (public) bir URL** oluşturulduğunu göreceksiniz.
+* Bu **`https://...` ile başlayan URL'yi** kopyalayın.
+* 3. Adım'da açtığınız `src/client/SecureVault.App/appsettings.json` dosyasına geri dönün ve `BaseUrl` değerini bu kopyaladığınız URL ile değiştirin.
 
 6.  **MAUI Client'ı Çalıştırın:** `src/client/SecureVault.App` projesini Visual Studio'da açıp istediğiniz platform (Windows veya Android) için çalıştırın. İstemci, 3. adımda yaptığınız ayarlar sayesinde Aspire tarafından yönetilen servislere otomatik olarak bağlanacaktır.
+
+---
+
+### 🚀 Kubernetes için Yayınlama (Deployment)
+
+Bu proje, .NET Aspire'in dağıtım özelliklerini kullanarak bir Kubernetes cluster'ına kolayca yayınlanacak şekilde yapılandırılmıştır.
+
+`SecureVault.AppHost` projesi içerisinde yer alan `builder.AddKubernetesEnvironment("k8s");` satırı, Aspire'e Kubernetes'i hedefleyen bir yapılandırma olduğunu bildirir ve buna uygun manifestler üretmesini sağlar.
+
+Tüm mikroservisler, veritabanları ve bağımlılıklar için gerekli olan Kubernetes manifest dosyalarını (Deployment, Service, ConfigMap, Secret vb. YAML dosyaları) tek bir komutla oluşturabilirsiniz:
+
+  ```bash
+    # AppHost projesini 'publish' modunda çalıştırarak manifestleri oluşturun
+    aspire src/aspire/SecureVaultAppHost -o ./kubernetes-manifests
+  ```
+Bu komut, projenizin ana dizininde kubernetes-manifests (veya belirttiğiniz başka bir çıktı klasörü) oluşturur. Bu klasörün içinde, tüm uygulamanızı kubectl apply -f . komutuyla Kubernetes cluster'ınıza dağıtmak için gereken tüm YAML dosyaları bulunur.
 
 ---
 
