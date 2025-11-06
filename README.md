@@ -110,11 +110,14 @@ This project uses a modern and robust technology stack to achieve its goals.
 | | **MongoDB** | NoSQL document database for the Vault service. |
 | | **Realm** | Client-side encrypted, local, and reactive database. |
 | | **Entity Framework Core** | ORM; type-safe, object-oriented interaction with the database. |
-| | **Redis** | High-performance cache service; for challenges and temporary session data. |
+| | **Redis** | High-performance cache service. Also acts as a **SignalR Backplane** for scalable, real-time communication. |
 | **Messaging & Real-time** | **SignalR** | Real-time data synchronization and messaging between devices. |
 | **API Communication** | **Refit** | Type-safe REST client for .NET, simplifies API calls. |
-| **Logging & Monitoring** | **Serilog** | Flexible and configurable structured logging library. |
-| | **Seq** | Centralized log collection and analysis server, integrated with Serilog. |
+| **Observability** | **OpenTelemetry** | Standard for collecting and exporting telemetry data (logs, traces, metrics). |
+| | **Serilog** | Flexible and configurable structured logging library. |
+| | **Seq** | Centralized log collection and analysis server, integrated with Serilog and OpenTelemetry. |
+| | **Prometheus** | Time-series database for collecting metrics from services. |
+| | **Grafana** | Dashboard interface for visualizing metrics from Prometheus and other sources. |
 | **DevOps & Orchestration** | **.NET Aspire** | Service orchestration, discovery, and telemetry for the development environment. |
 | | **Docker** | Containerization; running services in an isolated environment. |
 | **Security** | **BouncyCastle** | Advanced cryptography operations (especially ECDSA signing). |
@@ -151,54 +154,82 @@ Follow the steps below to run the project on your local machine.
 * [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 * [Docker and Docker Compose](https://www.docker.com/products/docker-desktop/)
 * [Git](https://git-scm.com/)
+* [Dev Tunnels CLI](https://learn.microsoft.com/en-us/azure/developer/dev-tunnels/get-started?tabs=windows)
+* [.NET Aspire CLI](https://learn.microsoft.com/en-us/dotnet/aspire/cli/install) (Optional, required for Kubernetes manifest generation)
 
 #### Setup Steps
 1.  **Clone the Project:**
     ```bash
-    git clone https://github.com/kursatabayli/SecureVault.git
+    git clone [https://github.com/kursatabayli/SecureVault.git](https://github.com/kursatabayli/SecureVault.git)
     cd securevault
     ```
 
 2.  **Set Up AppHost User Secrets:**
-* In Visual Studio, right-click on the `src/aspire/SecureVaultAppHost` project.
+* In Visual Studio, right-click on the `src/aspire/SecureVault.AppHost` project.
 * Select **Manage User Secrets**.
-* Paste the following content into the opened `secrets.json` file, modifying the values for your setup:
+* Paste the following content into the opened `secrets.json` file, replacing the values with **your own secure values**:
 
     ```json
     {
       "Parameters:vault-db-password": "your-secure-mongo-password-123",
       "Parameters:seqpassword": "your-seq-admin-password",
-      "Parameters:redis-cache-password": "your-secure-redis-password-xyz",
-      "Parameters:postgresusername": "your-postgre-user-name",
-      "Parameters:postgrespassword": "your-postgre-password",
-      "JwtSettings:RefreshTokenKey": "your-super-secret-64-byte-refresh-key-goes-here",
-      "JwtSettings:Key": "your-super-secret-64-byte-jwt-key-goes-here"
+      "Parameters:redispassword": "your-main-redis-password",
+      "Parameters:redis-cache-password": "your-cache-redis-password",
+      "Parameters:postgresusername": "your-postgres-user",
+      "Parameters:postgrespassword": "your-postgres-password",
+      "Parameters:jwtrefreshkey": "your-super-secret-64-byte-refresh-key",
+      "Parameters:jwtkey": "your-super-secret-64-byte-jwt-key"
     }
     ```
-3.  **Configure Client (MAUI) Settings:**
-* Open the `appsettings.json` file in the `src/client/SecureVault.App` directory.
-* Change the following content and, **very importantly**, replace `use-your-local-ip-with-gateway-port-or-use-forwarded-ports` with your actual local ip address with gateway port or use dev tunnels and forward a port.
+
+3.  **Configure Client (MAUI) Settings:**
+* Open the `appsettings.json` file in the `src/client/SecureVault.App` directory. You will update this file with the **Dev Tunnels** URL in the next steps.
+* The file's content should look like this:
 
     ```json
     {
       "ApiSettings": {
-        "BaseUrl": "https://use-your-local-ip-with-gateway-port-or-use-forwarded-ports/"
+        "BaseUrl": "https://replace-this-with-your-api-gateway-devtunnel/"
       }
     }
     ```
 
-4.  **Launch the Application with Aspire:**
-Start the `AppHost` project (e.g., from Visual Studio or using `dotnet run` from the `src/aspire/SecureVaultAppHost` directory).
-  ```bash
-      cd src/aspire/SecureVault.AppHost
-      dotnet run
-  ```
+4.  **Log in to Dev Tunnels and Launch the Application:**
+* Log in to the Dev Tunnels CLI (installed in Prerequisites) with a Microsoft or GitHub account:
+    ```bash
+    devtunnel user login
+    ```
+* Start the `AppHost` project from Visual Studio or the command line:
+    ```bash
+    cd src/aspire/SecureVault.AppHost
+    dotnet run
+    ```
 
-5.  **Monitor the Aspire Dashboard:** The .NET Aspire Dashboard will launch automatically in your default browser. You can monitor the logs and status of all microservices, databases (PostgreSQL, MongoDB, Redis), and the client application from this dashboard.
+5.  **Get the Dev Tunnel URL and Configure the Client:**
+* The .NET Aspire Dashboard will launch automatically in your default browser.
+* On the dashboard, find your `public-gateway` service. You will see a **public URL** generated for it by the Dev Tunnels integration (usually in the `Endpoints` column).
+* Copy this **URL that starts with `https://...`**.
+* Go back to the `src/client/SecureVault.App/appsettings.json` file you opened in Step 3 and replace the `BaseUrl` value with the URL you just copied.
 
-6.  **Run the MAUI Client:** Open the `src/client/SecureVault.App` project in Visual Studio and run it for your desired platform (Windows or Android). The client will automatically connect to the services managed by Aspire, thanks to the settings you configured in Step 3.
+6.  **Run the MAUI Client:**
+* Open the `src/client/SecureVault.App` project in Visual Studio and run it for your desired platform (Windows or Android).
+* The client will automatically connect to the services managed by Aspire, thanks to the settings you configured in Steps 3 and 5.
 
 ---
+
+### 🚀 Publishing for Kubernetes (Deployment)
+
+This project is configured to be easily published to a Kubernetes cluster using .NET Aspire's deployment features.
+
+The line `builder.AddKubernetesEnvironment("k8s");` within the `SecureVault.AppHost` project informs Aspire that it should generate manifests targeting Kubernetes.
+
+You can generate all the necessary Kubernetes manifest files (Deployment, Service, ConfigMap, Secret, etc. YAMLs) for all microservices, databases, and dependencies with a single command using the **.NET Aspire CLI**:
+
+  ```bash
+    aspire publish -o ./kubernetes-manifests
+  ```
+
+This command creates kubernetes-manifests in your project's root directory (or any other folder you keep it in). Inside these sections are all the YAML files needed to deploy your entire application to your Kubernetes Cluster with kubectl apply -f .
 
 ### 📄 License
 
