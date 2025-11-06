@@ -231,8 +231,8 @@ Bu proje, .NET Aspire'in dağıtım özelliklerini kullanarak bir Kubernetes clu
 Tüm mikroservisler, veritabanları ve bağımlılıklar için gerekli olan Kubernetes manifest dosyalarını (Deployment, Service, ConfigMap, Secret vb. YAML dosyaları) tek bir komutla oluşturabilirsiniz:
 
   ```bash
-    # AppHost projesini 'publish' modunda çalıştırarak manifestleri oluşturun
-    aspire src/aspire/SecureVaultAppHost -o ./kubernetes-manifests
+    # aspire komutunu çalıştırarak manifestleri oluşturun
+    aspire publish -o ./kubernetes-manifests
   ```
 Bu komut, projenizin ana dizininde kubernetes-manifests (veya belirttiğiniz başka bir çıktı klasörü) oluşturur. Bu klasörün içinde, tüm uygulamanızı kubectl apply -f . komutuyla Kubernetes cluster'ınıza dağıtmak için gereken tüm YAML dosyaları bulunur.
 
