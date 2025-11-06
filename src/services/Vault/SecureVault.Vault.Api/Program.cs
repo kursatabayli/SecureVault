@@ -4,6 +4,8 @@ using SecureVault.Vault.Api.Extensions;
 using SecureVault.Vault.Api.Helpers;
 using SecureVault.Vault.Application;
 using Serilog;
+using Serilog.Enrichers.OpenTelemetry;
+using Serilog.Events;
 using System.Text;
 
 namespace SecureVault.Vault.Api
@@ -17,12 +19,16 @@ namespace SecureVault.Vault.Api
             builder.AddServiceDefaults();
 
             builder.Host.UseSerilog((context, services, configuration) => configuration
-                            .ReadFrom.Configuration(context.Configuration)
                             .ReadFrom.Services(services)
+                            .MinimumLevel.Information()
                             .Enrich.FromLogContext()
                             .Enrich.WithProperty("ApplicationName", "SecureVault.Vault.Api")
-                            .Enrich.WithActivityId()
-                            .Enrich.WithActivityTags());
+                            .Enrich.WithOpenTelemetrySpanId()
+                            .Enrich.WithOpenTelemetryTraceId()
+                            .WriteTo.Console()
+                            .WriteTo.Seq(
+                                builder.Configuration.GetConnectionString("seq"),
+                                restrictedToMinimumLevel: LogEventLevel.Information));
 
             Log.Information("Uygulama başlatılıyor.");
 
@@ -31,6 +37,8 @@ namespace SecureVault.Vault.Api
             builder.Services.RegisterServices();
             builder.Services.AddOpenApi();
             builder.Services.AddLocalization();
+
+            builder.AddSeqEndpoint("seq");
 
             builder.Services.AddMongoDbConfiguration(builder);
 

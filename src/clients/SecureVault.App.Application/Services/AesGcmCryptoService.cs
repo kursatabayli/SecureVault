@@ -16,7 +16,7 @@ namespace SecureVault.App.Application.Services
         {
             var plaintextBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(dataToEncrypt));
 
-            using var aesGcm = new AesGcm(encryptionKey);
+            using var aesGcm = new AesGcm(encryptionKey, TagSize);
 
             var nonce = new byte[NonceSize];
             var tag = new byte[TagSize];
@@ -42,7 +42,7 @@ namespace SecureVault.App.Application.Services
             var tag = new ReadOnlySpan<byte>(encryptedData, NonceSize, TagSize);
             var ciphertext = new ReadOnlySpan<byte>(encryptedData, NonceSize + TagSize, encryptedData.Length - (NonceSize + TagSize));
 
-            using var aesGcm = new AesGcm(encryptionKey);
+            using var aesGcm = new AesGcm(encryptionKey, TagSize);
 
             var plaintextBytes = new byte[ciphertext.Length];
 
@@ -56,7 +56,7 @@ namespace SecureVault.App.Application.Services
             }
 
             var jsonString = Encoding.UTF8.GetString(plaintextBytes);
-            return JsonSerializer.Deserialize<T>(jsonString);
+            return JsonSerializer.Deserialize<T>(jsonString)!;
         }
 
 
@@ -65,7 +65,7 @@ namespace SecureVault.App.Application.Services
             if (encryptionKey.Length != AesKeySize)
                 throw new ArgumentException($"Invalid key size. Key must be {AesKeySize} bytes.", nameof(encryptionKey));
 
-            using var aesGcm = new AesGcm(encryptionKey);
+            using var aesGcm = new AesGcm(encryptionKey, TagSize);
             var nonce = new byte[NonceSize];
             var tag = new byte[TagSize];
             var ciphertext = new byte[plaintextBytes.Length];
@@ -92,7 +92,7 @@ namespace SecureVault.App.Application.Services
             var tag = new ReadOnlySpan<byte>(encryptedData, NonceSize, TagSize);
             var ciphertext = new ReadOnlySpan<byte>(encryptedData, NonceSize + TagSize, encryptedData.Length - (NonceSize + TagSize));
 
-            using var aesGcm = new AesGcm(encryptionKey);
+            using var aesGcm = new AesGcm(encryptionKey, TagSize);
             var plaintextBytes = new byte[ciphertext.Length];
 
             try

@@ -10,9 +10,6 @@ namespace SecureVault.Identity.Application.Features.CQRS.Auth.Commands
 
         string? IpAddress,
         string? UniqueDeviceId,
-        string? DeviceName,
-        string dpopProof,
-        string requestUrl,
-        string requestMethod
+        string? DeviceName
     ) : IRequest<Result<AuthResponse>>;
 }

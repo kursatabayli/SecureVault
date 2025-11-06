@@ -39,10 +39,6 @@ namespace SecureVault.Identity.Api.Controllers
             var deviceModel = Request.Headers["X-Device-Model"].FirstOrDefault();
             var deviceManufacturer = Request.Headers["X-Device-Manufacturer"].FirstOrDefault();
             var operatingSystem = Request.Headers["X-Device-OS"].FirstOrDefault();
-            var dpopProof = Request.Headers["DPoP"].FirstOrDefault();
-            var uri = new Uri(Request.GetDisplayUrl());
-            var requestUrl = uri.AbsolutePath;
-            var requestMethod = Request.Method;
             var command = new LoginUserCommand(
                 credentials.Email,
                 credentials.Signature,
@@ -52,10 +48,7 @@ namespace SecureVault.Identity.Api.Controllers
                 deviceModel,
                 deviceManufacturer,
                 operatingSystem,
-                ipAddress,
-                dpopProof,
-                requestUrl,
-                requestMethod
+                ipAddress
             );
 
             var result = await _mediator.Send(command);
@@ -69,19 +62,12 @@ namespace SecureVault.Identity.Api.Controllers
         [HttpPost("refresh")]
         public async Task<IActionResult> RefreshToken()
         {
-            var uri = new Uri(Request.GetDisplayUrl());
-            var requestUrl = uri.AbsolutePath;
-            var requestMethod = Request.Method;
-
             var command = new RefreshTokenCommand(
                 Request.Headers.Authorization.FirstOrDefault()?.Split(" ").Last(),
                 Request.Headers["X-Refresh-Token"].FirstOrDefault(),
                 HttpContext.Connection.RemoteIpAddress?.ToString(),
                 Request.Headers["X-Device-Id"].FirstOrDefault(),
-                Request.Headers["X-Device-Name"].FirstOrDefault(),
-                Request.Headers["DPoP"].FirstOrDefault(),
-                requestUrl,
-                requestMethod
+                Request.Headers["X-Device-Name"].FirstOrDefault()
             );
             var result = await _mediator.Send(command);
             return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
