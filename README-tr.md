@@ -54,6 +54,7 @@ Mimari, güvenlik, ölçeklenebilirlik ve esneklik sağlamak amacıyla modern ta
 | Özellik | Uygulama Detayları |
 | :--- | :--- |
 | 🛡️ **Sıfır Bilgi Kimlik Doğrulama** | Kimlik doğrulama, **ECDSA imzaları** kullanılarak bir "challenge-response" mekanizması ile gerçekleştirilir. Kullanıcının ana parolası istemci cihazını asla terk etmez. |
+| 🛡️ **Sender-Constrained Token'lar** | Standart Bearer Token'lar yerine, token hırsızlığını ve yeniden oynatma saldırılarını önleyen **DPoP (Demonstration of Proof-of-Possession)** kullanılır. Her token, kriptografik olarak onu oluşturan istemciye bağlanır. |
 | ✍️ **Uçtan Uca Şifreleme (E2EE)** | Tüm kasa verileri, sunucuya gönderilmeden önce istemci tarafında **AES-256 (GCM)** ile şifrelenir. Bu, sunucu ele geçirilse bile verilerin gizli kalmasını sağlar. |
 | 🔑 **QR Kod ile Güvenli Oturum Açma** | Cihazlar arasında **ECDH (Elliptic Curve Diffie-Hellman)** anahtar değişimi kullanılarak geçici ve güvenli bir şifreleme kanalı oluşturulur. Oturum bilgileri bu kanal üzerinden E2EE ile iletilir. |
 | 🌐 **Platformlar Arası İstemci** | **.NET MAUI Blazor** kullanılarak geliştirilen tek bir kod tabanı, hem mobil (Android) hem de masaüstü (Windows) platformlarını hedefleyerek tutarlı bir arayüz ve yerel performans sunar. |
@@ -74,8 +75,16 @@ Proje, her biri belirli bir işlevden sorumlu olan bağımsız bileşenlerden ol
 * **Vault Service:** Kullanıcının şifrelenmiş kasa verilerini (parolalar, 2FA kodları vb.) depolamaktan sorumludur. Veritabanı olarak MongoDB kullanır.
 * **Interaction Service:** Cihazlar arası gerçek zamanlı iletişimi (SignalR ile) yönetir. QR kod ile giriş ve anlık veri senkronizasyonu bu servis üzerinden sağlanır.
 
-## Kriptografik Akışlar
-Güvenlik modeli, yalnızca kullanıcının kendi verilerine erişebilmesini sağlamak üzere tasarlanmıştır.
+## 🔐 Güvenlik Modeli ve Kriptografik Akışlar
+Güvenlik modeli, yalnızca kullanıcının kendi verilerine erişebilmesini sağlamak ve oturum güvenliğini en üst düzeye çıkarmak üzere tasarlanmıştır.
+
+### DPoP (Demonstration of Proof-of-Possession)
+Proje, oturum güvenliğini sağlamak için standart Bearer Token'lar yerine **DPoP** (RFC 9449) standardını kullanır. Bu yaklaşım, token'ın çalınması ve başka bir istemcide yeniden kullanılması riskini etkili bir şekilde ortadan kaldırır.
+
+* **Nasıl Çalışır:** İstemci, her API isteğinde, sahip olduğu JWT'ye (Access Token) ek olarak, o anki isteğe (HTTP metodu ve URL) ve token'a bağlı özel bir "kanıt" (proof) imzalar.
+* **Avantajı:** API Gateway (YARP), bu kanıtı doğrulayarak token'ı *sadece* onu talep eden ve ilgili kriptografik anahtara sahip olan *orijinal* istemcinin kullanabildiğinden emin olur.
+
+### Temel Kriptografik Akışlar
 
 1. **Kayıt ve Anahtar Üretim Akışı**
      * İstemci tarafında benzersiz bir `salt` üretilir.
@@ -127,10 +136,10 @@ Bu proje, hedeflerine ulaşmak için modern ve sağlam bir teknoloji yığını 
 | | **Grafana** | Prometheus ve diğer kaynaklardan gelen metrikleri görselleştirmek için dashboard arayüzü. |
 | **DevOps & Orkestrasyon** | **.NET Aspire** | Geliştirme ortamı için servis orkestrasyonu, keşfi ve telemetri. |
 | | **Docker** | Konteynerleştirme; servisleri izole bir ortamda çalıştırma. |
-| **Güvenlik** | **BouncyCastle** | Gelişmiş kriptografi işlemleri (özellikle ECDSA imzalama). |
+| **Güvenlik** | **DPoP (JWT ile)** | Token'ın istemciye "bağlandığı" (sender-constrained) gelişmiş oturum yönetimi (RFC 9449). Klasik Bearer Token'lar yerine kullanılır. |
+| | **BouncyCastle** | Gelişmiş kriptografi işlemleri (özellikle ECDSA imzalama). |
 | | **Argon2id** | Güçlü parola hashleme; kaba kuvvet saldırılarına dayanıklı Master Key türetme. |
 | | **AES-256 (GCM)** | Uçtan uca veri şifrelemesi için doğrulanmış, modern simetrik şifreleme. |
-| | **JWT (JSON Web Token)** | Güvenli ve stateless oturum yönetimi (Access & Refresh Token). |
 | **QR Kod İşlemleri** | **ZXing.Net.MAUI** | İstemci tarafında QR kod okuma ve tarama. |
 | | **QRCoder & SkiaSharp** | QR kod oluşturma ve render etme. |
 
