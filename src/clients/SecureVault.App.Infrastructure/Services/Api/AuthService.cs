@@ -4,7 +4,6 @@ using Refit;
 using SecureVault.App.Application.Contracts.Abstractions.Api;
 using SecureVault.App.Application.Contracts.Abstractions.Cryptography;
 using SecureVault.App.Application.Contracts.Abstractions.Persistence;
-using SecureVault.App.Application.Contracts.Abstractions.UI;
 using SecureVault.App.Application.Contracts.DTOs.Auth;
 using SecureVault.Shared.Result;
 using System.Security.Cryptography;
@@ -46,7 +45,6 @@ namespace SecureVault.App.Infrastructure.Services.Api
                             return (ms, pk, sig, ek);
                         }, cancellationToken);
 
-                _logger.LogInformation("Kriptografi işlemleri tamamlandı.");
                 var loginCredentials = new LoginCredentialsDto(loginDto.Email, signatureHex);
                 var authResponse = await _secureVaultAnonymousApi.LoginAsync(loginDto.RememberMe, loginCredentials, cancellationToken);
                 await _storageService.SetTokensAsync(authResponse);

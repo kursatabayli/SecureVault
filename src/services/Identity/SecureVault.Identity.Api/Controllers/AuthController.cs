@@ -1,6 +1,5 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using SecureVault.Identity.Application.Contracts.DTOs.AuthDto;
 using SecureVault.Identity.Application.Features.CQRS.Auth.Commands;
@@ -39,6 +38,8 @@ namespace SecureVault.Identity.Api.Controllers
             var deviceModel = Request.Headers["X-Device-Model"].FirstOrDefault();
             var deviceManufacturer = Request.Headers["X-Device-Manufacturer"].FirstOrDefault();
             var operatingSystem = Request.Headers["X-Device-OS"].FirstOrDefault();
+            var jkt = Request.Headers["X-DPoP-JKT"].FirstOrDefault();
+
             var command = new LoginUserCommand(
                 credentials.Email,
                 credentials.Signature,
@@ -48,7 +49,8 @@ namespace SecureVault.Identity.Api.Controllers
                 deviceModel,
                 deviceManufacturer,
                 operatingSystem,
-                ipAddress
+                ipAddress,
+                jkt
             );
 
             var result = await _mediator.Send(command);
@@ -67,7 +69,8 @@ namespace SecureVault.Identity.Api.Controllers
                 Request.Headers["X-Refresh-Token"].FirstOrDefault(),
                 HttpContext.Connection.RemoteIpAddress?.ToString(),
                 Request.Headers["X-Device-Id"].FirstOrDefault(),
-                Request.Headers["X-Device-Name"].FirstOrDefault()
+                Request.Headers["X-Device-Name"].FirstOrDefault(),
+                Request.Headers["X-DPoP-JKT"].FirstOrDefault()
             );
             var result = await _mediator.Send(command);
             return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);

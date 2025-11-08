@@ -17,13 +17,15 @@ namespace SecureVault.Identity.Api
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            const string appName = "SecureVault.Identity.Api";
+
             builder.AddServiceDefaults();
 
             builder.Host.UseSerilog((context, services, configuration) => configuration
                 .ReadFrom.Services(services)
                 .MinimumLevel.Information()
                 .Enrich.FromLogContext()
-                .Enrich.WithProperty("ApplicationName", "SecureVault.Identity.Api")
+                .Enrich.WithProperty("ApplicationName", appName)
                 .Enrich.WithOpenTelemetrySpanId()
                 .Enrich.WithOpenTelemetryTraceId()
                 .WriteTo.Console()
@@ -31,7 +33,7 @@ namespace SecureVault.Identity.Api
                     builder.Configuration.GetConnectionString("seq"),
                     restrictedToMinimumLevel: LogEventLevel.Information));
 
-            Log.Information("Uygulama başlatılıyor.");
+            Log.Information("{ApplicationName} service is starting.", appName);
 
             builder.Services.AddControllers();
             builder.Services.AddApplicationServices();
@@ -42,13 +44,14 @@ namespace SecureVault.Identity.Api
 
             builder.Services.Configure<ForwardedHeadersOptions>(options =>
             {
-                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                options.ForwardedHeaders = ForwardedHeaders.All;
                 options.KnownProxies.Clear();
                 options.KnownNetworks.Clear();
             });
             builder.AddSeqEndpoint("seq");
 
-            builder.AddRedisClient("redis-cache");
+            builder.AddRedisDistributedCache("redis-cache");
+
 
             builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
             var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();

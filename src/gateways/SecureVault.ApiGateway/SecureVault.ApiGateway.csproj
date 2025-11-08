@@ -11,7 +11,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Aspire.Seq" Version="9.5.2" />
-		<PackageReference Include="Aspire.StackExchange.Redis" Version="9.5.2" />
+		<PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" Version="9.5.2" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
 		<PackageReference Include="Microsoft.Extensions.ServiceDiscovery.Yarp" Version="9.5.2" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />

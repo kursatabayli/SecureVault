@@ -1,42 +1,33 @@
-﻿using SecureVault.App.Application.Contracts.Abstractions.Api;
+﻿using Microsoft.Extensions.Logging;
+using SecureVault.App.Application.Contracts.Abstractions.Api;
 using SecureVault.App.Application.Contracts.Abstractions.Persistence;
 using SecureVault.App.Application.Contracts.Abstractions.UI;
 using System.Net;
-using System.Net.Http.Headers;
 
 namespace SecureVault.App.Infrastructure.HttpHandlers
 {
-    public sealed class AuthTokenHandler : DelegatingHandler
+    public sealed class RefreshTokenHandler : DelegatingHandler
     {
         private readonly SemaphoreSlim _refreshTokenLock = new(1, 1);
         private readonly IAuthService _authService;
         private readonly IStorageService _storageService;
         private readonly IAuthenticationStateNotifier _authenticationStateNotifier;
+        private readonly ILogger<RefreshTokenHandler> _logger;
         private bool _disposed = false;
-        public AuthTokenHandler(IAuthService authService, IStorageService storageService, IAuthenticationStateNotifier authenticationStateNotifier)
+        public RefreshTokenHandler(IAuthService authService, IStorageService storageService, IAuthenticationStateNotifier authenticationStateNotifier, ILogger<RefreshTokenHandler> logger)
         {
             _authService = authService;
             _storageService = storageService;
             _authenticationStateNotifier = authenticationStateNotifier;
+            _logger = logger;
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            if (request.Headers.TryGetValues("X-Anonymous", out _))
-            {
-                request.Headers.Remove("X-Anonymous");
-                var bearer = await _storageService.GetAccessTokenAsync();
-                if (!string.IsNullOrEmpty(bearer))
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
-                return await base.SendAsync(request, cancellationToken);
-            }
 
             await RefreshTokenIfNeededAsync(cancellationToken);
 
-            var accessToken = await _storageService.GetAccessTokenAsync();
-            if (!string.IsNullOrEmpty(accessToken))
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
+            var tokenBeforeSend = await _storageService.GetAccessTokenAsync();
             var response = await base.SendAsync(request, cancellationToken);
 
             if (response.StatusCode == HttpStatusCode.Unauthorized)
@@ -44,24 +35,26 @@ namespace SecureVault.App.Infrastructure.HttpHandlers
                 await _refreshTokenLock.WaitAsync(cancellationToken);
                 try
                 {
-                    var currentToken = await _storageService.GetAccessTokenAsync();
-                    if (accessToken != currentToken)
+                    var tokenAfterWait = await _storageService.GetAccessTokenAsync();
+                    if (tokenBeforeSend != tokenAfterWait)
                     {
                         var clonedRequestForRetry = await CloneRequestAsync(request);
-                        clonedRequestForRetry.Headers.Authorization = new AuthenticationHeaderValue("Bearer", currentToken);
                         return await base.SendAsync(clonedRequestForRetry, cancellationToken);
                     }
 
+                    _logger.LogWarning("RefreshTokenHandler: Received 401, initiating token refresh.");
                     var refreshResult = await _authService.RefreshTokenAsync(cancellationToken);
+
                     if (refreshResult.IsSuccess)
                     {
-                        var refreshedAccessToken = await _storageService.GetAccessTokenAsync();
+                        _logger.LogInformation("RefreshTokenHandler: Token successfully refreshed.");
                         var clonedRequest = await CloneRequestAsync(request);
-                        clonedRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", refreshedAccessToken);
+
                         return await base.SendAsync(clonedRequest, cancellationToken);
                     }
                     else
                     {
+                        _logger.LogError("RefreshTokenHandler: Refresh token renewal FAILED. Terminating session.");
                         await _authenticationStateNotifier.NotifyUserLogout();
                         return response;
                     }
@@ -73,6 +66,7 @@ namespace SecureVault.App.Infrastructure.HttpHandlers
             }
             else if (response.StatusCode == HttpStatusCode.Forbidden)
             {
+                _logger.LogWarning("RefreshTokenHandler: Received 403 Forbidden. Terminating session.");
                 await _authenticationStateNotifier.NotifyUserLogout();
             }
             return response;

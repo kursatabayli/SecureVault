@@ -16,15 +16,15 @@ namespace SecureVault.Identity.Application.Features.CQRS.Auth.Handlers
         private readonly IMediator _mediator;
         private readonly IUserRepository _userRepository;
         private readonly IUserSessionService _userSessionService;
-        private readonly IAuthService _authService;
+        private readonly IJwtTokenService _jwtTokenService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<LoginUserHandler> _logger;
         private readonly IStringLocalizer<ReturnMessages> _returnMessages;
-        public LoginUserHandler(IMediator mediator, IUserRepository userRepository, IAuthService authService, IUnitOfWork unitOfWork, IStringLocalizer<ReturnMessages> returnMessages, ILogger<LoginUserHandler> logger, IUserSessionService userSessionService)
+        public LoginUserHandler(IMediator mediator, IUserRepository userRepository, IJwtTokenService jwtTokenService, IUnitOfWork unitOfWork, IStringLocalizer<ReturnMessages> returnMessages, ILogger<LoginUserHandler> logger, IUserSessionService userSessionService)
         {
             _mediator = mediator;
             _userRepository = userRepository;
-            _authService = authService;
+            _jwtTokenService = jwtTokenService;
             _unitOfWork = unitOfWork;
             _returnMessages = returnMessages;
             _logger = logger;
@@ -44,8 +44,8 @@ namespace SecureVault.Identity.Application.Features.CQRS.Auth.Handlers
                 var user = verificationResult.Value;
 
                 var userWithInfo = await _userRepository.GetUserWithUserInfoAsync(user.Id);
-                var (accessToken, accessTokenJti, accessTokenExp) = _authService.GenerateJwtTokenForUser(userWithInfo);
-                var (refreshToken, refreshTokenJti, refreshTokenExp) = _authService.GenerateRefreshTokenJwt(user.Id, request.RememberMe);
+                var (accessToken, accessTokenJti, accessTokenExp) = _jwtTokenService.GenerateJwtTokenForUser(userWithInfo, request.DpopJkt);
+                var (refreshToken, refreshTokenJti, refreshTokenExp) = _jwtTokenService.GenerateRefreshTokenJwt(user.Id, request.RememberMe, request.DpopJkt);
 
                 await _userSessionService.ManageSessionAsync(user, request, accessTokenJti, refreshTokenJti, refreshTokenExp);
 
@@ -61,8 +61,7 @@ namespace SecureVault.Identity.Application.Features.CQRS.Auth.Handlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Login işlemi sırasında token oluşturma veya session kaydında beklenmedik bir hata oluştu. UserId: {UserId}", verificationResult.Value.Id);
-                return new Error(ErrorCodes.InternalServerError, _returnMessages[ErrorCodes.InternalServerError]);
+                _logger.LogError(ex, "An unexpected error occurred during token creation or session registration during login. UserId: {UserId}", verificationResult.Value.Id); return new Error(ErrorCodes.InternalServerError, _returnMessages[ErrorCodes.InternalServerError]);
             }
         }
     }
