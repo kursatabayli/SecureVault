@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using SecureVault.Identity.Application.Contracts.Services;
 using SecureVault.Identity.Application.Features.CQRS.Auth.Commands;
-using SecureVault.Identity.Application.Services;
 using SecureVault.Shared.Result;
 
 namespace SecureVault.Identity.Application.Features.CQRS.Auth.Handlers

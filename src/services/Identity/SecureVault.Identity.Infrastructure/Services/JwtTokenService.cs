@@ -7,20 +7,21 @@ using SecureVault.Identity.Infrastructure.Helpers;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 
 namespace SecureVault.Identity.Infrastructure.Services
 {
-    public class AuthService : IAuthService
+    public class JwtTokenService : IJwtTokenService
     {
-        private readonly ILogger<AuthService> _logger;
+        private readonly ILogger<JwtTokenService> _logger;
         private readonly JwtSettings _jwtSettings;
-        public AuthService(IOptions<JwtSettings> jwtSettings, ILogger<AuthService> logger)
+        public JwtTokenService(IOptions<JwtSettings> jwtSettings, ILogger<JwtTokenService> logger)
         {
             _jwtSettings = jwtSettings.Value;
             _logger = logger;
         }
 
-        public (string token, string jti, DateTime expiration) GenerateJwtTokenForUser(User user)
+        public (string token, string jti, DateTime expiration) GenerateJwtTokenForUser(User user, string? dpopJkt)
         {
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
             var creds = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
@@ -35,6 +36,15 @@ namespace SecureVault.Identity.Infrastructure.Services
                 new(ClaimTypes.Surname, user.UserInfo.Surname)
             };
 
+            if (!string.IsNullOrEmpty(dpopJkt))
+            {
+                var cnf = new Dictionary<string, object>
+                {
+                    { "jkt", dpopJkt }
+                };
+                claims.Add(new Claim("cnf", JsonSerializer.Serialize(cnf), JsonClaimValueTypes.Json));
+            }
+
             var token = new JwtSecurityToken(
                 issuer: _jwtSettings.Issuer,
                 audience: _jwtSettings.Audience,
@@ -46,7 +56,7 @@ namespace SecureVault.Identity.Infrastructure.Services
             return (new JwtSecurityTokenHandler().WriteToken(token), jti, token.ValidTo);
         }
 
-        public (string token, string jti, DateTime expiration) GenerateRefreshTokenJwt(Guid userId, bool rememberMe)
+        public (string token, string jti, DateTime expiration) GenerateRefreshTokenJwt(Guid userId, bool rememberMe, string? dpopJkt)
         {
             var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.RefreshTokenKey));
             var credentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
@@ -58,11 +68,19 @@ namespace SecureVault.Identity.Infrastructure.Services
             else
                 expiration = DateTime.UtcNow.AddHours(1);
 
-            Claim[] claims =
-            [
+            var claims = new List<Claim>
+            {
                 new(JwtRegisteredClaimNames.Sub, userId.ToString()),
                 new(JwtRegisteredClaimNames.Jti, jti),
-            ];
+            };
+            if (!string.IsNullOrEmpty(dpopJkt))
+            {
+                var cnf = new Dictionary<string, object>
+                {
+                    { "jkt", dpopJkt }
+                };
+                claims.Add(new Claim("cnf", JsonSerializer.Serialize(cnf), JsonClaimValueTypes.Json));
+            }
 
             var token = new JwtSecurityToken(
                 issuer: _jwtSettings.Issuer,

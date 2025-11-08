@@ -12,8 +12,7 @@ namespace SecureVault.Identity.Api.Extensions
         {
             //Services
             services.AddScoped<IUnitOfWork, UnitOfWork>();
-            services.AddScoped<IAuthService, AuthService>();
-            services.AddScoped<IHashService, HashService>();
+            services.AddScoped<IJwtTokenService, JwtTokenService>();
             services.AddScoped<IEcdsaVerificationService, EcdsaVerificationService>();
             services.AddScoped<ICacheService, RedisCacheService>();
 

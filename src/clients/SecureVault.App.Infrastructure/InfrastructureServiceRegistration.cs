@@ -42,15 +42,18 @@ namespace SecureVault.App.Infrastructure
             services.AddScoped<IInteractionService, InteractionService>();
             //device
             services.AddScoped<IDeviceInfoService, DeviceInfoService>();
-            //persistence
 
+            //persistence
             services.AddSingleton(Preferences.Default);
             services.AddSingleton(SecureStorage.Default);
             services.AddScoped<IStorageService, StorageService>();
+            services.AddScoped<IDpopKeyService, DpopKeyService>();
+            services.AddScoped<IDpopProofService, DpopProofService>();
+
             //http handlers
             services.AddTransient<DeviceHeadersHandler>();
-            services.AddTransient<AuthTokenHandler>();
-            services.AddTransient<AddBearerTokenHandler>();
+            services.AddTransient<RefreshTokenHandler>();
+            services.AddTransient<DpopHandler>();
             services.AddTransient<PollyResiliencyHandler>();
             services.AddSingleton<IHttpHandlerPipelineBuilder, HttpHandlerPipelineBuilder>();
 
@@ -151,14 +154,15 @@ namespace SecureVault.App.Infrastructure
                     .ConfigureHttpClient(configureClient)
                     .AddHttpMessageHandler<PollyResiliencyHandler>()
                     .AddHttpMessageHandler<DeviceHeadersHandler>()
-                    .AddHttpMessageHandler<AuthTokenHandler>()
+                    .AddHttpMessageHandler<RefreshTokenHandler>()
+                    .AddHttpMessageHandler<DpopHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => configureHandler(apiSettings.BaseUrl));
 
             services.AddRefitClient<ISecureVaultAnonymousApi>(refitSettings)
                     .ConfigureHttpClient(configureClient)
                     .AddHttpMessageHandler<PollyResiliencyHandler>()
                     .AddHttpMessageHandler<DeviceHeadersHandler>()
-                    .AddHttpMessageHandler<AddBearerTokenHandler>()
+                    .AddHttpMessageHandler<DpopHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => configureHandler(apiSettings.BaseUrl));
 
             return services;
