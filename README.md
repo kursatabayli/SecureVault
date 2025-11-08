@@ -44,14 +44,15 @@ This project is a modern password and 2FA code manager application focused on se
 
 The architecture is built on modern design patterns and technologies to ensure security, scalability, and flexibility.
 
-| Feature                          | Implementation Details                                                                                                                                                             |
-| :------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🛡️ **Zero-Knowledge Authentication** | Authentication is performed with a challenge-response mechanism using **ECDSA signatures**. The user's master password never leaves the client device.                                   |
-| ✍️ **End-to-End Encryption (E2EE)** | All vault data is encrypted on the client side with **AES-256 (GCM)** before being sent to the server. This ensures data remains confidential even if the server is compromised.     |
+| Feature | Implementation Details |
+| :--- | :--- |
+| 🛡️ **Zero-Knowledge Authentication** | Authentication is performed with a challenge-response mechanism using **ECDSA signatures**. The user's master password never leaves the client device. |
+| 🛡️ **Sender-Constrained Tokens** | Uses **DPoP (Demonstration of Proof-of-Possession)** instead of standard Bearer Tokens. This cryptographically binds tokens to the client, preventing token theft and replay attacks. |
+| ✍️ **End-to-End Encryption (E2EE)** | All vault data is encrypted on the client side with **AES-256 (GCM)** before being sent to the server. This ensures data remains confidential even if the server is compromised. |
 | 🔑 **Secure Login with QR Code** | A temporary and secure encryption channel is established between devices using **ECDH (Elliptic Curve Diffie-Hellman)** key exchange. Session information is transmitted over this channel with E2EE. |
-| 🌐 **Cross-Platform Client** | A single codebase developed using **.NET MAUI Blazor** targets both mobile (Android) and desktop (Windows) platforms, offering a consistent UI and native performance.              |
+| 🌐 **Cross-Platform Client** | A single codebase developed using **.NET MAUI Blazor** targets both mobile (Android) and desktop (Windows) platforms, offering a consistent UI and native performance. |
 | 🧩 **Microservices-Based Backend** | The backend consists of independent services (Identity, Vault, Interaction). In the development environment, service orchestration, discovery, and telemetry are provided by **.NET Aspire**. API Gateway functionality is managed using **YARP (Yet Another Reverse Proxy)**. |
-| 🔄 **Real-Time Data Streaming** | **SignalR** establishes a bidirectional, persistent connection between clients and the server, enabling instant delivery of data changes to all devices.                                 |
+| 🔄 **Real-Time Data Streaming** | **SignalR** establishes a bidirectional, persistent connection between clients and the server, enabling instant delivery of data changes to all devices. |
 | 💾 **Hybrid Data Storage** | On the client side, data is stored in an **encrypted Realm database** for offline access. On the server side, **PostgreSQL** and **MongoDB** are used based on service needs. |
 
 ---
@@ -67,8 +68,16 @@ The project consists of independent components, each responsible for a specific 
 * **Vault Service:** Responsible for storing the user's encrypted vault data (passwords, 2FA codes, etc.). It uses MongoDB as its database.
 * **Interaction Service:** Manages real-time communication between devices (with SignalR). QR code login and instant data synchronization are handled by this service.
 
-## Cryptographic Flows
-The security model is designed to ensure that only the user can access their own data.
+### 🔐 Security Model and Cryptographic Flows
+The security model is designed to ensure that only the user can access their own data and to maximize session security.
+
+#### DPoP (Demonstration of Proof-of-Possession)
+The project uses the **DPoP** (RFC 9449) standard for session security instead of standard Bearer Tokens. This approach effectively mitigates the risk of token theft and reuse.
+
+* **How it Works:** For every API request, the client signs a special 'proof' (a DPoP JWT) that is bound to the Access Token and the specific HTTP request (method and URL).
+* **Advantage:** The API Gateway (YARP) verifies this proof, ensuring the Access Token is "sender-constrained"—it can *only* be used by the original client that possesses the corresponding cryptographic key.
+
+### Core Cryptographic Flows
 
 1. **Registration and Key Generation Flow**
     * A unique `salt` is generated on the client side.
@@ -120,10 +129,10 @@ This project uses a modern and robust technology stack to achieve its goals.
 | | **Grafana** | Dashboard interface for visualizing metrics from Prometheus and other sources. |
 | **DevOps & Orchestration** | **.NET Aspire** | Service orchestration, discovery, and telemetry for the development environment. |
 | | **Docker** | Containerization; running services in an isolated environment. |
-| **Security** | **BouncyCastle** | Advanced cryptography operations (especially ECDSA signing). |
+| **Security** | **DPoP (with JWT)** | Advanced, sender-constrained session management (RFC 9449). Used instead of standard Bearer Tokens to prevent token theft. |
+| | **BouncyCastle** | Advanced cryptography operations (especially ECDSA signing). |
 | | **Argon2id** | Strong password hashing; brute-force resistant Master Key derivation. |
 | | **AES-256 (GCM)** | Modern, authenticated symmetric encryption for end-to-end data encryption.|
-| | **JWT (JSON Web Token)** | Secure and stateless session management (Access & Refresh Tokens). |
 | **QR Code Operations** | **ZXing.Net.MAUI** | Client-side QR code reading and scanning. |
 | | **QRCoder & SkiaSharp** | QR code generation and rendering. |
 
