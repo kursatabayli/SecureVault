@@ -32,13 +32,18 @@ namespace SecureVault.App.Infrastructure.HttpHandlers
                 if (!string.IsNullOrEmpty(accessToken))
                     request.Headers.Authorization = new AuthenticationHeaderValue("DPoP", accessToken);
                 else
-                    _logger.LogWarning("DpopHandler: Authentication was requested for {RequestUri}, but no Access Token was found in storage.", request.RequestUri);
+                    _logger.LogInformation("DpopHandler: Authentication was requested for {RequestUri}, but no Access Token was found in storage.", request.RequestUri);
 
                 return await base.SendAsync(request, cancellationToken);
             }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogInformation(ex, "DpopHandler: The request to {RequestUri} was canceled. This is expected if the connection was disposed.", request.RequestUri);
+                throw;
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred within DpopHandler. Request URI: {RequestUri}", request.RequestUri);
+                _logger.LogError(ex, "An unexpected error occurred within DpopHandler. Request URI: {RequestUri}", request.RequestUri);
                 throw;
             }
         }

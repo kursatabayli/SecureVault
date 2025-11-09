@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using SecureVault.App.Application.Contracts.Abstractions.Api;
 using SecureVault.App.Application.Contracts.Abstractions.Device;
 using SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin;
 using SecureVault.App.Application.Contracts.DTOs.Auth;
@@ -10,8 +9,7 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
 {
     public class QrLoginOrchestratorService : IQrLoginOrchestrator, IQrLoginContext
     {
-        // --- Bağımlılıklar ---
-        private readonly IInteractionService _interactionService;
+        private const int QrRefreshIntervalSeconds = 55;
         private readonly IQrHubConnection _hubConnection;
         private readonly ISecureChannelManager _secureChannelManager;
         private readonly IDispatcher _dispatcher;
@@ -23,13 +21,12 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
         public bool IsPublicKeySent => _isPublicKeySent;
         public ISecureChannelManager SecureChannelManager => _secureChannelManager;
 
-        // --- Durum (State) Değişkenleri ---
         private string _channelId;
         private QrLoginRole _currentRole;
         private QrSessionState _currentState = QrSessionState.Idle;
         private bool _isPublicKeySent = false;
+        private Timer _qrRefreshTimer;
 
-        // --- Olaylar (Events) ---
         public event Func<QrSessionState, string, Task> OnStateChanged;
         public event Func<string, Task> OnQrCodeAvailable;
         public event Func<LoginQrCodeDto, Task> OnLoginCredentialsReceived;
@@ -37,7 +34,6 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
         public event Func<DeviceDetailDto, Task> OnDeviceAuthorizationRequired;
 
         public QrLoginOrchestratorService(
-            IInteractionService interactionService,
             IQrHubConnection hubConnection,
             ISecureChannelManager secureChannelManager,
             IDispatcher dispatcher,
@@ -45,7 +41,6 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
             ILogger<QrLoginOrchestratorService> logger,
             IEnumerable<IMessageHandler> handlers)
         {
-            _interactionService = interactionService;
             _hubConnection = hubConnection;
             _secureChannelManager = secureChannelManager;
             _dispatcher = dispatcher;
@@ -53,34 +48,45 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
             _logger = logger;
             _messageHandlers = handlers.ToDictionary(h => h.MessageType, h => h);
 
-            // Olayları dinlemeye başla
             _hubConnection.OnMessageReceived += HandleReceivedMessage;
             _hubConnection.OnErrorReceived += HandleErrorReceived;
         }
 
         public async Task SetState(QrSessionState newState, string message)
         {
+            if (_currentState == newState) return;
+
+            var oldState = _currentState;
             _currentState = newState;
+
+            if (oldState == QrSessionState.AwaitingPeer && newState != QrSessionState.AwaitingPeer)
+            {
+                StopQrRefreshTimer();
+            }
             _logger.LogInformation("State changed to {State}: {Message}", newState, message);
             await SafeInvokeAsync(() => OnStateChanged?.Invoke(newState, message));
         }
 
         public async Task StartSession(QrLoginRole role, CancellationToken cancellationToken = default)
         {
+            StopQrRefreshTimer();
+
             await ResetStateAsync();
             _currentRole = role;
 
             try
             {
                 await SetState(QrSessionState.CreatingChannel, "Oturum kanalı oluşturuluyor...");
-                var result = await _interactionService.CreateQrLoginChannelAsync(cancellationToken);
-                _channelId = result.Value;
+                var result = await _hubConnection.ConnectAndCreateChannelAsync(cancellationToken);
+
+                _channelId = result;
                 if (string.IsNullOrEmpty(_channelId))
                     throw new InvalidOperationException("Sunucudan kanal ID'si alınamadı.");
 
                 await SafeInvokeAsync(() => OnQrCodeAvailable?.Invoke(_channelId));
-                await _hubConnection.ConnectAndJoinChannelAsync(_channelId, cancellationToken);
                 await SetState(QrSessionState.AwaitingPeer, "Diğer cihazın bağlanması bekleniyor...");
+
+                StartQrRefreshTimer();
             }
             catch (Exception ex)
             {
@@ -111,6 +117,61 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
                 await DisposeAsync();
             }
         }
+
+        #region Private Timer Methods
+        private void StartQrRefreshTimer()
+        {
+            _logger.LogInformation("Starting QR refresh timer for {Seconds} seconds.", QrRefreshIntervalSeconds);
+            StopQrRefreshTimer();
+
+            _qrRefreshTimer = new Timer(
+                callback: OnQrTimerElapsed,
+                state: null,
+                dueTime: TimeSpan.FromSeconds(QrRefreshIntervalSeconds),
+                period: Timeout.InfiniteTimeSpan
+            );
+        }
+
+        private void StopQrRefreshTimer()
+        {
+            if (_qrRefreshTimer != null)
+            {
+                _logger.LogInformation("Stopping QR refresh timer.");
+                _qrRefreshTimer.Dispose();
+                _qrRefreshTimer = null;
+            }
+        }
+
+        private async void OnQrTimerElapsed(object state)
+        {
+            await _dispatcher.DispatchAsync(async () =>
+            {
+                if (_currentState == QrSessionState.AwaitingPeer)
+                {
+                    _logger.LogInformation("QR code expired. Requesting a new channel...");
+                    try
+                    {
+                        var newChannelId = await _hubConnection.SwitchChannelAsync(CancellationToken.None);
+                        _channelId = newChannelId;
+
+                        _logger.LogInformation("New channel {NewChannelId} received. Updating QR code.", newChannelId);
+
+                        await SafeInvokeAsync(() => OnQrCodeAvailable?.Invoke(_channelId));
+
+                        StartQrRefreshTimer();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to switch to a new channel automatically.");
+                        await SetState(QrSessionState.Error, $"Yeni QR kod alınamadı: {ex.Message}");
+                        await DisposeAsync();
+                    }
+                }
+            });
+        }
+        #endregion
+
+        #region Lifecycle and Event Handlers
         private async Task HandleReceivedMessage(string messageType, string payload)
         {
             if (_messageHandlers.TryGetValue(messageType, out var handler))
@@ -225,10 +286,18 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
 
             return Task.CompletedTask;
         }
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            return new ValueTask(ResetStateAsync());
+            _logger.LogInformation("Disposing Orchestrator...");
+
+            StopQrRefreshTimer();
+
+            _hubConnection.OnMessageReceived -= HandleReceivedMessage;
+            _hubConnection.OnErrorReceived -= HandleErrorReceived;
+
+            await _hubConnection.DisposeAsync();
+            await ResetStateAsync();
         }
+        #endregion
     }
 }
-

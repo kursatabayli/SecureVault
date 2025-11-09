@@ -11,14 +11,14 @@ namespace SecureVault.App.Infrastructure.Services.Interaction
     public class InteractionConnectionService : IInteractionConnectionService
     {
         private readonly ILogger<InteractionConnectionService> _logger;
-        private readonly IHttpHandlerPipelineBuilder _pipelineBuilder;
+        private readonly IProtectedHttpHandlerPipelineBuilder _pipelineBuilder;
         private readonly IStorageService _storageService;
         private readonly IEnumerable<ISignalRHubEventHandler> _hubEventHandlers;
         private HubConnection _connection;
         private readonly string _hubUrl;
 
         public InteractionConnectionService(ILogger<InteractionConnectionService> logger,
-         IHttpHandlerPipelineBuilder pipelineBuilder,
+         IProtectedHttpHandlerPipelineBuilder pipelineBuilder,
          IStorageService storageService,
          IEnumerable<ISignalRHubEventHandler> hubEventHandlers,
          IOptions<ApiSettings> apiSettings,
