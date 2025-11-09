@@ -165,9 +165,10 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
             SetView(DialogView.DisplayingQr, title: "Diğer Cihazla Okutun", icon: Icons.Material.Filled.QrCode2);
             return Task.CompletedTask;
         }
-        private void HandleQrClose()
+        private async Task HandleQrClose()
         {
             _sessionCts?.Cancel();
+            await Orchestrator.DisposeAsync();
             SetView(DialogView.InitialSelection, title: "Yeni Cihazı Yetkilendir", icon: Icons.Material.Filled.PhonelinkSetup);
         }
         private async Task HandleAuthorizationComplete()
@@ -176,7 +177,11 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
             MudDialog.Close(DialogResult.Ok(true));
         }
 
-        private void Cancel() => MudDialog.Cancel();
+        private async Task Cancel()
+        {
+            await Orchestrator.DisposeAsync();
+            MudDialog.Cancel();
+        }
 
         public async ValueTask DisposeAsync()
         {

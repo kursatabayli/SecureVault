@@ -6,7 +6,7 @@ namespace SecureVault.Interaction.Api.Features.QrLogin.Services;
 public class RedisQrLoginChannelService : IQrLoginChannelService
 {
     private readonly IDatabase _redisDb;
-    private readonly TimeSpan _channelExpiration = TimeSpan.FromMinutes(2);
+    private readonly TimeSpan _channelExpiration = TimeSpan.FromMinutes(1);
 
     public RedisQrLoginChannelService(IConnectionMultiplexer redis)
     {
@@ -30,6 +30,19 @@ public class RedisQrLoginChannelService : IQrLoginChannelService
         var key = GetChannelStateKey(channelId);
         var state = await _redisDb.StringGetAsync(key);
         return state == "Waiting";
+    }
+
+    public async Task<int> GetChannelCountAsync(string channelId)
+    {
+        var countKey = GetChannelCountKey(channelId);
+        var countVal = await _redisDb.StringGetAsync(countKey);
+
+        if (countVal.TryParse(out int count))
+        {
+            return count;
+        }
+
+        return 0;
     }
 
     public async Task MarkChannelAsCompletedAsync(string channelId)

@@ -39,7 +39,7 @@ namespace SecureVault.App.Infrastructure
             services.AddScoped<IUserSessionService, UserSessionService>();
             services.AddScoped<IRecoveryDataService, RecoveryDataService>();
             services.AddScoped<IRegisterService, RegisterService>();
-            services.AddScoped<IInteractionService, InteractionService>();
+
             //device
             services.AddScoped<IDeviceInfoService, DeviceInfoService>();
 
@@ -55,7 +55,8 @@ namespace SecureVault.App.Infrastructure
             services.AddTransient<RefreshTokenHandler>();
             services.AddTransient<DpopHandler>();
             services.AddTransient<PollyResiliencyHandler>();
-            services.AddSingleton<IHttpHandlerPipelineBuilder, HttpHandlerPipelineBuilder>();
+            services.AddSingleton<IProtectedHttpHandlerPipelineBuilder, ProtectedHttpHandlerPipelineBuilder>();
+            services.AddSingleton<IPublicHttpHandlerPipelineBuilder, PublicHttpHandlerPipelineBuilder>();
 
             //repositories
             services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));

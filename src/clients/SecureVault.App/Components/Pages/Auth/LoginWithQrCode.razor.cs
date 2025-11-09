@@ -106,9 +106,10 @@ namespace SecureVault.App.Components.Pages.Auth
             SetView(LoginPageView.DisplayingQr);
             return Task.CompletedTask;
         }
-        private void HandleQrClose()
+        private async Task HandleQrClose()
         {
             _sessionCts?.Cancel();
+            await Orchestrator.DisposeAsync();
             SetView(LoginPageView.InitialSelection);
         }
         private async Task HandleLoginCredentialsReceived(LoginQrCodeDto credentials)
@@ -124,9 +125,10 @@ namespace SecureVault.App.Components.Pages.Auth
                 await HandleStateChanged(QrSessionState.Error, result.Error.Message ?? "Giriş işlemi sırasında bilinmeyen bir hata oluştu.");
         }
 
-        private void GoBack()
+        private async Task GoBack()
         {
             _sessionCts?.Cancel();
+            await Orchestrator.DisposeAsync();
             NavigationManager.NavigateTo("/login");
         }
         public async ValueTask DisposeAsync()
