@@ -37,7 +37,7 @@ namespace SecureVault.App.Components.Pages.Auth
                 var result = await Mediator.Send(command);
 
                 if (result.IsSuccess)
-                    NavigationManager.NavigateTo("/", true);
+                    NavigationManager.NavigateTo("/");
                 else
                 {
                     Submitting = false;

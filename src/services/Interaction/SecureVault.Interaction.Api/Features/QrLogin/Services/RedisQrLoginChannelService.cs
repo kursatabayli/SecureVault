@@ -6,78 +6,156 @@ namespace SecureVault.Interaction.Api.Features.QrLogin.Services;
 public class RedisQrLoginChannelService : IQrLoginChannelService
 {
     private readonly IDatabase _redisDb;
+    private readonly ILogger<RedisQrLoginChannelService> _logger;
     private readonly TimeSpan _channelExpiration = TimeSpan.FromMinutes(1);
 
-    public RedisQrLoginChannelService(IConnectionMultiplexer redis)
+    public RedisQrLoginChannelService(IConnectionMultiplexer redis, ILogger<RedisQrLoginChannelService> logger)
     {
         _redisDb = redis.GetDatabase();
+        _logger = logger;
     }
 
     private string GetChannelStateKey(string channelId) => $"qr:channel:{channelId}:state";
     private string GetChannelCountKey(string channelId) => $"qr:channel:{channelId}:count";
     private string GetConnectionKey(string connectionId) => $"qr:conn:{connectionId}";
 
-    public async Task<string> CreateChannelAsync()
+    public async Task<(bool Success, int NewCount, string Role)> RegisterConnectionAsync(string channelId, string connectionId)
     {
-        var channelId = Guid.NewGuid().ToString();
-        var key = GetChannelStateKey(channelId);
-        await _redisDb.StringSetAsync(key, "Waiting", _channelExpiration);
-        return channelId;
+        var stateKey = GetChannelStateKey(channelId);
+        var countKey = GetChannelCountKey(channelId);
+        var connKey = GetConnectionKey(connectionId);
+
+        _logger.LogInformation("RegisterConnectionAsync: {ConnectionId} -> {ChannelId}", connectionId, channelId);
+
+        var tranCreator = _redisDb.CreateTransaction();
+        tranCreator.AddCondition(Condition.KeyNotExists(stateKey));
+
+        tranCreator.StringSetAsync(stateKey, "Waiting", _channelExpiration);
+        tranCreator.StringSetAsync(countKey, 1, _channelExpiration);
+        tranCreator.StringSetAsync(connKey, channelId, _channelExpiration);
+
+        try
+        {
+            if (await tranCreator.ExecuteAsync())
+            {
+                _logger.LogInformation("RegisterConnectionAsync: YENİ kanal oluşturuldu (Creator). {ChannelId}, Count=1", channelId);
+                return (true, 1, "Creator");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "RegisterConnectionAsync (Creator Path): Transaction HATA. {ChannelId}", channelId);
+            return (false, -1, null);
+        }
+
+        _logger.LogInformation("RegisterConnectionAsync: Kanal mevcut, katılma deneniyor (Joiner). {ChannelId}", channelId);
+
+        if (!await ValidateChannelAsync(channelId))
+        {
+            _logger.LogWarning("RegisterConnectionAsync (Joiner Path): Kanal geçerli değil (Waiting değil veya süresi dolmuş). {ChannelId}", channelId);
+            return (false, -1, "Invalid");
+        }
+
+        var tranJoiner = _redisDb.CreateTransaction();
+        tranJoiner.AddCondition(Condition.StringEqual(countKey, 1));
+
+        tranJoiner.StringSetAsync(connKey, channelId, _channelExpiration);
+        var newCountTask = tranJoiner.StringIncrementAsync(countKey);
+        tranJoiner.KeyExpireAsync(connKey, _channelExpiration);
+        tranJoiner.KeyExpireAsync(countKey, _channelExpiration);
+        tranJoiner.KeyExpireAsync(stateKey, _channelExpiration);
+
+        try
+        {
+            if (await tranJoiner.ExecuteAsync())
+            {
+                var finalCount = (int)await newCountTask;
+                _logger.LogInformation("RegisterConnectionAsync: Joiner katıldı. {ChannelId}, New Count={NewCount}", channelId, finalCount);
+                return (true, finalCount, "Joiner");
+            }
+            else
+            {
+                var currentCount = await _redisDb.StringGetAsync(countKey);
+                _logger.LogWarning("RegisterConnectionAsync (Joiner Path): Transaction BAŞARISIZ. Koşul (count == 1) sağlanamadı. Güncel Count: {Count}", currentCount.HasValue ? currentCount.ToString() : "NULL");
+                return (false, (int)(currentCount.HasValue ? currentCount : -1), "BusyOrFull");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "RegisterConnectionAsync (Joiner Path): Transaction HATA. {ChannelId}", channelId);
+            return (false, -1, null);
+        }
     }
 
     public async Task<bool> ValidateChannelAsync(string channelId)
     {
         var key = GetChannelStateKey(channelId);
-        var state = await _redisDb.StringGetAsync(key);
-        return state == "Waiting";
-    }
+        _logger.LogInformation("ValidateChannelAsync: Kanal doğrulanıyor. Anahtar: {Key}", key);
 
-    public async Task<int> GetChannelCountAsync(string channelId)
-    {
-        var countKey = GetChannelCountKey(channelId);
-        var countVal = await _redisDb.StringGetAsync(countKey);
-
-        if (countVal.TryParse(out int count))
+        try
         {
-            return count;
-        }
+            var state = await _redisDb.StringGetAsync(key);
 
-        return 0;
+            if (!state.HasValue)
+            {
+                _logger.LogWarning("ValidateChannelAsync: Anahtar bulunamadı veya süresi dolmuş. Anahtar: {Key}", key);
+                return false;
+            }
+
+            bool isValid = state == "Waiting";
+            _logger.LogInformation("ValidateChannelAsync: Kanal durumu '{State}'. Geçerli: {IsValid}", state.ToString(), isValid);
+            return isValid;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "ValidateChannelAsync: Doğrulama sırasında HATA oluştu. Anahtar: {Key}", key);
+            return false;
+        }
     }
 
     public async Task MarkChannelAsCompletedAsync(string channelId)
     {
-        await _redisDb.KeyDeleteAsync([
+        var keys = new RedisKey[] {
             GetChannelStateKey(channelId),
-                GetChannelCountKey(channelId)
-        ]);
-    }
-
-    public async Task<int> JoinChannelAsync(string channelId, string connectionId)
-    {
-        var connKey = GetConnectionKey(connectionId);
-        await _redisDb.StringSetAsync(connKey, channelId);
-
-        var countKey = GetChannelCountKey(channelId);
-        var newCount = await _redisDb.StringIncrementAsync(countKey);
-
-        await _redisDb.KeyExpireAsync(connKey, _channelExpiration);
-        await _redisDb.KeyExpireAsync(countKey, _channelExpiration);
-
-        return (int)newCount;
+            GetChannelCountKey(channelId)
+        };
+        _logger.LogInformation("MarkChannelAsCompletedAsync: {ChannelId} için anahtarlar siliniyor.", channelId);
+        try
+        {
+            await _redisDb.KeyDeleteAsync(keys);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "MarkChannelAsCompletedAsync: Silme sırasında HATA oluştu. ChannelId: {ChannelId}", channelId);
+        }
     }
 
     public async Task<string?> LeaveChannelAsync(string connectionId)
     {
+        _logger.LogInformation("LeaveChannelAsync: {ConnectionId} ayrılıyor.", connectionId);
         var connKey = GetConnectionKey(connectionId);
-        var channelId = await _redisDb.StringGetDeleteAsync(connKey);
 
-        if (!channelId.HasValue)
+        try
+        {
+            var channelId = await _redisDb.StringGetDeleteAsync(connKey);
+
+            if (!channelId.HasValue)
+            {
+                _logger.LogWarning("LeaveChannelAsync: {ConnectionId} için kanal bulunamadı (belki süresi doldu).", connectionId);
+                return null;
+            }
+
+            var countKey = GetChannelCountKey(channelId.ToString());
+
+            var newCount = await _redisDb.StringDecrementAsync(countKey);
+            _logger.LogInformation("LeaveChannelAsync: {ConnectionId} ayrıldı. Kanal: {ChannelId}, Yeni Sayı: {NewCount}", connectionId, channelId.ToString(), newCount);
+
+            return channelId.ToString();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "LeaveChannelAsync: HATA oluştu. ConnectionId: {ConnectionId}", connectionId);
             return null;
-
-        var countKey = GetChannelCountKey(channelId.ToString());
-        await _redisDb.StringDecrementAsync(countKey);
-
-        return channelId.ToString();
+        }
     }
 }

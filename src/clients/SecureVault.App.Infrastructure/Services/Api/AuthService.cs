@@ -140,25 +140,30 @@ namespace SecureVault.App.Infrastructure.Services.Api
             }
         }
 
-        public async Task<Result?> LogoutAsync(CancellationToken cancellationToken)
+        public async Task LogoutAsync(CancellationToken cancellationToken)
         {
             var refreshToken = await _storageService.GetRefreshTokenAsync();
             var accessToken = await _storageService.GetAccessTokenAsync();
 
-            if (!string.IsNullOrEmpty(refreshToken) && !string.IsNullOrEmpty(accessToken))
+            if (string.IsNullOrEmpty(refreshToken) || string.IsNullOrEmpty(accessToken))
+            {
+                return;
+            }
+
+            _ = Task.Run(async () =>
             {
                 try
                 {
                     await _secureVaultAnonymousApi.LogoutAsync(refreshToken, cancellationToken);
                 }
-                catch (Exception)
+                catch (OperationCanceledException)
                 {
-                    // Logout sırasında sunucuya ulaşılamasa bile sorun değil.
-                    // Akışın devam edip local token'ları temizlemesi daha önemli.
-                    // Bu yüzden bu blokta hatayı yutuyoruz.
                 }
-            }
-            return Result.Success();
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Arka planda çalışan remote logout işlemi başarısız oldu.");
+                }
+            }, cancellationToken);
         }
 
 

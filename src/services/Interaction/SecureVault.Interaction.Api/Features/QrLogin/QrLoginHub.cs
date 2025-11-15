@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using SecureVault.Interaction.Api.Features.QrLogin.Contracts;
+using Serilog;
 
 namespace SecureVault.Interaction.Api.Features.QrLogin;
 
@@ -14,56 +15,59 @@ public class QrLoginHub : Hub
         _logger = logger;
     }
 
-    public async Task<string> CreateChannel()
+    public override async Task OnConnectedAsync()
     {
-        var channelId = await _channelService.CreateChannelAsync();
-        await Groups.AddToGroupAsync(Context.ConnectionId, channelId);
-        await _channelService.JoinChannelAsync(channelId, Context.ConnectionId);
-        _logger.LogInformation("Channel created and client joined. ConnectionId: {ConnectionId}, ChannelId: {ChannelId}", Context.ConnectionId, channelId);
-        return channelId;
-    }
-
-    public async Task JoinChannel(string channelId)
-    {
-        if (!await _channelService.ValidateChannelAsync(channelId))
+        var httpContext = Context.GetHttpContext();
+        if (httpContext == null)
         {
-            await Clients.Caller.SendAsync("Error", "InvalidOrExpiredChannel");
-            _logger.LogWarning("Invalid join attempt. ChannelId: {ChannelId}, ConnectionId: {ConnectionId}", channelId, Context.ConnectionId);
+            _logger.LogError("OnConnectedAsync: HttpContext is null. ConnectionId: {ConnectionId}", Context.ConnectionId);
+            Context.Abort();
             return;
         }
 
-        var existingCount = await _channelService.GetChannelCountAsync(channelId);
-        if (existingCount != 1)
+        string channelId = httpContext.Request.Headers["X-Channel-Id"];
+        if (string.IsNullOrEmpty(channelId))
         {
-            await Clients.Caller.SendAsync("Error", "ChannelIsFull");
-            _logger.LogWarning("Channel is full on join attempt. ChannelId: {ChannelId}, ConnectionId: {ConnectionId}", channelId, Context.ConnectionId);
+            _logger.LogWarning("OnConnectedAsync: X-Channel-Id header eksik veya boş. Bağlantı reddedildi. ConnectionId: {ConnectionId}", Context.ConnectionId);
+            Context.Abort();
             return;
         }
 
-        await Groups.AddToGroupAsync(Context.ConnectionId, channelId);
+        _logger.LogInformation("OnConnectedAsync: İstemci bağlanıyor. ChannelId: {ChannelId}, ConnectionId: {ConnectionId}", channelId, Context.ConnectionId);
 
-        var connectionCount = await _channelService.JoinChannelAsync(channelId, Context.ConnectionId);
-
-        _logger.LogInformation("Client joined channel. ConnectionId: {ConnectionId}, ChannelId: {ChannelId}, Total Users: {UserCount}", Context.ConnectionId, channelId, connectionCount);
-
-        if (connectionCount == 2)
+        try
         {
-            _logger.LogInformation("Channel is ready. ChannelId: {ChannelId}", channelId);
-            await Clients.Group(channelId).SendAsync("ReceiveMessage", "ChannelReady", string.Empty);
+            var (success, newCount, role) = await _channelService.RegisterConnectionAsync(channelId, Context.ConnectionId);
 
+            if (!success)
+            {
+                _logger.LogWarning("OnConnectedAsync: Kanal kaydı başarısız. ChannelId: {ChannelId}, ConnId: {ConnectionId}, Raporlanan Sayı: {Count}", channelId, Context.ConnectionId, newCount);
+                await Clients.Caller.SendAsync("Error", "ChannelIsFullOrBusy");
+                Context.Abort();
+                return;
+            }
+
+            await Groups.AddToGroupAsync(Context.ConnectionId, channelId);
+            _logger.LogInformation("OnConnectedAsync: İstemci gruba eklendi. Rol: {Role}, ChannelId: {ChannelId}, ConnId: {ConnectionId}, Toplam Üye: {UserCount}", role, channelId, Context.ConnectionId, newCount);
+
+            if (role == "Joiner" && newCount == 2)
+            {
+                _logger.LogInformation("OnConnectedAsync: Kanal hazır. Gruba 'ChannelReady' gönderiliyor. ChannelId: {ChannelId}", channelId);
+                await Clients.Group(channelId).SendAsync("ReceiveMessage", "ChannelReady", string.Empty);
+            }
+
+            await Clients.Caller.SendAsync("Connected", role);
+
+            await base.OnConnectedAsync();
         }
-        if (connectionCount == 2)
+        catch (Exception ex)
         {
-            _logger.LogWarning("Channel is empty. Kicking user. ChannelId: {ChannelId}, ConnectionId: {ConnectionId}", channelId, Context.ConnectionId);
-            await Clients.Caller.SendAsync("Error", "ChannelIsFull");
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, channelId);
-
-            await _channelService.LeaveChannelAsync(Context.ConnectionId);
-
+            _logger.LogError(ex, "!!!!!!!! ERROR OnConnectedAsync !!!!!!!! ChannelId: {ChannelId}, ConnectionId: {ConnectionId}", channelId, Context.ConnectionId);
+            Context.Abort();
         }
     }
 
-    public async Task<string> SwitchToNewChannel()
+    public async Task SwitchToNewChannel(string newChannelId)
     {
         _logger.LogInformation("Client {ConnectionId} requested to switch channel.", Context.ConnectionId);
 
@@ -77,14 +81,19 @@ public class QrLoginHub : Hub
         {
             _logger.LogWarning("Client {ConnectionId} requested switch, but was not in any channel.", Context.ConnectionId);
         }
+        var (success, newCount, role) = await _channelService.RegisterConnectionAsync(newChannelId, Context.ConnectionId);
 
-        var newChannelId = await _channelService.CreateChannelAsync();
+        if (!success)
+        {
+            _logger.LogError("SwitchToNewChannel: Yeni kanal için kayıt BAŞARISIZ OLDU. {ConnectionId}", Context.ConnectionId);
+            await Clients.Caller.SendAsync("Error", "FailedToSwitchChannel");
+            throw new InvalidOperationException("Failed to register new channel during switch.");
+        }
+
         await Groups.AddToGroupAsync(Context.ConnectionId, newChannelId);
-        await _channelService.JoinChannelAsync(newChannelId, Context.ConnectionId);
 
-        _logger.LogInformation("Client {ConnectionId} switched to new channel {NewChannelId}.", Context.ConnectionId, newChannelId);
+        _logger.LogInformation("Client {ConnectionId} switched to new channel {NewChannelId}. Role: {Role}, Count: {NewCount}", Context.ConnectionId, newChannelId, role, newCount);
 
-        return newChannelId;
     }
 
     public async Task SendMessageToChannel(string channelId, string messageType, string? payload)

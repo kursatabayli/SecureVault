@@ -1,10 +1,13 @@
-﻿using Microsoft.AspNetCore.SignalR.Client;
+﻿using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.Http.Connections.Client;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SecureVault.App.Application.Contracts.Abstractions.Interaction;
 using SecureVault.App.Application.Contracts.Abstractions.Persistence;
 using SecureVault.App.Infrastructure.Helpers;
 using SecureVault.App.Infrastructure.HttpHandlers;
+using System.Net.WebSockets;
 
 namespace SecureVault.App.Infrastructure.Services.Interaction
 {
@@ -13,6 +16,7 @@ namespace SecureVault.App.Infrastructure.Services.Interaction
         private readonly ILogger<InteractionConnectionService> _logger;
         private readonly IProtectedHttpHandlerPipelineBuilder _pipelineBuilder;
         private readonly IStorageService _storageService;
+        private readonly IDpopProofService _dpopProofService;
         private readonly IEnumerable<ISignalRHubEventHandler> _hubEventHandlers;
         private HubConnection _connection;
         private readonly string _hubUrl;
@@ -20,6 +24,7 @@ namespace SecureVault.App.Infrastructure.Services.Interaction
         public InteractionConnectionService(ILogger<InteractionConnectionService> logger,
          IProtectedHttpHandlerPipelineBuilder pipelineBuilder,
          IStorageService storageService,
+         IDpopProofService dpopProofService,
          IEnumerable<ISignalRHubEventHandler> hubEventHandlers,
          IOptions<ApiSettings> apiSettings,
          IOptions<SignalRSettings> signalRSettings)
@@ -27,6 +32,7 @@ namespace SecureVault.App.Infrastructure.Services.Interaction
             _logger = logger;
             _pipelineBuilder = pipelineBuilder;
             _storageService = storageService;
+            _dpopProofService = dpopProofService;
             _hubEventHandlers = hubEventHandlers;
             var baseUrl = new Uri(apiSettings.Value.BaseUrl);
             var fullHubUri = new Uri(baseUrl, signalRSettings.Value.HubPath);
@@ -41,10 +47,48 @@ namespace SecureVault.App.Infrastructure.Services.Interaction
                 return;
             }
 
+            async ValueTask<WebSocket> CreateWebSocketFactoryAsync(WebSocketConnectionContext context, CancellationToken factoryCancellationToken)
+            {
+                var dws = new ClientWebSocket();
+
+                try
+                {
+                    var currentAccessToken = await _storageService.GetAccessTokenAsync();
+                    if (string.IsNullOrEmpty(currentAccessToken))
+                    {
+                        _logger.LogError("WebSocketFactory: Access Token bulunamadı.");
+                        throw new InvalidOperationException("WebSocketFactory: Access Token bulunamadı.");
+                    }
+
+                    var uriBuilder = new UriBuilder(context.Uri.GetLeftPart(UriPartial.Path));
+                    if (uriBuilder.Scheme == "wss")
+                        uriBuilder.Scheme = "https";
+
+                    var htu = uriBuilder.Uri.AbsoluteUri;
+                    var dpopProof = await _dpopProofService.CreateProofAsync("GET", htu, currentAccessToken);
+
+                    dws.Options.SetRequestHeader("DPoP", dpopProof);
+                    dws.Options.SetRequestHeader("Authorization", "DPoP " + currentAccessToken);
+
+                    _logger.LogDebug("WebSocketFactory: DPoP başlıkları ile {Uri} adresine bağlanılıyor...", context.Uri);
+                    await dws.ConnectAsync(context.Uri, factoryCancellationToken);
+                    return dws;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "WebSocketFactory içinde DPoP kanıtı oluşturulurken veya bağlanırken hata oluştu.");
+                    dws.Dispose();
+                    throw;
+                }
+            }
+
             _connection = new HubConnectionBuilder()
                 .WithUrl(_hubUrl, options =>
                 {
+                    options.Transports = HttpTransportType.WebSockets;
+                    options.SkipNegotiation = true;
                     options.HttpMessageHandlerFactory = _ => _pipelineBuilder.CreatePipeline();
+                    options.WebSocketFactory = CreateWebSocketFactoryAsync;
                 })
                 .WithAutomaticReconnect()
                 .Build();

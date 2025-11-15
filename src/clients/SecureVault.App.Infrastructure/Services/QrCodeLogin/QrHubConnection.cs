@@ -1,9 +1,13 @@
-﻿using Microsoft.AspNetCore.SignalR.Client;
+﻿using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.Http.Connections.Client;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SecureVault.App.Application.Contracts.Abstractions.Persistence;
 using SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin;
 using SecureVault.App.Infrastructure.Helpers;
 using SecureVault.App.Infrastructure.HttpHandlers;
+using System.Net.WebSockets;
 
 namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
 {
@@ -11,6 +15,8 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
     {
         private HubConnection _hubConnection;
         private readonly IPublicHttpHandlerPipelineBuilder _pipelineBuilder;
+        private readonly IStorageService _storageService;
+        private readonly IDpopProofService _dpopProofService;
         private readonly ILogger<QrHubConnection> _logger;
         private readonly string _hubUrl;
         private string _channelId;
@@ -20,11 +26,15 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
 
         public QrHubConnection(
             IPublicHttpHandlerPipelineBuilder pipelineBuilder,
+            IStorageService storageService,
+            IDpopProofService dpopProofService,
             IOptions<ApiSettings> apiSettings,
             IOptions<QrCodeSettings> qrCodeSettings,
             ILogger<QrHubConnection> logger)
         {
             _pipelineBuilder = pipelineBuilder;
+            _storageService = storageService;
+            _dpopProofService = dpopProofService;
             _logger = logger;
 
             var baseUrl = new Uri(apiSettings.Value.BaseUrl);
@@ -32,103 +42,55 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
             _hubUrl = fullHubUri.ToString();
         }
 
-        public async Task ConnectAndJoinChannelAsync(string channelId, CancellationToken cancellationToken = default)
-        {
-            if (await IsConnectionActiveAsync())
-            {
-                _logger.LogWarning("Hub connection already exists and is active.");
-                return;
-            }
-
-            _channelId = channelId;
-
-            try
-            {
-                await InitializeAndStartConnectionAsync(cancellationToken);
-
-                _logger.LogInformation("Hub connection started successfully. Joining channel {ChannelId}...", _channelId);
-                await _hubConnection.InvokeAsync("JoinChannel", _channelId, cancellationToken);
-                _logger.LogInformation("Successfully joined channel {ChannelId}.", _channelId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to connect to hub or join channel {ChannelId}.", _channelId);
-                await DisposeAsync();
-                throw;
-            }
-        }
-
-        public async Task<string> ConnectAndCreateChannelAsync(CancellationToken cancellationToken = default)
-        {
-            if (await IsConnectionActiveAsync())
-            {
-                _logger.LogWarning("Hub connection already exists and is active.");
-                await DisposeAsync();
-            }
-
-            try
-            {
-                await InitializeAndStartConnectionAsync(cancellationToken);
-
-                _logger.LogInformation("Hub connection started successfully. Creating new channel...");
-                var newChannelId = await _hubConnection.InvokeAsync<string>("CreateChannel", cancellationToken);
-
-                if (string.IsNullOrEmpty(newChannelId))
-                {
-                    throw new InvalidOperationException("Hub returned an invalid (null or empty) channel ID.");
-                }
-
-                _channelId = newChannelId;
-                _logger.LogInformation("Successfully created and joined channel {ChannelId}.", _channelId);
-                return _channelId;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to connect to hub or create channel.");
-                await DisposeAsync();
-                throw;
-            }
-        }
-
-        public async Task<string> SwitchChannelAsync(CancellationToken cancellationToken = default)
-        {
-            if (_hubConnection?.State != HubConnectionState.Connected)
-            {
-                _logger.LogError("Cannot switch channel. Hub is not connected.");
-                throw new InvalidOperationException("Hub is not connected.");
-            }
-
-            try
-            {
-                _logger.LogInformation("Requesting to switch channel. Leaving old channel {OldChannelId}...", _channelId);
-
-                var newChannelId = await _hubConnection.InvokeAsync<string>("SwitchToNewChannel", cancellationToken);
-
-                if (string.IsNullOrEmpty(newChannelId))
-                {
-                    throw new InvalidOperationException("Hub returned an invalid (null or empty) new channel ID during switch.");
-                }
-
-                var oldChannelId = _channelId;
-                _channelId = newChannelId;
-
-                _logger.LogInformation("Successfully switched from channel {OldChannelId} to new channel {NewChannelId}.", oldChannelId, _channelId);
-                return _channelId;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to switch channel. Current channel was {ChannelId}", _channelId);
-                throw;
-            }
-        }
-
-        private async Task InitializeAndStartConnectionAsync(CancellationToken cancellationToken)
+        public async Task<string> StartConnectionAsync(string? channelId, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Initializing new Hub connection to {HubUrl}...", _hubUrl);
+
+            if(string.IsNullOrEmpty(channelId))
+                channelId = Guid.CreateVersion7().ToString();
+            _channelId = channelId;
+
+            async ValueTask<WebSocket> CreateWebSocketFactoryAsync(WebSocketConnectionContext context, CancellationToken factoryCancellationToken)
+            {
+                var dws = new ClientWebSocket();
+
+                try
+                {
+                    var currentAccessToken = await _storageService.GetAccessTokenAsync();
+
+                    var uriBuilder = new UriBuilder(context.Uri.GetLeftPart(UriPartial.Path));
+                    if (uriBuilder.Scheme == "wss")
+                        uriBuilder.Scheme = "https";
+
+                    var htu = uriBuilder.Uri.AbsoluteUri;
+                    var dpopProof = await _dpopProofService.CreateProofAsync("GET", htu, currentAccessToken);
+
+                    dws.Options.SetRequestHeader("DPoP", dpopProof);
+
+                    if (!string.IsNullOrEmpty(currentAccessToken))
+                        dws.Options.SetRequestHeader("Authorization", "DPoP " + currentAccessToken);
+
+
+                    dws.Options.SetRequestHeader("X-Channel-Id", _channelId);
+
+                    _logger.LogDebug("WebSocketFactory: DPoP başlıkları ile {Uri} adresine bağlanılıyor...", context.Uri);
+                    await dws.ConnectAsync(context.Uri, factoryCancellationToken);
+                    return dws;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "WebSocketFactory içinde DPoP kanıtı oluşturulurken veya bağlanırken hata oluştu.");
+                    dws.Dispose();
+                    throw;
+                }
+            }
 
             _hubConnection = new HubConnectionBuilder()
                 .WithUrl(_hubUrl, options =>
                 {
+                    options.Transports = HttpTransportType.WebSockets;
+                    options.SkipNegotiation = true;
+                    options.WebSocketFactory = CreateWebSocketFactoryAsync;
                     options.HttpMessageHandlerFactory = _ => _pipelineBuilder.CreatePipeline();
                 })
                 .WithAutomaticReconnect()
@@ -153,7 +115,41 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
             _hubConnection.Reconnected += OnReconnected;
 
             await _hubConnection.StartAsync(cancellationToken);
+            return _channelId;
         }
+        public async Task<string> SwitchChannelAsync(CancellationToken cancellationToken = default)
+        {
+            if (_hubConnection?.State != HubConnectionState.Connected)
+            {
+                _logger.LogError("Cannot switch channel. Hub is not connected.");
+                throw new InvalidOperationException("Hub is not connected.");
+            }
+
+            try
+            {
+                _logger.LogInformation("Requesting to switch channel. Leaving old channel {OldChannelId}...", _channelId);
+
+                var newChannelId = Guid.CreateVersion7().ToString();
+                await _hubConnection.InvokeAsync<string>("SwitchToNewChannel", newChannelId, cancellationToken);
+
+                if (string.IsNullOrEmpty(newChannelId))
+                {
+                    throw new InvalidOperationException("Hub returned an invalid (null or empty) new channel ID during switch.");
+                }
+
+                var oldChannelId = _channelId;
+                _channelId = newChannelId;
+
+                _logger.LogInformation("Successfully switched from channel {OldChannelId} to new channel {NewChannelId}.", oldChannelId, _channelId);
+                return _channelId;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to switch channel. Current channel was {ChannelId}", _channelId);
+                throw;
+            }
+        }
+
 
         public async Task SendMessageAsync(string messageType, string payload, CancellationToken cancellationToken = default)
         {
@@ -195,31 +191,11 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
             return Task.CompletedTask;
         }
 
-        private async Task OnReconnected(string newConnectionId)
+        private Task OnReconnected(string newConnectionId)
         {
             _logger.LogInformation("Hub connection reestablished with new ConnectionId: {ConnectionId}.", newConnectionId);
-
-            if (!string.IsNullOrEmpty(_channelId))
-            {
-                _logger.LogInformation("Re-joining channel {ChannelId} after reconnection.", _channelId);
-                try
-                {
-                    await _hubConnection.InvokeAsync("JoinChannel", _channelId);
-                    _logger.LogInformation("Successfully re-joined channel {ChannelId}.", _channelId);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to re-join channel {ChannelId} after reconnection.", _channelId);
-                    if (OnErrorReceived != null)
-                        _logger.LogError(ex, "Failed to re-join channel {ChannelId} after reconnection.", _channelId);
-                    if (OnErrorReceived != null)
-                    {
-                        await OnErrorReceived.Invoke("FailedToRejoinChannel");
-                    }
-
-                    _channelId = null;
-                }
-            }
+            _logger.LogInformation("Channel {ChannelId} was re-joined automatically via OnConnectedAsync logic.", _channelId);
+            return Task.CompletedTask;
         }
         public async ValueTask DisposeAsync()
         {

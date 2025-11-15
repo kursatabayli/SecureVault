@@ -1,31 +1,16 @@
 ﻿using Microsoft.Extensions.Logging;
-using SecureVault.App.Application.Contracts.Abstractions.Device;
 using SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin;
+using SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin.enums;
 using SecureVault.App.Application.Contracts.DTOs.Auth;
 using SecureVault.App.Application.Contracts.DTOs.Session;
-using System.Text.Json;
 
 namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
 {
-    public class QrLoginOrchestratorService : IQrLoginOrchestrator, IQrLoginContext
+    public class QrLoginOrchestratorService : IQrLoginOrchestrator
     {
-        private const int QrRefreshIntervalSeconds = 55;
-        private readonly IQrHubConnection _hubConnection;
-        private readonly ISecureChannelManager _secureChannelManager;
+        private readonly IQrLoginSessionManager _sessionManager;
         private readonly IDispatcher _dispatcher;
-        private readonly IDeviceInfoService _deviceInfoService;
         private readonly ILogger<QrLoginOrchestratorService> _logger;
-        private readonly IReadOnlyDictionary<string, IMessageHandler> _messageHandlers;
-
-        public QrLoginRole CurrentRole => _currentRole;
-        public bool IsPublicKeySent => _isPublicKeySent;
-        public ISecureChannelManager SecureChannelManager => _secureChannelManager;
-
-        private string _channelId;
-        private QrLoginRole _currentRole;
-        private QrSessionState _currentState = QrSessionState.Idle;
-        private bool _isPublicKeySent = false;
-        private Timer _qrRefreshTimer;
 
         public event Func<QrSessionState, string, Task> OnStateChanged;
         public event Func<string, Task> OnQrCodeAvailable;
@@ -34,270 +19,167 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin
         public event Func<DeviceDetailDto, Task> OnDeviceAuthorizationRequired;
 
         public QrLoginOrchestratorService(
-            IQrHubConnection hubConnection,
-            ISecureChannelManager secureChannelManager,
+            IQrLoginSessionManager sessionManager,
             IDispatcher dispatcher,
-            IDeviceInfoService deviceInfoService,
-            ILogger<QrLoginOrchestratorService> logger,
-            IEnumerable<IMessageHandler> handlers)
+            ILogger<QrLoginOrchestratorService> logger)
         {
-            _hubConnection = hubConnection;
-            _secureChannelManager = secureChannelManager;
+            _sessionManager = sessionManager;
             _dispatcher = dispatcher;
-            _deviceInfoService = deviceInfoService;
             _logger = logger;
-            _messageHandlers = handlers.ToDictionary(h => h.MessageType, h => h);
 
-            _hubConnection.OnMessageReceived += HandleReceivedMessage;
-            _hubConnection.OnErrorReceived += HandleErrorReceived;
+            _sessionManager.StateChanged += HandleStateChanged;
+            _sessionManager.QrCodeAvailable += HandleQrCodeAvailable;
+            _sessionManager.LoginCredentialsReceived += HandleLoginCredentialsReceived;
+            _sessionManager.DeviceAuthorizationRequired += HandleDeviceAuthorizationRequired;
+            _sessionManager.AuthorizationComplete += HandleAuthorizationComplete;
         }
 
-        public async Task SetState(QrSessionState newState, string message)
+        #region UI Komutlarını Çekirdek Mantığa İletme (Pass-through)
+
+        public Task StartSession(QrLoginRole role, CancellationToken cancellationToken = default)
         {
-            if (_currentState == newState) return;
-
-            var oldState = _currentState;
-            _currentState = newState;
-
-            if (oldState == QrSessionState.AwaitingPeer && newState != QrSessionState.AwaitingPeer)
-            {
-                StopQrRefreshTimer();
-            }
-            _logger.LogInformation("State changed to {State}: {Message}", newState, message);
-            await SafeInvokeAsync(() => OnStateChanged?.Invoke(newState, message));
+            return _sessionManager.StartSession(role, cancellationToken);
         }
 
-        public async Task StartSession(QrLoginRole role, CancellationToken cancellationToken = default)
+        public Task JoinSessionByScanning(QrLoginRole role, string scannedChannelId, CancellationToken cancellationToken = default)
         {
-            StopQrRefreshTimer();
-
-            await ResetStateAsync();
-            _currentRole = role;
-
-            try
-            {
-                await SetState(QrSessionState.CreatingChannel, "Oturum kanalı oluşturuluyor...");
-                var result = await _hubConnection.ConnectAndCreateChannelAsync(cancellationToken);
-
-                _channelId = result;
-                if (string.IsNullOrEmpty(_channelId))
-                    throw new InvalidOperationException("Sunucudan kanal ID'si alınamadı.");
-
-                await SafeInvokeAsync(() => OnQrCodeAvailable?.Invoke(_channelId));
-                await SetState(QrSessionState.AwaitingPeer, "Diğer cihazın bağlanması bekleniyor...");
-
-                StartQrRefreshTimer();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Oturum başlatılamadı.");
-                await SetState(QrSessionState.Error, $"Oturum başlatılamadı: {ex.Message}");
-                await DisposeAsync();
-            }
+            return _sessionManager.JoinSessionByScanning(role, scannedChannelId, cancellationToken);
         }
 
-        public async Task JoinSessionByScanning(QrLoginRole role, string scannedChannelId, CancellationToken cancellationToken = default)
+        public Task SendCredentials(bool rememberMeDecision)
         {
-            await ResetStateAsync();
-            _currentRole = role;
-            _channelId = scannedChannelId;
-
-            try
-            {
-                if (string.IsNullOrEmpty(scannedChannelId))
-                    throw new ArgumentNullException(nameof(scannedChannelId), "Taranan Channel ID boş olamaz.");
-
-                await _hubConnection.ConnectAndJoinChannelAsync(_channelId, cancellationToken);
-                await SetState(QrSessionState.AwaitingPeer, "Diğer cihazın bağlanması bekleniyor...");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Oturuma katılım sağlanamadı.");
-                await SetState(QrSessionState.Error, $"Oturuma katılım sağlanamadı: {ex.Message}");
-                await DisposeAsync();
-            }
+            return _sessionManager.SendCredentials(rememberMeDecision);
         }
 
-        #region Private Timer Methods
-        private void StartQrRefreshTimer()
+        public Task ApproveAuthorization()
         {
-            _logger.LogInformation("Starting QR refresh timer for {Seconds} seconds.", QrRefreshIntervalSeconds);
-            StopQrRefreshTimer();
-
-            _qrRefreshTimer = new Timer(
-                callback: OnQrTimerElapsed,
-                state: null,
-                dueTime: TimeSpan.FromSeconds(QrRefreshIntervalSeconds),
-                period: Timeout.InfiniteTimeSpan
-            );
+            return _sessionManager.ApproveAuthorization();
         }
 
-        private void StopQrRefreshTimer()
+        public Task DenyAuthorization()
         {
-            if (_qrRefreshTimer != null)
-            {
-                _logger.LogInformation("Stopping QR refresh timer.");
-                _qrRefreshTimer.Dispose();
-                _qrRefreshTimer = null;
-            }
+            return _sessionManager.DenyAuthorization();
         }
 
-        private async void OnQrTimerElapsed(object state)
-        {
-            await _dispatcher.DispatchAsync(async () =>
-            {
-                if (_currentState == QrSessionState.AwaitingPeer)
-                {
-                    _logger.LogInformation("QR code expired. Requesting a new channel...");
-                    try
-                    {
-                        var newChannelId = await _hubConnection.SwitchChannelAsync(CancellationToken.None);
-                        _channelId = newChannelId;
-
-                        _logger.LogInformation("New channel {NewChannelId} received. Updating QR code.", newChannelId);
-
-                        await SafeInvokeAsync(() => OnQrCodeAvailable?.Invoke(_channelId));
-
-                        StartQrRefreshTimer();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to switch to a new channel automatically.");
-                        await SetState(QrSessionState.Error, $"Yeni QR kod alınamadı: {ex.Message}");
-                        await DisposeAsync();
-                    }
-                }
-            });
-        }
         #endregion
 
-        #region Lifecycle and Event Handlers
-        private async Task HandleReceivedMessage(string messageType, string payload)
+        #region Olay Yönlendirme (Event Bridging)
+
+        private async void HandleStateChanged(QrSessionState state, string message)
         {
-            if (_messageHandlers.TryGetValue(messageType, out var handler))
-            {
-                await handler.HandleAsync(this, payload);
-            }
-            else
-            {
-                _logger.LogWarning("Unknown message type received: {MessageType}", messageType);
-            }
-        }
+            if (OnStateChanged == null) return;
 
-        private async Task HandleErrorReceived(string errorMessage)
-        {
-            await SetState(QrSessionState.Error, $"Sunucu hatası: {errorMessage}");
-        }
-
-        public async Task InitiateKeyExchange()
-        {
-            if (_isPublicKeySent) return;
-
-            await SetState(QrSessionState.ExchangingKeys, "Anahtar değişimi yapılıyor...");
-            var publicKeyBase64 = _secureChannelManager.InitiateKeyExchange();
-            await _hubConnection.SendMessageAsync("PublicKey", publicKeyBase64);
-            _isPublicKeySent = true;
-        }
-
-        public async Task SendDeviceInfo()
-        {
-            var deviceInfo = new DeviceDetailDto
-            {
-                UniqueDeviceId = await _deviceInfoService.GetUniqueDeviceIdAsync(),
-                DeviceModel = _deviceInfoService.GetDeviceModel(),
-                DeviceName = _deviceInfoService.GetDeviceName(),
-                DeviceManufacturer = _deviceInfoService.GetDeviceManufacturer(),
-                OperatingSystem = _deviceInfoService.GetOperatingSystemInfo()
-            };
-
-            var payload = JsonSerializer.Serialize(deviceInfo);
-            await _hubConnection.SendMessageAsync("DeviceInfoRequest", payload);
-        }
-
-        public async Task ApproveAuthorization()
-        {
-            await _hubConnection.SendMessageAsync("AuthorizationApproved", string.Empty);
-            await InitiateKeyExchange();
-        }
-
-        public async Task DenyAuthorization()
-        {
-            await _hubConnection.SendMessageAsync("AuthorizationDenied", string.Empty);
-            await SetState(QrSessionState.Idle, "Bağlantı isteği reddedildi.");
-            await DisposeAsync();
-        }
-
-        public async Task SendCredentials(LoginQrCodeDto credentials)
-        {
-            if (_currentRole != QrLoginRole.Provider || !_secureChannelManager.IsSecureChannelEstablished)
-            {
-                await SetState(QrSessionState.Error, "Bu cihaz oturum bilgisi gönderme yetkisine sahip değil veya güvenli kanal hazır değil.");
-                return;
-            }
-
-            try
-            {
-                await SetState(QrSessionState.TransferringCredentials, "Oturum bilgileri şifrelenip gönderiliyor...");
-                var encryptedBytes = _secureChannelManager.Encrypt(credentials);
-                var encryptedBase64 = Convert.ToBase64String(encryptedBytes);
-                await _hubConnection.SendMessageAsync("EncryptedLoginData", encryptedBase64);
-                await SafeInvokeAsync(() => OnAuthorizationComplete?.Invoke());
-                await SetState(QrSessionState.Completed, "Yetkilendirme tamamlandı.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Kimlik bilgileri gönderilemedi.");
-                await SetState(QrSessionState.Error, $"Kimlik bilgileri gönderilemedi: {ex.Message}");
-            }
-        }
-
-        public async Task RaiseDeviceAuthorizationRequired(DeviceDetailDto deviceInfo) => await SafeInvokeAsync(() => OnDeviceAuthorizationRequired?.Invoke(deviceInfo));
-        public async Task RaiseLoginCredentialsReceived(LoginQrCodeDto credentials) => await SafeInvokeAsync(() => OnLoginCredentialsReceived?.Invoke(credentials));
-
-        public async Task SafeInvokeAsync(Func<Task>? eventHandler)
-        {
-            if (eventHandler == null) return;
-
-            var handlers = eventHandler.GetInvocationList();
-            foreach (var handler in handlers)
+            foreach (var handler in OnStateChanged.GetInvocationList().Cast<Func<QrSessionState, string, Task>>())
             {
                 await _dispatcher.DispatchAsync(async () =>
                 {
                     try
                     {
-                        if (handler is Func<Task> taskHandler)
-                        {
-                            await taskHandler();
-                        }
+                        await handler(state, message);
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Error in event subscriber: {ex}");
+                        _logger.LogError(ex, "OnStateChanged abonesinde hata oluştu.");
                     }
                 });
             }
         }
-        private Task ResetStateAsync()
+        private async void HandleQrCodeAvailable(string channelId)
         {
-            _logger.LogInformation("Resetting QR login session state.");
-            _isPublicKeySent = false;
-            _channelId = null;
-            _currentState = QrSessionState.Idle;
+            if (OnQrCodeAvailable == null) return;
 
-            return Task.CompletedTask;
+            foreach (var handler in OnQrCodeAvailable.GetInvocationList().Cast<Func<string, Task>>())
+            {
+                await _dispatcher.DispatchAsync(async () =>
+                {
+                    try
+                    {
+                        await handler(channelId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "OnQrCodeAvailable abonesinde hata oluştu.");
+                    }
+                });
+            }
         }
+        private async void HandleLoginCredentialsReceived(LoginQrCodeDto credentials)
+        {
+            if (OnLoginCredentialsReceived == null) return;
+
+            foreach (var handler in OnLoginCredentialsReceived.GetInvocationList().Cast<Func<LoginQrCodeDto, Task>>())
+            {
+                await _dispatcher.DispatchAsync(async () =>
+                {
+                    try
+                    {
+                        await handler(credentials);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "OnLoginCredentialsReceived abonesinde hata oluştu.");
+                    }
+                });
+            }
+        }
+        private async void HandleDeviceAuthorizationRequired(DeviceDetailDto deviceInfo)
+        {
+            if (OnDeviceAuthorizationRequired == null) return;
+
+            foreach (var handler in OnDeviceAuthorizationRequired.GetInvocationList().Cast<Func<DeviceDetailDto, Task>>())
+            {
+                await _dispatcher.DispatchAsync(async () =>
+                {
+                    try
+                    {
+                        await handler(deviceInfo);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "OnDeviceAuthorizationRequired abonesinde hata oluştu.");
+                    }
+                });
+            }
+        }
+        private async void HandleAuthorizationComplete()
+        {
+            if (OnAuthorizationComplete == null) return;
+
+            foreach (var handler in OnAuthorizationComplete.GetInvocationList().Cast<Func<Task>>())
+            {
+                await _dispatcher.DispatchAsync(async () =>
+                {
+                    try
+                    {
+                        await handler();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "OnAuthorizationComplete abonesinde hata oluştu.");
+                    }
+                });
+            }
+        }
+
+        #endregion
+
+        #region Yaşam Döngüsü (Lifecycle)
+
         public async ValueTask DisposeAsync()
         {
-            _logger.LogInformation("Disposing Orchestrator...");
+            _logger.LogInformation("Disposing Orchestrator (Adapter) and unsubscribing from Session Manager...");
 
-            StopQrRefreshTimer();
+            _sessionManager.StateChanged -= HandleStateChanged;
+            _sessionManager.QrCodeAvailable -= HandleQrCodeAvailable;
+            _sessionManager.LoginCredentialsReceived -= HandleLoginCredentialsReceived;
+            _sessionManager.DeviceAuthorizationRequired -= HandleDeviceAuthorizationRequired;
+            _sessionManager.AuthorizationComplete -= HandleAuthorizationComplete;
 
-            _hubConnection.OnMessageReceived -= HandleReceivedMessage;
-            _hubConnection.OnErrorReceived -= HandleErrorReceived;
+            await _sessionManager.DisposeAsync();
 
-            await _hubConnection.DisposeAsync();
-            await ResetStateAsync();
+            GC.SuppressFinalize(this);
         }
+
         #endregion
     }
 }

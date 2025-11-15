@@ -6,6 +6,6 @@ public record DpopKey(ECDsaSecurityKey SigningKey, string PublicJwkString);
 
 public interface IDpopKeyService
 {
-  Task<DpopKey> GetOrCreateDpopKeyAsync();
-  Task ClearDpopKeyAsync();
+    Task<DpopKey> GetOrCreateDpopKeyAsync();
+    Task ClearDpopKeyCacheAsync();
 }

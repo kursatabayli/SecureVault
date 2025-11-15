@@ -19,15 +19,24 @@ public class InteractionHub : Hub
 
   public async override Task OnConnectedAsync()
   {
-    var userId = GetUserIdFromContext();
-    if (string.IsNullOrEmpty(userId))
+    try
     {
-      Context.Abort();
-      return;
+      var userId = GetUserIdFromContext();
+      if (string.IsNullOrEmpty(userId))
+      {
+        Context.Abort();
+        return;
+      }
+      await Groups.AddToGroupAsync(Context.ConnectionId, userId);
+      _logger.LogInformation("Client connected: {ConnectionId}, User: {UserId}", Context.ConnectionId, userId);
+      await base.OnConnectedAsync();
     }
-    await Groups.AddToGroupAsync(Context.ConnectionId, userId);
-    _logger.LogInformation("Client connected: {ConnectionId}, User: {UserId}", Context.ConnectionId, userId);
-    await base.OnConnectedAsync();
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "!!!!!!!! ERROR OnConnectedAsync !!!!!!!! ConnectionId: {ConnectionId}", Context.ConnectionId);
+
+      Context.Abort();
+    }
   }
 
   public async Task RegisterActiveDevice(string uniqueDeviceId)

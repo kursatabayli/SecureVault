@@ -42,6 +42,7 @@ namespace SecureVault.Interaction.Api
             builder.AddSeqEndpoint("seq");
 
             builder.AddRedisClient("redis-cache");
+            builder.Services.AddAuthorization();
 
             builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(nameof(JwtSettings)));
             var jwtSettings = builder.Configuration.GetSection(nameof(JwtSettings)).Get<JwtSettings>();
@@ -65,35 +66,13 @@ namespace SecureVault.Interaction.Api
                 };
             });
 
-            var allowedOrigin = builder.Configuration["CorsSettings:AllowedOrigin"];
-
-            if (string.IsNullOrEmpty(allowedOrigin))
-                throw new InvalidOperationException("CORS origin 'CorsSettings:AllowedOrigin' ayarlanmamış.");
-
-            builder.Services.AddCors(options =>
+            var redisConnectionString = builder.Configuration.GetConnectionString("redis-cache");
+            if (string.IsNullOrEmpty(redisConnectionString))
+                throw new InvalidOperationException("Redis bağlantı dizesi 'redis-cache' bulunamadı.");
+            builder.Services.AddSignalR().AddStackExchangeRedis(redisConnectionString, options =>
             {
-                options.AddPolicy("AllowAppOrigin",
-                    policy =>
-                    {
-                        policy.WithOrigins(allowedOrigin)
-                              .AllowAnyHeader()
-                              .AllowAnyMethod()
-                              .AllowCredentials();
-                    });
+                options.Configuration.ChannelPrefix = RedisChannel.Literal("Interaction-Api");
             });
-
-            builder.Services.AddSignalR().AddStackExchangeRedis(options =>
-            {
-                var connectionString = builder.Configuration.GetConnectionString("redis-cache");
-
-                if (string.IsNullOrEmpty(connectionString))
-                    throw new InvalidOperationException("Redis bağlantı dizesi 'redis-cache' bulunamadı.");
-
-                options.Configuration = ConfigurationOptions.Parse(connectionString);
-                options.Configuration.AbortOnConnectFail = false;
-            });
-            builder.Services.AddAuthorization();
-
 
             var app = builder.Build();
 
@@ -105,11 +84,10 @@ namespace SecureVault.Interaction.Api
             // app.UseHttpsRedirection();
             app.UseSerilogRequestLogging();
             app.UseRouting();
-            app.UseCors("AllowAppOrigin");
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseWebSockets();
             app.MapDefaultEndpoints();
-            app.MapControllers();
             app.MapHub<InteractionHub>("/hubs/interaction-hub");
             app.MapHub<QrLoginHub>("/hubs/qr-login-hub");
 

@@ -41,13 +41,7 @@
       "interaction-route": {
         "ClusterId": "interaction-cluster",
         "Match": {
-          "Path": "/interaction/{**everything}",
-          "Methods": [
-            "GET",
-            "POST",
-            "PUT",
-            "DELETE"
-          ]
+          "Path": "/interaction/{**everything}"
         },
         "Transforms": [
           {

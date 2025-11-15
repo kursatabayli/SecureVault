@@ -18,6 +18,8 @@ namespace SecureVault.App.Application.Contracts.Abstractions.Persistence
         Task SetKeysAsync(byte[] privateKey, byte[] encryptionKey);
         Task<byte[]> GetOrCreateDbKeyAsync();
         Task<string?> GetOrCreateDbPathAsync();
+        Task<string?> GetDPoPKeyAsync();
+        Task SetDPoPKeyAsync(string dpopJwk);
 
         //Preferences
         void SetEmail(string email);

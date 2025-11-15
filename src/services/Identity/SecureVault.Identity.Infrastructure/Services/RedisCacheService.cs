@@ -1,44 +1,61 @@
-﻿using SecureVault.Identity.Application.Contracts.Services;
-using StackExchange.Redis;
+﻿using Microsoft.Extensions.Caching.Distributed;
+using SecureVault.Identity.Application.Contracts.Services;
+using System.Text;
 using System.Text.Json;
 
 namespace SecureVault.Identity.Infrastructure.Services
 {
     public class RedisCacheService : ICacheService
     {
-        private readonly IDatabase _database;
+        private readonly IDistributedCache _cache;
 
-        public RedisCacheService(IConnectionMultiplexer redis)
+        public RedisCacheService(IDistributedCache cache)
         {
-            _database = redis.GetDatabase();
+            _cache = cache;
         }
 
         public async Task<T?> GetAsync<T>(string key)
         {
-            var value = await _database.StringGetAsync(key);
-            if (value.IsNullOrEmpty)
+            var value = await _cache.GetAsync(key);
+
+            if (value == null || value.Length == 0)
                 return default;
 
             if (typeof(T) == typeof(string))
-                return (T)(object)value.ToString();
+            {
+                return (T)(object)Encoding.UTF8.GetString(value);
+            }
 
-            return JsonSerializer.Deserialize<T>(value!);
+            return JsonSerializer.Deserialize<T>(value);
         }
 
         public async Task SetAsync(string key, object data, TimeSpan? expiry = null)
         {
-            if (data is string stringValue)
+            var options = new DistributedCacheEntryOptions();
+            if (expiry.HasValue)
             {
-                await _database.StringSetAsync(key, stringValue, expiry);
-                return;
+                options.AbsoluteExpirationRelativeToNow = expiry;
             }
 
-            var jsonValue = JsonSerializer.Serialize(data);
-            await _database.StringSetAsync(key, jsonValue, expiry);
+            byte[] bytes;
+            if (data is string stringValue)
+            {
+                bytes = Encoding.UTF8.GetBytes(stringValue);
+            }
+            else
+            {
+                bytes = JsonSerializer.SerializeToUtf8Bytes(data);
+            }
+
+            await _cache.SetAsync(key, bytes, options);
         }
 
-        public async Task RemoveAsync(string key) => await _database.KeyDeleteAsync(key);
+        public async Task RemoveAsync(string key) => await _cache.RemoveAsync(key);
 
-        public async Task<bool> ExistsAsync(string key) => await _database.KeyExistsAsync(key);
+        public async Task<bool> ExistsAsync(string key)
+        {
+            var value = await _cache.GetAsync(key);
+            return value != null;
+        }
     }
 }
