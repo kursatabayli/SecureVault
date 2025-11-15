@@ -117,6 +117,10 @@ namespace SecureVault.App.Infrastructure.Services.Storage
             }
         }
 
+        public async Task<string?> GetDPoPKeyAsync() => await _secureStorage.GetAsync(StorageItems.DPoPPrivateJwk);
+
+        public async Task SetDPoPKeyAsync(string dpopJwk) => await _secureStorage.SetAsync(StorageItems.DPoPPrivateJwk, dpopJwk);
+
         //Preferences
         public void SetLastSyncDate(DateTimeOffset syncDate) => _preferences.Set(StorageItems.LastSyncDateKey, syncDate);
         public DateTimeOffset GetLastSyncDate() => _preferences.Get(StorageItems.LastSyncDateKey, DateTimeOffset.MinValue);

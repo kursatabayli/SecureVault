@@ -2,10 +2,8 @@
 
 public interface IQrLoginChannelService
 {
-    Task<string> CreateChannelAsync();
-    Task<int> GetChannelCountAsync(string channelId);
+    Task<(bool Success, int NewCount, string Role)> RegisterConnectionAsync(string channelId, string connectionId);
     Task<bool> ValidateChannelAsync(string channelId);
     Task MarkChannelAsCompletedAsync(string channelId);
-    Task<int> JoinChannelAsync(string channelId, string connectionId);
     Task<string?> LeaveChannelAsync(string connectionId);
 }

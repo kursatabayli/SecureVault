@@ -15,5 +15,6 @@
         public const string DbEncryptionKey = "DbEncryptionKey";
         public const string DbPathKey = "DbPathKey";
         public const string LastSyncDateKey = "LastSyncDate";
+        public const string DPoPPrivateJwk = "DPoPPrivateJwk";
     }
 }

@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin;
+using SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin.enums;
 using SecureVault.App.Application.Contracts.DTOs.Auth;
 using SecureVault.App.Application.Features.CQRS.Auth.Commands;
 using SecureVault.App.Components.Helpers;
@@ -15,27 +16,25 @@ namespace SecureVault.App.Components.Pages.Auth
         [Inject] private IMediator Mediator { get; set; }
         [Inject] private IMapper Mapper { get; set; }
         [Inject] private IDialogService DialogService { get; set; }
-        [Inject] private IQrLoginOrchestrator Orchestrator { get; set; }
+        [Inject] private IQrLoginOrchestratorFactory OrchestratorFactory { get; set; }
         [Inject] private NavigationManager NavigationManager { get; set; }
 
+        private IQrLoginOrchestrator _orchestrator;
         private CancellationTokenSource _sessionCts;
         private readonly DialogOptions DialogOptions = new() { BackdropClick = false, CloseOnEscapeKey = false, };
-        protected override void OnInitialized()
-        {
-            Orchestrator.OnStateChanged += HandleStateChanged;
-            Orchestrator.OnQrCodeAvailable += HandleQrCodeAvailable;
-            Orchestrator.OnLoginCredentialsReceived += HandleLoginCredentialsReceived;
-        }
-        private void SetView(LoginPageView view, string statusMessage = null)
+
+        private async Task SetView(LoginPageView view, string statusMessage = null)
         {
             _currentView = view;
             if (statusMessage is not null)
                 _statusMessage = statusMessage;
-            InvokeAsync(StateHasChanged);
+            await InvokeAsync(StateHasChanged);
         }
         private async Task ScanQrCode()
         {
-            SetView(LoginPageView.Processing, "QR kod taranıyor...");
+            await SetView(LoginPageView.Processing, "QR kod taranıyor...");
+
+            await InitializeOrchestrator();
 
             var dialog = await DialogService.ShowAsync<ScanQRCodeDialog>("QR Kodu Tara", DialogOptions);
             var result = await dialog.Result;
@@ -44,8 +43,7 @@ namespace SecureVault.App.Components.Pages.Auth
             {
                 try
                 {
-                    _sessionCts = new CancellationTokenSource();
-                    await Orchestrator.JoinSessionByScanning(QrLoginRole.Requester, scannedChannelId, _sessionCts.Token);
+                    await _orchestrator.JoinSessionByScanning(QrLoginRole.Requester, scannedChannelId, _sessionCts.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -58,18 +56,19 @@ namespace SecureVault.App.Components.Pages.Auth
                 }
             }
             else
-                SetView(LoginPageView.InitialSelection);
+                await SetView(LoginPageView.InitialSelection);
 
         }
 
         private async Task GenerateQrCode()
         {
-            SetView(LoginPageView.Processing, "Güvenli oturum başlatılıyor...");
+            await SetView(LoginPageView.Processing, "Güvenli oturum başlatılıyor...");
+
+            await InitializeOrchestrator();
+
             try
             {
-                _sessionCts = new CancellationTokenSource();
-
-                await Orchestrator.StartSession(QrLoginRole.Requester, _sessionCts.Token);
+                await _orchestrator.StartSession(QrLoginRole.Requester, _sessionCts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -90,55 +89,76 @@ namespace SecureVault.App.Components.Pages.Auth
                 case QrSessionState.AwaitingAuthorization:
                     if (_currentView == LoginPageView.DisplayingQr)
                         _channelIdForQr = null;
-                    SetView(LoginPageView.Processing, message);
+                    await SetView(LoginPageView.Processing, message);
                     break;
 
                 case QrSessionState.Error:
                     Snackbar.Add(message, Severity.Error);
-                    SetView(LoginPageView.InitialSelection);
+                    await SetView(LoginPageView.InitialSelection);
                     break;
             }
             await InvokeAsync(StateHasChanged);
         }
-        private Task HandleQrCodeAvailable(string channelId)
+        private async Task HandleQrCodeAvailable(string channelId)
         {
             _channelIdForQr = channelId;
-            SetView(LoginPageView.DisplayingQr);
-            return Task.CompletedTask;
+            await SetView(LoginPageView.DisplayingQr);
         }
         private async Task HandleQrClose()
         {
-            _sessionCts?.Cancel();
-            await Orchestrator.DisposeAsync();
-            SetView(LoginPageView.InitialSelection);
+            await DisposeCurrentOrchestrator();
+
+            await SetView(LoginPageView.InitialSelection);
         }
         private async Task HandleLoginCredentialsReceived(LoginQrCodeDto credentials)
         {
-            SetView(LoginPageView.Processing, "Oturum bilgileri doğrulandı. Giriş yapılıyor...");
+            await SetView(LoginPageView.Processing, "Oturum bilgileri doğrulandı. Giriş yapılıyor...");
 
             var command = Mapper.Map<LoginWithQrCodeCommand>(credentials);
             var result = await Mediator.Send(command);
 
             if (result.IsSuccess)
-                NavigationManager.NavigateTo("/", forceLoad: true);
+                NavigationManager.NavigateTo("/");
             else
                 await HandleStateChanged(QrSessionState.Error, result.Error.Message ?? "Giriş işlemi sırasında bilinmeyen bir hata oluştu.");
         }
 
         private async Task GoBack()
         {
-            _sessionCts?.Cancel();
-            await Orchestrator.DisposeAsync();
             NavigationManager.NavigateTo("/login");
+        }
+        private async Task InitializeOrchestrator()
+        {
+            await DisposeCurrentOrchestrator();
+
+            _orchestrator = OrchestratorFactory.Create();
+
+            _orchestrator.OnStateChanged += HandleStateChanged;
+            _orchestrator.OnQrCodeAvailable += HandleQrCodeAvailable;
+            _orchestrator.OnLoginCredentialsReceived += HandleLoginCredentialsReceived;
+
+            _sessionCts?.Dispose();
+            _sessionCts = new CancellationTokenSource();
+        }
+        private async Task DisposeCurrentOrchestrator()
+        {
+            _sessionCts?.Cancel();
+            _sessionCts?.Dispose();
+            _sessionCts = null;
+
+            if (_orchestrator != null)
+            {
+                _orchestrator.OnStateChanged -= HandleStateChanged;
+                _orchestrator.OnQrCodeAvailable -= HandleQrCodeAvailable;
+                _orchestrator.OnLoginCredentialsReceived -= HandleLoginCredentialsReceived;
+
+                await _orchestrator.DisposeAsync();
+                _orchestrator = null;
+            }
         }
         public async ValueTask DisposeAsync()
         {
-            Orchestrator.OnStateChanged -= HandleStateChanged;
-            Orchestrator.OnQrCodeAvailable -= HandleQrCodeAvailable;
-            Orchestrator.OnLoginCredentialsReceived -= HandleLoginCredentialsReceived;
-            _sessionCts?.Cancel();
-            _sessionCts?.Dispose();
-            await Orchestrator.DisposeAsync();
+            await DisposeCurrentOrchestrator();
         }
     }
 }

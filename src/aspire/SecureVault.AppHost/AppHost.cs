@@ -19,6 +19,7 @@ var vaultDb = builder.AddMongoDB("vault-db").WithDataVolume();
 
 var redisPasswordParameter = builder.AddParameter("redispassword", secret: true);
 var redisCache = builder.AddRedis("redis-cache")
+                        .WithRedisInsight()
                         .WithPassword(redisPasswordParameter);
 
 var prometheus = builder.AddContainer("prometheus", "prom/prometheus", "v3.2.1")
@@ -42,9 +43,11 @@ var vaultApi = builder.AddProject<Projects.SecureVault_Vault_Api>("vault-api");
 var interactionApi = builder.AddProject<Projects.SecureVault_Interaction_Api>("interaction-api");
 var apigateway = builder.AddProject<Projects.SecureVault_ApiGateway>("api-gateway");
 
-var gatewayTunnel = builder.AddDevTunnel("public-gateway")
-                           .WithReference(apigateway)
-                           .WithAnonymousAccess();
+
+// DevTunnels services does not work for WebSockets requests cause of unknown issue. use your own tunneling solution or localhost for testing.
+//var gatewayTunnel = builder.AddDevTunnel("public-gateway")
+//                           .WithReference(apigateway)
+//                           .WithAnonymousAccess();
 
 var jwtIssuer = "https://identity.securevault.local";
 var jwtAudience = apigateway.Resource.Name;
@@ -57,8 +60,7 @@ identityApi.WithReference(identityDb)
            .WithEnvironment("JwtSettings__RefreshTokenKey", jwtRefreshKeyParameter)
            .WithEnvironment("JwtSettings__Issuer", jwtIssuer)
            .WithEnvironment("JwtSettings__Audience", jwtAudience)
-           .WithEnvironment("GRAFANA_URL", grafana.GetEndpoint("http"))
-           .WithReplicas(3);
+           .WithEnvironment("GRAFANA_URL", grafana.GetEndpoint("http"));
 
 vaultApi.WithReference(vaultDb)
         .WithReference(seq)
@@ -73,7 +75,7 @@ interactionApi.WithReference(redisCache)
               .WithEnvironment("JwtSettings__Key", jwtKeyParameter)
               .WithEnvironment("JwtSettings__Issuer", jwtIssuer)
               .WithEnvironment("JwtSettings__Audience", jwtAudience)
-              .WithEnvironment("CorsSettings__AllowedOrigin", jwtAudience)
+              .WithEnvironment("CorsSettings__AllowedOrigin", apigateway.GetEndpoint("https"))
               .WithEnvironment("GRAFANA_URL", grafana.GetEndpoint("http"));
 
 apigateway.WithReference(redisCache)

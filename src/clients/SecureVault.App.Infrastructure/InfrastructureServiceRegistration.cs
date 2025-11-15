@@ -18,7 +18,6 @@ using SecureVault.App.Infrastructure.Services.Device;
 using SecureVault.App.Infrastructure.Services.Interaction;
 using SecureVault.App.Infrastructure.Services.Interaction.Handlers;
 using SecureVault.App.Infrastructure.Services.QrCodeLogin;
-using SecureVault.App.Infrastructure.Services.QrCodeLogin.MessageHandlers;
 using SecureVault.App.Infrastructure.Services.Storage;
 using SecureVault.App.Infrastructure.Services.Sync;
 using SecureVault.App.Infrastructure.Services.Sync.Handlers;
@@ -49,6 +48,7 @@ namespace SecureVault.App.Infrastructure
             services.AddScoped<IStorageService, StorageService>();
             services.AddScoped<IDpopKeyService, DpopKeyService>();
             services.AddScoped<IDpopProofService, DpopProofService>();
+            services.AddMemoryCache();
 
             //http handlers
             services.AddTransient<DeviceHeadersHandler>();
@@ -90,17 +90,12 @@ namespace SecureVault.App.Infrastructure
             services.AddSingleton<ISignalRHubEventHandler, UserSessionRevokedHandler>();
 
             //qr code login
-            services.AddScoped<IQrLoginOrchestrator, QrLoginOrchestratorService>();
-            services.AddScoped<IQrLoginContext>(sp => sp.GetRequiredService<IQrLoginOrchestrator>() as QrLoginOrchestratorService);
-            services.AddScoped<IQrHubConnection, QrHubConnection>();
-            services.AddScoped<ISecureChannelManager, SecureChannelManager>();
-
-            services.AddScoped<IMessageHandler, AuthorizationApprovedHandler>();
-            services.AddScoped<IMessageHandler, AuthorizationDeniedHandler>();
-            services.AddScoped<IMessageHandler, ChannelReadyHandler>();
-            services.AddScoped<IMessageHandler, DeviceInfoRequestHandler>();
-            services.AddScoped<IMessageHandler, EncryptedLoginDataHandler>();
-            services.AddScoped<IMessageHandler, PublicKeyHandler>();
+            services.AddSingleton<IQrLoginOrchestratorFactory, QrLoginOrchestratorFactory>();
+            services.AddTransient<IQrLoginOrchestrator, QrLoginOrchestratorService>();
+            services.AddTransient<IQrHubConnection, QrHubConnection>();
+            services.AddTransient<ISecureChannelManager, SecureChannelManager>();
+            services.AddTransient<IQrLoginSessionManager, QrLoginSessionManager>();
+            services.AddTransient<IQrCodeRefresher, QrCodeRefresher>();
 
             services.Configure<ApiSettings>(config.GetSection(nameof(ApiSettings)));
             services.Configure<SignalRSettings>(config.GetSection(nameof(SignalRSettings)));
@@ -125,7 +120,6 @@ namespace SecureVault.App.Infrastructure
                     ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
                     {
 #if DEBUG
-                        // Kontrolü artık devHost üzerinden yap
                         if (!string.IsNullOrEmpty(devHost) &&
                             message.RequestUri.Host.Equals(devHost, StringComparison.OrdinalIgnoreCase))
                         {

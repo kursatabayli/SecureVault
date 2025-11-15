@@ -2,6 +2,7 @@
 using MudBlazor;
 using SecureVault.App.Application.Contracts.Abstractions.Persistence;
 using SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin;
+using SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin.enums;
 using SecureVault.App.Application.Contracts.DTOs.Auth;
 using SecureVault.App.Application.Contracts.DTOs.Session;
 using SecureVault.App.Components.Helpers;
@@ -14,54 +15,61 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
 
         [Inject] private ISnackbar Snackbar { get; set; }
         [Inject] private IDialogService DialogService { get; set; }
-        [Inject] private IQrLoginOrchestrator Orchestrator { get; set; }
-        [Inject] private IStorageService StorageService { get; set; }
+        [Inject] private IQrLoginOrchestratorFactory OrchestratorFactory { get; set; }
 
+        private IQrLoginOrchestrator _orchestrator;
         private string _statusMessage = "İşlem bekleniyor...";
         private CancellationTokenSource _sessionCts;
         private readonly DialogOptions DialogOptions = new() { BackdropClick = false, CloseOnEscapeKey = false, };
         private DeviceDetailDto _deviceToConfirm;
         private bool _rememberMeDecision = false;
-        protected override void OnInitialized()
+
+        private async Task InitializeOrchestrator()
         {
-            Orchestrator.OnStateChanged += HandleStateChanged;
-            Orchestrator.OnQrCodeAvailable += HandleQrCodeAvailable;
-            Orchestrator.OnAuthorizationComplete += HandleAuthorizationComplete;
-            Orchestrator.OnDeviceAuthorizationRequired += HandleDeviceAuthorizationRequired;
+            await DisposeCurrentOrchestrator(false);
+            _orchestrator = OrchestratorFactory.Create();
+            _orchestrator.OnStateChanged += HandleStateChanged;
+            _orchestrator.OnQrCodeAvailable += HandleQrCodeAvailable;
+            _orchestrator.OnAuthorizationComplete += HandleAuthorizationComplete;
+            _orchestrator.OnDeviceAuthorizationRequired += HandleDeviceAuthorizationRequired;
+            _sessionCts?.Dispose();
+            _sessionCts = new CancellationTokenSource();
         }
-        private void SetView(DialogView view, string statusMessage = null, string title = null, string icon = null)
+
+        private async Task SetView(DialogView view, string statusMessage = null, string title = null, string icon = null)
         {
             _currentView = view;
             if (statusMessage != null) _statusMessage = statusMessage;
             if (title != null) _titleText = title;
             if (icon != null) _titleIcon = icon;
-            InvokeAsync(StateHasChanged);
+            await InvokeAsync(StateHasChanged);
         }
-        private Task HandleDeviceAuthorizationRequired(DeviceDetailDto deviceInfo)
+        private async Task HandleDeviceAuthorizationRequired(DeviceDetailDto deviceInfo)
         {
             _channelIdForQr = null;
             _deviceToConfirm = deviceInfo;
-            SetView(DialogView.AwaitingConfirmation, title: "Yeni Cihaz Bağlantı İsteği");
-            return Task.CompletedTask;
+            await SetView(DialogView.AwaitingConfirmation, title: "Yeni Cihaz Bağlantı İsteği");
         }
         private async Task HandleConfirmationDecision((bool IsApproved, bool RememberMe) decision)
         {
             if (decision.IsApproved)
             {
                 _rememberMeDecision = decision.RememberMe;
-                SetView(DialogView.Processing, "Cihaz onaylanıyor...");
-                await Orchestrator.ApproveAuthorization();
+                await SetView(DialogView.Processing, "Cihaz onaylanıyor...");
+                await _orchestrator.ApproveAuthorization();
             }
             else
             {
-                SetView(DialogView.Processing, "Cihaz reddediliyor...");
-                await Orchestrator.DenyAuthorization();
-                SetView(DialogView.InitialSelection, title: "Yeni Cihazı Yetkilendir", icon: Icons.Material.Filled.PhonelinkSetup);
+                await SetView(DialogView.Processing, "Cihaz reddediliyor...");
+                await _orchestrator.DenyAuthorization();
+                await SetView(DialogView.InitialSelection, title: "Yeni Cihazı Yetkilendir", icon: Icons.Material.Filled.PhonelinkSetup);
             }
         }
         private async Task ScanQrCode()
         {
-            SetView(DialogView.Processing, "QR kod taranıyor...");
+            await SetView(DialogView.Processing, "QR kod taranıyor...");
+
+            await InitializeOrchestrator();
 
             var dialog = await DialogService.ShowAsync<ScanQRCodeDialog>("QR Kodu Tara", DialogOptions);
             var result = await dialog.Result;
@@ -70,8 +78,7 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
             {
                 try
                 {
-                    _sessionCts = new CancellationTokenSource();
-                    await Orchestrator.JoinSessionByScanning(QrLoginRole.Provider, scannedChannelId, _sessionCts.Token);
+                    await _orchestrator.JoinSessionByScanning(QrLoginRole.Provider, scannedChannelId, _sessionCts.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -84,18 +91,19 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
             }
             else
             {
-                SetView(DialogView.InitialSelection);
+                await SetView(DialogView.InitialSelection);
             }
         }
 
         private async Task GenerateQrCode()
         {
-            SetView(DialogView.Processing, "Güvenli oturum başlatılıyor...");
+            await SetView(DialogView.Processing, "Güvenli oturum başlatılıyor...");
+
+            await InitializeOrchestrator();
+
             try
             {
-                _sessionCts = new CancellationTokenSource();
-
-                await Orchestrator.StartSession(QrLoginRole.Provider, _sessionCts.Token);
+                await _orchestrator.StartSession(QrLoginRole.Provider, _sessionCts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -116,22 +124,21 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
                 case QrSessionState.PeerJoined:
                     if (_currentView == DialogView.DisplayingQr)
                         _channelIdForQr = null;
-                    SetView(DialogView.Processing, message);
+                    await SetView(DialogView.Processing, message);
                     break;
                 case QrSessionState.ExchangingKeys:
                     if (_currentView == DialogView.DisplayingQr)
                         _channelIdForQr = null;
-                    SetView(DialogView.Processing, message);
+                    await SetView(DialogView.Processing, message);
                     break;
 
                 case QrSessionState.SecureChannelEstablished:
-                    SetView(DialogView.Processing, message);
+                    await SetView(DialogView.Processing, message);
                     await SendCredentialsSafe();
                     break;
 
                 case QrSessionState.Error:
                     Snackbar.Add(message, Severity.Error, config => { config.CloseAfterNavigation = true; });
-                    _sessionCts?.Cancel();
                     MudDialog.Close(DialogResult.Cancel());
                     break;
             }
@@ -143,15 +150,7 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
         {
             try
             {
-                var credentials = new LoginQrCodeDto
-                {
-                    Email = StorageService.GetEmail(),
-                    PrivateKey = await StorageService.GetPrivateKeyAsByteAsync(),
-                    EncryptionKey = await StorageService.GetEncryptionKeyAsByteAsync(),
-                    RememberMe = _rememberMeDecision
-                };
-
-                await Orchestrator.SendCredentials(credentials);
+                await _orchestrator.SendCredentials(_rememberMeDecision);
             }
             catch (Exception ex)
             {
@@ -159,17 +158,16 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
             }
         }
 
-        private Task HandleQrCodeAvailable(string channelId)
+        private async Task HandleQrCodeAvailable(string channelId)
         {
             _channelIdForQr = channelId;
-            SetView(DialogView.DisplayingQr, title: "Diğer Cihazla Okutun", icon: Icons.Material.Filled.QrCode2);
-            return Task.CompletedTask;
+            await SetView(DialogView.DisplayingQr, title: "Diğer Cihazla Okutun", icon: Icons.Material.Filled.QrCode2);
         }
         private async Task HandleQrClose()
         {
-            _sessionCts?.Cancel();
-            await Orchestrator.DisposeAsync();
-            SetView(DialogView.InitialSelection, title: "Yeni Cihazı Yetkilendir", icon: Icons.Material.Filled.PhonelinkSetup);
+            await DisposeCurrentOrchestrator(false);
+
+            await SetView(DialogView.InitialSelection, title: "Yeni Cihazı Yetkilendir", icon: Icons.Material.Filled.PhonelinkSetup);
         }
         private async Task HandleAuthorizationComplete()
         {
@@ -179,19 +177,34 @@ namespace SecureVault.App.Components.Pages.Settings.Sessions
 
         private async Task Cancel()
         {
-            await Orchestrator.DisposeAsync();
             MudDialog.Cancel();
+        }
+        private async Task DisposeCurrentOrchestrator(bool cancelDialog)
+        {
+            _sessionCts?.Cancel();
+            _sessionCts?.Dispose();
+            _sessionCts = null;
+
+            if (_orchestrator != null)
+            {
+                _orchestrator.OnStateChanged -= HandleStateChanged;
+                _orchestrator.OnQrCodeAvailable -= HandleQrCodeAvailable;
+                _orchestrator.OnAuthorizationComplete -= HandleAuthorizationComplete;
+                _orchestrator.OnDeviceAuthorizationRequired -= HandleDeviceAuthorizationRequired;
+
+                await _orchestrator.DisposeAsync();
+                _orchestrator = null;
+            }
+
+            if (cancelDialog)
+            {
+                MudDialog.Close(DialogResult.Cancel());
+            }
         }
 
         public async ValueTask DisposeAsync()
         {
-            Orchestrator.OnStateChanged -= HandleStateChanged;
-            Orchestrator.OnQrCodeAvailable -= HandleQrCodeAvailable;
-            Orchestrator.OnAuthorizationComplete -= HandleAuthorizationComplete;
-            Orchestrator.OnDeviceAuthorizationRequired -= HandleDeviceAuthorizationRequired;
-            _sessionCts?.Cancel();
-            _sessionCts?.Dispose();
-            await Orchestrator.DisposeAsync();
+            await DisposeCurrentOrchestrator(false);
         }
     }
 }
