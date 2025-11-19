@@ -2,7 +2,6 @@
 using SecureVault.Identity.Domain.Entities;
 using SecureVault.Shared.Result;
 
-namespace SecureVault.Identity.Application.Features.CQRS.Register.Commands
-{
-    public record RegisterUserCommand(string Email, byte[] PublicKey, byte[] Salt, UserInfo UserInfo, byte[] RecoveryData) : IRequest<Result>;
-}
+namespace SecureVault.Identity.Application.Features.CQRS.Register.Commands;
+
+public record RegisterUserCommand(string Email, byte[] PublicKey, byte[] Salt, UserInfo UserInfo, byte[] RecoveryData) : IRequest<Result>;

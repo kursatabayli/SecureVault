@@ -8,36 +8,51 @@ using SecureVault.Vault.Application.Features.CQRS.VaultItems.Results;
 using SecureVault.Vault.Application.Features.Specifications.VaultItems;
 using SecureVault.Vault.Application.Messages;
 
-namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
+namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers;
+
+internal class GetAllUserVaultItemsByLastSyncTimeQueryHandler : IRequestHandler<GetAllUserVaultItemsByLastSyncTimeQuery, Result<IReadOnlyCollection<GetAllUserVaultItemsByLastSyncTimeResult>>>
 {
-    internal class GetAllUserVaultItemsByLastSyncTimeQueryHandler : IRequestHandler<GetAllUserVaultItemsByLastSyncTimeQuery, Result<IReadOnlyCollection<GetAllUserVaultItemsByLastSyncTimeResult>>>
+    private readonly IVaultItemsRepository _repository;
+    private readonly ILogger<GetAllUserVaultItemsByLastSyncTimeQueryHandler> _logger;
+    private readonly IStringLocalizer<ReturnMessages> _returnMessages;
+
+    public GetAllUserVaultItemsByLastSyncTimeQueryHandler(IVaultItemsRepository repository, ILogger<GetAllUserVaultItemsByLastSyncTimeQueryHandler> logger, IStringLocalizer<ReturnMessages> returnMessages)
     {
-        private readonly IVaultItemsRepository _repository;
-        private readonly ILogger<GetAllUserVaultItemsByLastSyncTimeQueryHandler> _logger;
-        private readonly IStringLocalizer<ReturnMessages> _returnMessages;
+        _repository = repository;
+        _logger = logger;
+        _returnMessages = returnMessages;
+    }
 
-        public GetAllUserVaultItemsByLastSyncTimeQueryHandler(IVaultItemsRepository repository, ILogger<GetAllUserVaultItemsByLastSyncTimeQueryHandler> logger, IStringLocalizer<ReturnMessages> returnMessages)
+    public async Task<Result<IReadOnlyCollection<GetAllUserVaultItemsByLastSyncTimeResult>>> Handle(GetAllUserVaultItemsByLastSyncTimeQuery request, CancellationToken cancellationToken)
+    {
+        try
         {
-            _repository = repository;
-            _logger = logger;
-            _returnMessages = returnMessages;
+            var spec = new VaultItemsByLastSyncTimeSpecification(request.UserId, request.LastUpdatedTime, request.DeviceId);
+
+            var vaultItemsResult = await _repository.FindAsync(spec);
+
+            if (vaultItemsResult == null || !vaultItemsResult.Any())
+            {
+                _logger.LogInformation(
+                    "No new items found for synchronization (client is up-to-date). UserId: {UserId}, LastSyncTime: {LastUpdatedTime}, RequestingDevice: {DeviceId}",
+                    request.UserId, request.LastUpdatedTime, request.DeviceId);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Successfully retrieved {ItemCount} items for synchronization. UserId: {UserId}, LastSyncTime: {LastUpdatedTime}, RequestingDevice: {DeviceId}",
+                    vaultItemsResult.Count, request.UserId, request.LastUpdatedTime, request.DeviceId);
+            }
+
+            return Result<IReadOnlyCollection<GetAllUserVaultItemsByLastSyncTimeResult>>.Success(vaultItemsResult);
         }
-
-        public async Task<Result<IReadOnlyCollection<GetAllUserVaultItemsByLastSyncTimeResult>>> Handle(GetAllUserVaultItemsByLastSyncTimeQuery request, CancellationToken cancellationToken)
+        catch (Exception ex)
         {
-            try
-            {
-                var spec = new VaultItemsByLastSyncTimeSpecification(request.UserId, request.LastUpdatedTime, request.DeviceId);
+            _logger.LogError(ex,
+                "An unexpected error occurred while retrieving items for synchronization. UserId: {UserId}, LastSyncTime: {LastUpdatedTime}, RequestingDevice: {DeviceId}",
+                request.UserId, request.LastUpdatedTime, request.DeviceId);
 
-                var vaultItemsResult = await _repository.FindAsync(spec);
-
-                return Result<IReadOnlyCollection<GetAllUserVaultItemsByLastSyncTimeResult>>.Success(vaultItemsResult);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Kullanıcının vault item'ları listelenirken beklenmedik bir hata oluştu. UserId: {UserId}", request.UserId);
-                return new Error(ErrorCodes.InternalServerError, _returnMessages[ErrorCodes.InternalServerError]);
-            }
+            return new Error(ErrorCodes.InternalServerError, _returnMessages[ErrorCodes.InternalServerError]);
         }
     }
 }

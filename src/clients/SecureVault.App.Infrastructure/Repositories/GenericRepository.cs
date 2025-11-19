@@ -4,166 +4,165 @@ using SecureVault.App.Application.Contracts.Repositories;
 using SecureVault.App.Domain.Entities;
 using System.Linq.Expressions;
 
-namespace SecureVault.App.Infrastructure.Repositories
+namespace SecureVault.App.Infrastructure.Repositories;
+
+public class GenericRepository<T> : IRepository<T> where T : class, IRealmObject, ISynchronizableEntity, new()
 {
-    public class GenericRepository<T> : IRepository<T> where T : class, IRealmObject, ISynchronizableEntity, new()
+    private readonly IRealmService _realmService;
+
+    public GenericRepository(IRealmService realmService)
     {
-        private readonly IRealmService _realmService;
+        _realmService = realmService;
+    }
 
-        public GenericRepository(IRealmService realmService)
-        {
-            _realmService = realmService;
-        }
+    public async Task<IList<T>> GetAllAsync()
+    {
+        var realm = await _realmService.GetRealmAsync();
+        return realm.All<T>().ToList();
+    }
+    public async Task<T?> GetByIdAsync(Guid id)
+    {
+        var realm = await _realmService.GetRealmAsync();
+        return realm.Find<T>(id);
+    }
 
-        public async Task<IList<T>> GetAllAsync()
+    public async Task<IRealmCollection<T>> GetLiveCollectionAsync()
+    {
+        var realm = await _realmService.GetRealmAsync();
+        return realm.All<T>().AsRealmCollection();
+    }
+    public async Task AddAsync(T entity)
+    {
+        var realm = await _realmService.GetRealmAsync();
+        await realm.WriteAsync(() =>
         {
-            var realm = await _realmService.GetRealmAsync();
-            return realm.All<T>().ToList();
-        }
-        public async Task<T?> GetByIdAsync(Guid id)
+            realm.Add(entity);
+        });
+    }
+    public async Task AddRangeAsync(IEnumerable<T> entities)
+    {
+        var realm = await _realmService.GetRealmAsync();
+        await realm.WriteAsync(() =>
         {
-            var realm = await _realmService.GetRealmAsync();
-            return realm.Find<T>(id);
-        }
-
-        public async Task<IRealmCollection<T>> GetLiveCollectionAsync()
-        {
-            var realm = await _realmService.GetRealmAsync();
-            return realm.All<T>().AsRealmCollection();
-        }
-        public async Task AddAsync(T entity)
-        {
-            var realm = await _realmService.GetRealmAsync();
-            await realm.WriteAsync(() =>
+            foreach (var entity in entities)
             {
                 realm.Add(entity);
-            });
-        }
-        public async Task AddRangeAsync(IEnumerable<T> entities)
+            }
+        });
+    }
+    public async Task UpdateAsync(T entity)
+    {
+        var realm = await _realmService.GetRealmAsync();
+        await realm.WriteAsync(() =>
         {
-            var realm = await _realmService.GetRealmAsync();
-            await realm.WriteAsync(() =>
-            {
-                foreach (var entity in entities)
-                {
-                    realm.Add(entity);
-                }
-            });
-        }
-        public async Task UpdateAsync(T entity)
+            realm.Add(entity, update: true);
+        });
+    }
+
+    public async Task UpdateRangeAsync(IEnumerable<T> entities)
+    {
+        var realm = await _realmService.GetRealmAsync();
+        await realm.WriteAsync(() =>
         {
-            var realm = await _realmService.GetRealmAsync();
-            await realm.WriteAsync(() =>
+            foreach (var entity in entities)
             {
                 realm.Add(entity, update: true);
-            });
-        }
+            }
+        });
+    }
 
-        public async Task UpdateRangeAsync(IEnumerable<T> entities)
+    public async Task MarkAsDeletedAsync(T entity)
+    {
+        var realm = await _realmService.GetRealmAsync();
+        if (entity is ISynchronizableEntity synchronizableEntity)
         {
-            var realm = await _realmService.GetRealmAsync();
             await realm.WriteAsync(() =>
             {
-                foreach (var entity in entities)
-                {
-                    realm.Add(entity, update: true);
-                }
+                synchronizableEntity.MarkAsDeleted();
             });
         }
+    }
 
-        public async Task MarkAsDeletedAsync(T entity)
+    public async Task MarkAsDeletedRangeAsync(IEnumerable<T> entities)
+    {
+        var realm = await _realmService.GetRealmAsync();
+        await realm.WriteAsync(() =>
         {
-            var realm = await _realmService.GetRealmAsync();
-            if (entity is ISynchronizableEntity synchronizableEntity)
+            foreach (var entity in entities)
             {
-                await realm.WriteAsync(() =>
+                if (entity is ISynchronizableEntity synchronizableEntity)
                 {
                     synchronizableEntity.MarkAsDeleted();
-                });
+                }
             }
-        }
+        });
+    }
 
-        public async Task MarkAsDeletedRangeAsync(IEnumerable<T> entities)
+    public async Task HardDeleteAsync(T entity)
+    {
+        var realm = await _realmService.GetRealmAsync();
+        await realm.WriteAsync(() =>
         {
-            var realm = await _realmService.GetRealmAsync();
-            await realm.WriteAsync(() =>
-            {
-                foreach (var entity in entities)
-                {
-                    if (entity is ISynchronizableEntity synchronizableEntity)
-                    {
-                        synchronizableEntity.MarkAsDeleted();
-                    }
-                }
-            });
-        }
+            realm.Remove(entity);
+        });
+    }
 
-        public async Task HardDeleteAsync(T entity)
+    public async Task HardDeleteRangeAsync(IEnumerable<T> entities)
+    {
+        var realm = await _realmService.GetRealmAsync();
+        var idsToDelete = entities.Select(i => i.Id).ToHashSet();
+        var allItems = realm.All<T>().ToList();
+        var managedItemsToDelete = allItems.Where(p => idsToDelete.Contains(p.Id));
+        await realm.WriteAsync(() =>
         {
-            var realm = await _realmService.GetRealmAsync();
-            await realm.WriteAsync(() =>
+            foreach (var item in managedItemsToDelete)
             {
-                realm.Remove(entity);
-            });
-        }
+                if (item != null && item.IsValid)
+                {
+                    realm.Remove(item);
+                }
+            }
+        });
+    }
 
-        public async Task HardDeleteRangeAsync(IEnumerable<T> entities)
+    public async Task<IList<T>> Find(Expression<Func<T, bool>> predicate)
+    {
+        var realm = await _realmService.GetRealmAsync();
+        return realm.All<T>().Where(predicate).ToList();
+    }
+    public async Task ApplyServerPullUpsertsAsync(IEnumerable<T> itemsToUpsert)
+    {
+        var realm = await _realmService.GetRealmAsync();
+        await realm.WriteAsync(() =>
         {
-            var realm = await _realmService.GetRealmAsync();
-            var idsToDelete = entities.Select(i => i.Id).ToHashSet();
-            var allItems = realm.All<T>().ToList();
-            var managedItemsToDelete = allItems.Where(p => idsToDelete.Contains(p.Id));
-            await realm.WriteAsync(() =>
+            foreach (var item in itemsToUpsert)
             {
-                foreach (var item in managedItemsToDelete)
+                realm.Add(item, update: true);
+            }
+        });
+    }
+    public async Task ApplyLocalPushChangesAsync(
+        IEnumerable<T> itemsToMarkAsSynced,
+        IEnumerable<T> itemsToHardDelete)
+    {
+        var realm = await _realmService.GetRealmAsync();
+        await realm.WriteAsync(() =>
+        {
+            foreach (var item in itemsToMarkAsSynced)
+            {
+                if (item is ISynchronizableEntity syncable && item.IsValid)
                 {
-                    if (item != null && item.IsValid)
-                    {
-                        realm.Remove(item);
-                    }
+                    syncable.MarkAsSynced();
                 }
-            });
-        }
+            }
 
-        public async Task<IList<T>> Find(Expression<Func<T, bool>> predicate)
-        {
-            var realm = await _realmService.GetRealmAsync();
-            return realm.All<T>().Where(predicate).ToList();
-        }
-        public async Task ApplyServerPullUpsertsAsync(IEnumerable<T> itemsToUpsert)
-        {
-            var realm = await _realmService.GetRealmAsync();
-            await realm.WriteAsync(() =>
+            foreach (var item in itemsToHardDelete)
             {
-                foreach (var item in itemsToUpsert)
+                if (item.IsValid)
                 {
-                    realm.Add(item, update: true);
+                    realm.Remove(item);
                 }
-            });
-        }
-        public async Task ApplyLocalPushChangesAsync(
-            IEnumerable<T> itemsToMarkAsSynced,
-            IEnumerable<T> itemsToHardDelete)
-        {
-            var realm = await _realmService.GetRealmAsync();
-            await realm.WriteAsync(() =>
-            {
-                foreach (var item in itemsToMarkAsSynced)
-                {
-                    if (item is ISynchronizableEntity syncable && item.IsValid)
-                    {
-                        syncable.MarkAsSynced();
-                    }
-                }
-
-                foreach (var item in itemsToHardDelete)
-                {
-                    if (item.IsValid)
-                    {
-                        realm.Remove(item);
-                    }
-                }
-            });
-        }
+            }
+        });
     }
 }

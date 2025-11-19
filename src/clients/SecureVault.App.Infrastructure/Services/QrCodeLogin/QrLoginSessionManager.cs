@@ -59,7 +59,7 @@ public class QrLoginSessionManager : IQrLoginSessionManager
     _currentState.HandleEnterAsync(this).ConfigureAwait(false);
   }
 
-  #region State Geçişi ve Event Tetikleme (State'lerin kullanması için)
+  #region State Transitions & Event Triggers (for States to use)
 
   public async Task TransitionToAsync(IQrLoginState newState)
   {
@@ -106,12 +106,13 @@ public class QrLoginSessionManager : IQrLoginSessionManager
       OperatingSystem = DeviceInfoService.GetOperatingSystemInfo()
     };
     var payload = JsonSerializer.Serialize(deviceInfo);
+    Logger.LogDebug("Sending 'DeviceInfoRequest' message to hub.");
     await HubConnection.SendMessageAsync("DeviceInfoRequest", payload);
   }
 
   #endregion
 
-  #region IQrLoginSessionManager Implementasyonu (UI Komutları -> State'e Delege Et)
+  #region IQrLoginSessionManager Implementation (Delegating UI Commands -> State)
 
   public async Task StartSession(QrLoginRole role, CancellationToken cancellationToken = default)
   {
@@ -187,10 +188,11 @@ public class QrLoginSessionManager : IQrLoginSessionManager
 
   #endregion
 
-  #region Olay Dinleyicileri (Event Handlers -> State'e Delege Et)
+  #region Event Listeners (Delegating Events -> State)
 
   private async Task HandleReceivedMessage(string messageType, string payload)
   {
+    Logger.LogDebug("External Event: HandleReceivedMessage. Type: {MessageType}", messageType);
     await _stateLock.WaitAsync();
     try
     {
@@ -204,10 +206,11 @@ public class QrLoginSessionManager : IQrLoginSessionManager
 
   private async Task HandleErrorReceived(string errorMessage)
   {
+    Logger.LogWarning("External Event: HandleErrorReceived. Error: {ErrorMessage}", errorMessage);
     await _stateLock.WaitAsync();
     try
     {
-      await HandleErrorAsync($"Sunucu hatası: {errorMessage}");
+      await HandleErrorAsync($"Server error: {errorMessage}");
     }
     finally
     {
@@ -217,6 +220,7 @@ public class QrLoginSessionManager : IQrLoginSessionManager
 
   private async Task HandleQrRefreshed(string newChannelId)
   {
+    Logger.LogInformation("External Event: HandleQrRefreshed. New ChannelId: {NewChannelId}", newChannelId);
     await _stateLock.WaitAsync();
     try
     {
@@ -230,6 +234,7 @@ public class QrLoginSessionManager : IQrLoginSessionManager
 
   private async Task HandleQrRefreshError(string errorMessage)
   {
+    Logger.LogWarning("External Event: HandleQrRefreshError. Error: {ErrorMessage}", errorMessage);
     await _stateLock.WaitAsync();
     try
     {
@@ -243,7 +248,7 @@ public class QrLoginSessionManager : IQrLoginSessionManager
 
   #endregion
 
-  #region Yaşam Döngüsü (Lifecycle)
+  #region Lifecycle
 
   public async ValueTask DisposeAsync()
   {

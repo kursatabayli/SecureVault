@@ -4,140 +4,159 @@ using SecureVault.App.Application.Contracts.Abstractions.Persistence;
 using SecureVault.App.Application.Contracts.Abstractions.UI;
 using System.Net;
 
-namespace SecureVault.App.Infrastructure.HttpHandlers
+namespace SecureVault.App.Infrastructure.HttpHandlers;
+
+public sealed class RefreshTokenHandler : DelegatingHandler
 {
-    public sealed class RefreshTokenHandler : DelegatingHandler
+    private readonly SemaphoreSlim _refreshTokenLock = new(1, 1);
+    private readonly IAuthService _authService;
+    private readonly IStorageService _storageService;
+    private readonly IAuthenticationStateNotifier _authenticationStateNotifier;
+    private readonly ILogger<RefreshTokenHandler> _logger;
+    private bool _disposed = false;
+    public RefreshTokenHandler(IAuthService authService, IStorageService storageService, IAuthenticationStateNotifier authenticationStateNotifier, ILogger<RefreshTokenHandler> logger)
     {
-        private readonly SemaphoreSlim _refreshTokenLock = new(1, 1);
-        private readonly IAuthService _authService;
-        private readonly IStorageService _storageService;
-        private readonly IAuthenticationStateNotifier _authenticationStateNotifier;
-        private readonly ILogger<RefreshTokenHandler> _logger;
-        private bool _disposed = false;
-        public RefreshTokenHandler(IAuthService authService, IStorageService storageService, IAuthenticationStateNotifier authenticationStateNotifier, ILogger<RefreshTokenHandler> logger)
+        _authService = authService;
+        _storageService = storageService;
+        _authenticationStateNotifier = authenticationStateNotifier;
+        _logger = logger;
+    }
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        await RefreshTokenIfNeededAsync(cancellationToken);
+
+        var tokenBeforeSend = await _storageService.GetAccessTokenAsync();
+        var response = await base.SendAsync(request, cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            _authService = authService;
-            _storageService = storageService;
-            _authenticationStateNotifier = authenticationStateNotifier;
-            _logger = logger;
-        }
-
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-
-            await RefreshTokenIfNeededAsync(cancellationToken);
-
-            var tokenBeforeSend = await _storageService.GetAccessTokenAsync();
-            var response = await base.SendAsync(request, cancellationToken);
-
-            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            await _refreshTokenLock.WaitAsync(cancellationToken);
+            try
             {
-                await _refreshTokenLock.WaitAsync(cancellationToken);
-                try
+                var tokenAfterWait = await _storageService.GetAccessTokenAsync();
+
+                if (tokenBeforeSend != tokenAfterWait)
                 {
-                    var tokenAfterWait = await _storageService.GetAccessTokenAsync();
-                    if (tokenBeforeSend != tokenAfterWait)
-                    {
-                        var clonedRequestForRetry = await CloneRequestAsync(request);
-                        return await base.SendAsync(clonedRequestForRetry, cancellationToken);
-                    }
-
-                    _logger.LogWarning("RefreshTokenHandler: Received 401, initiating token refresh.");
-                    var refreshResult = await _authService.RefreshTokenAsync(cancellationToken);
-
-                    if (refreshResult.IsSuccess)
-                    {
-                        _logger.LogInformation("RefreshTokenHandler: Token successfully refreshed.");
-                        var clonedRequest = await CloneRequestAsync(request);
-
-                        return await base.SendAsync(clonedRequest, cancellationToken);
-                    }
-                    else
-                    {
-                        _logger.LogError("RefreshTokenHandler: Refresh token renewal FAILED. Terminating session.");
-                        await _authenticationStateNotifier.NotifyUserLogout();
-                        return response;
-                    }
+                    _logger.LogInformation("RefreshTokenHandler: Token was already refreshed by another thread while waiting for the lock. Retrying request.");
+                    var clonedRequestForRetry = await CloneRequestAsync(request);
+                    return await base.SendAsync(clonedRequestForRetry, cancellationToken);
                 }
-                finally
+
+                _logger.LogWarning("RefreshTokenHandler: Received 401 Unauthorized. Initiating token refresh...");
+                var refreshResult = await _authService.RefreshTokenAsync(cancellationToken);
+
+                if (refreshResult.IsSuccess)
                 {
-                    _refreshTokenLock.Release();
+                    _logger.LogInformation("RefreshTokenHandler: Token successfully refreshed (reactively). Retrying original request...");
+                    var clonedRequest = await CloneRequestAsync(request);
+
+                    return await base.SendAsync(clonedRequest, cancellationToken);
+                }
+                else
+                {
+                    _logger.LogError("RefreshTokenHandler: Refresh token renewal FAILED (Result: {Error}). Terminating session.", refreshResult.Error.Code);
+                    await _authenticationStateNotifier.NotifyUserLogout();
+                    return response;
                 }
             }
-            else if (response.StatusCode == HttpStatusCode.Forbidden)
+            finally
             {
-                _logger.LogWarning("RefreshTokenHandler: Received 403 Forbidden. Terminating session.");
-                await _authenticationStateNotifier.NotifyUserLogout();
+                _refreshTokenLock.Release();
             }
-            return response;
         }
-
-
-        private async Task RefreshTokenIfNeededAsync(CancellationToken cancellationToken)
+        else if (response.StatusCode == HttpStatusCode.Forbidden)
         {
-            var expirationDate = _storageService.GetAccessTokenExpiration();
+            _logger.LogWarning("RefreshTokenHandler: Received 403 Forbidden. Terminating session as a security measure.");
+            await _authenticationStateNotifier.NotifyUserLogout();
+        }
+        return response;
+    }
 
-            if (expirationDate <= DateTime.UtcNow.AddSeconds(30))
+    private async Task RefreshTokenIfNeededAsync(CancellationToken cancellationToken)
+    {
+        var expirationDate = _storageService.GetAccessTokenExpiration();
+        if (expirationDate == null)
+            return;
+
+        if (expirationDate <= DateTime.UtcNow.AddSeconds(30))
+        {
+            if (!await _refreshTokenLock.WaitAsync(TimeSpan.FromSeconds(1), cancellationToken))
             {
-                await _refreshTokenLock.WaitAsync(cancellationToken);
+                _logger.LogDebug("Proactive refresh skipped: Lock already held by another thread.");
+                return;
+            }
+
+            try
+            {
+                var newExpirationDate = _storageService.GetAccessTokenExpiration();
+                if (newExpirationDate > expirationDate)
+                {
+                    _logger.LogDebug("Proactive refresh skipped: Token was already refreshed by another thread.");
+                    return;
+                }
+
+                _logger.LogInformation("RefreshTokenHandler: Access Token is expiring soon. Performing proactive refresh...");
+
                 try
                 {
-                    var newExpirationDate = _storageService.GetAccessTokenExpiration();
-                    if (newExpirationDate != expirationDate)
-                        return;
-
                     await _authService.RefreshTokenAsync(cancellationToken);
+                    _logger.LogInformation("RefreshTokenHandler: Proactive refresh successful.");
                 }
-                finally
+                catch (Exception ex)
                 {
-                    _refreshTokenLock.Release();
+                    _logger.LogWarning(ex, "Proactive token refresh failed (e.g., network error). The original request will proceed.");
                 }
             }
+            finally
+            {
+                _refreshTokenLock.Release();
+            }
         }
+    }
 
-        private static async Task<HttpRequestMessage> CloneRequestAsync(HttpRequestMessage originalRequest)
+    private static async Task<HttpRequestMessage> CloneRequestAsync(HttpRequestMessage originalRequest)
+    {
+        var clone = new HttpRequestMessage(originalRequest.Method, originalRequest.RequestUri)
         {
-            var clone = new HttpRequestMessage(originalRequest.Method, originalRequest.RequestUri)
-            {
-                Version = originalRequest.Version
-            };
+            Version = originalRequest.Version
+        };
 
-            if (originalRequest.Content != null)
-            {
-                var ms = new MemoryStream();
-                await originalRequest.Content.CopyToAsync(ms);
-                ms.Position = 0;
-                clone.Content = new StreamContent(ms);
-
-                foreach (var header in originalRequest.Content.Headers)
-                {
-                    clone.Content.Headers.Add(header.Key, header.Value);
-                }
-            }
-
-            foreach (var header in originalRequest.Headers)
-            {
-                clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
-            }
-
-            foreach (var option in originalRequest.Options)
-            {
-                clone.Options.Set(new HttpRequestOptionsKey<object>(option.Key), option.Value);
-            }
-
-            return clone;
-        }
-
-        protected override void Dispose(bool disposing)
+        if (originalRequest.Content != null)
         {
-            if (!_disposed)
-            {
-                if (disposing)
-                    _refreshTokenLock.Dispose();
-                _disposed = true;
-            }
+            var ms = new MemoryStream();
+            await originalRequest.Content.CopyToAsync(ms);
+            ms.Position = 0;
+            clone.Content = new StreamContent(ms);
 
-            base.Dispose(disposing);
+            foreach (var header in originalRequest.Content.Headers)
+            {
+                clone.Content.Headers.Add(header.Key, header.Value);
+            }
         }
+
+        foreach (var header in originalRequest.Headers)
+        {
+            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
+        foreach (var option in originalRequest.Options)
+        {
+            clone.Options.Set(new HttpRequestOptionsKey<object?>(option.Key), option.Value);
+        }
+
+        return clone;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+                _refreshTokenLock.Dispose();
+            _disposed = true;
+        }
+
+        base.Dispose(disposing);
     }
 }

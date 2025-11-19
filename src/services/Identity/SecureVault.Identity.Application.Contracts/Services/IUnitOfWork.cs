@@ -1,8 +1,7 @@
-﻿namespace SecureVault.Identity.Application.Contracts.Services
+﻿namespace SecureVault.Identity.Application.Contracts.Services;
+
+public interface IUnitOfWork : IAsyncDisposable
 {
-    public interface IUnitOfWork : IAsyncDisposable
-    {
-        Task SaveChangesAsync();
-        Task SaveChangesWithTransactionAsync();
-    }
+    Task SaveChangesAsync();
+    Task SaveChangesWithTransactionAsync();
 }

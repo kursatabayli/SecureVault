@@ -11,7 +11,9 @@ public class SecureChannelState : QrLoginStateBase
 
   public override async Task HandleEnterAsync(QrLoginSessionManager context)
   {
-    await context.SetState(QrSessionState.SecureChannelEstablished, "Güvenli kanal kuruldu.");
+    Logger.LogInformation("Entering SecureChannelState: Secure channel is established. Awaiting credential transfer.");
+
+    await context.SetState(QrSessionState.SecureChannelEstablished, "Secure channel established.");
   }
 
   public override async Task HandleMessageAsync(QrLoginSessionManager context, string messageType, string payload)
@@ -20,20 +22,22 @@ public class SecureChannelState : QrLoginStateBase
     {
       if (messageType == "EncryptedLoginData")
       {
-        await context.SetState(QrSessionState.TransferringCredentials, "Oturum bilgileri alındı, doğrulanıyor...");
+        Logger.LogInformation("SecureChannelState (Requester): Received 'EncryptedLoginData'. Attempting decryption...");
+        await context.SetState(QrSessionState.TransferringCredentials, "Login credentials received, decrypting...");
         try
         {
           var encryptedBytes = Convert.FromBase64String(payload);
           var decryptedDto = context.SecureChannelManager.Decrypt<LoginQrCodeDto>(encryptedBytes);
 
+          Logger.LogInformation("SecureChannelState (Requester): Decryption successful. Notifying orchestrator.");
           context.NotifyLoginCredentialsReceived(decryptedDto);
 
           await context.TransitionToAsync(new CompletedState(Logger));
         }
         catch (Exception ex)
         {
-          Logger.LogError(ex, "Oturum bilgileri çözülemedi.");
-          await context.HandleErrorAsync($"Oturum bilgileri çözülemedi: {ex.Message}");
+          Logger.LogError(ex, "Failed to decrypt login credentials.");
+          await context.HandleErrorAsync($"Failed to decrypt login credentials: {ex.Message}");
         }
       }
       else
@@ -57,27 +61,29 @@ public class SecureChannelState : QrLoginStateBase
 
     if (!context.SecureChannelManager.IsSecureChannelEstablished)
     {
-      await context.HandleErrorAsync("Güvenli kanal hazır değil. Kimlik bilgileri gönderilemez.");
+      await context.HandleErrorAsync("Secure channel is not ready. Cannot send credentials.");
       return;
     }
 
     try
     {
-      await context.SetState(QrSessionState.TransferringCredentials, "Oturum bilgileri şifrelenip gönderiliyor...");
+      Logger.LogInformation("SecureChannelState (Provider): 'SendCredentialsAsync' called. Encrypting data...");
+      await context.SetState(QrSessionState.TransferringCredentials, "Encrypting and sending login credentials...");
 
       var encryptedBytes = context.SecureChannelManager.Encrypt(credentials);
       var encryptedBase64 = Convert.ToBase64String(encryptedBytes);
 
       await context.HubConnection.SendMessageAsync("EncryptedLoginData", encryptedBase64);
 
-      context.NotifyAuthorizationComplete();
+      Logger.LogInformation("SecureChannelState (Provider): Successfully encrypted and sent 'EncryptedLoginData' message.");
 
+      context.NotifyAuthorizationComplete();
       await context.TransitionToAsync(new CompletedState(Logger));
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Kimlik bilgileri gönderilemedi.");
-      await context.HandleErrorAsync($"Kimlik bilgileri gönderilemedi: {ex.Message}");
+      Logger.LogError(ex, "Failed to send credentials.");
+      await context.HandleErrorAsync($"Failed to send credentials: {ex.Message}");
     }
   }
 }

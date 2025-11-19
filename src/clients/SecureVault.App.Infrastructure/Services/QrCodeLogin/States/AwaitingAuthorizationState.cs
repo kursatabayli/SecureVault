@@ -1,4 +1,3 @@
-using System;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin.enums;
@@ -16,6 +15,7 @@ public class AwaitingAuthorizationState : QrLoginStateBase
     {
       if (messageType == "DeviceInfoRequest")
       {
+        Logger.LogInformation("AwaitingAuthorizationState (Provider): Received 'DeviceInfoRequest'. Deserializing and notifying UI...");
         var deviceInfo = JsonSerializer.Deserialize<DeviceDetailDto>(payload);
         if (deviceInfo != null)
         {
@@ -27,11 +27,13 @@ public class AwaitingAuthorizationState : QrLoginStateBase
     {
       if (messageType == "AuthorizationApproved")
       {
+        Logger.LogInformation("AwaitingAuthorizationState (Requester): Received 'AuthorizationApproved'. Transitioning to key exchange.");
         await context.TransitionToAsync(new ExchangingKeysState(Logger));
       }
       else if (messageType == "AuthorizationDenied")
       {
-        await context.HandleErrorAsync("Cihaz bağlantı isteği reddedildi.");
+        Logger.LogWarning("AwaitingAuthorizationState (Requester): Received 'AuthorizationDenied'.");
+        await context.HandleErrorAsync("Device connection request was denied.");
       }
     }
   }
@@ -40,6 +42,7 @@ public class AwaitingAuthorizationState : QrLoginStateBase
   {
     if (context.CurrentRole == QrLoginRole.Provider)
     {
+      Logger.LogInformation("AwaitingAuthorizationState (Provider): Authorization approved by user. Sending 'AuthorizationApproved' message...");
       await context.HubConnection.SendMessageAsync("AuthorizationApproved", string.Empty);
       await context.TransitionToAsync(new ExchangingKeysState(Logger));
     }
@@ -53,8 +56,9 @@ public class AwaitingAuthorizationState : QrLoginStateBase
   {
     if (context.CurrentRole == QrLoginRole.Provider)
     {
+      Logger.LogInformation("AwaitingAuthorizationState (Provider): Authorization denied by user. Sending 'AuthorizationDenied' message...");
       await context.HubConnection.SendMessageAsync("AuthorizationDenied", string.Empty);
-      await context.SetState(QrSessionState.Idle, "Bağlantı isteği reddedildi.");
+      await context.SetState(QrSessionState.Idle, "Connection request denied.");
       await context.TransitionToAsync(new IdleState(Logger));
     }
     else

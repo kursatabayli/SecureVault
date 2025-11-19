@@ -1,4 +1,3 @@
-using System;
 using Microsoft.Extensions.Logging;
 using SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin.enums;
 
@@ -10,9 +9,12 @@ public class IdleState : QrLoginStateBase
 
   public override async Task HandleEnterAsync(QrLoginSessionManager context)
   {
+    Logger.LogInformation("Entering IdleState: Session context is being reset.");
+
     context.IsPublicKeySent = false;
     context.ChannelId = null;
-    await context.SetState(QrSessionState.Idle, "Oturum boşta", true);
+
+    await context.SetState(QrSessionState.Idle, "Session idle", true);
   }
 
   public override async Task StartSessionAsync(QrLoginSessionManager context, QrLoginRole role, CancellationToken cancellationToken)
@@ -28,7 +30,7 @@ public class IdleState : QrLoginStateBase
 
     if (string.IsNullOrEmpty(scannedChannelId))
     {
-      await context.HandleErrorAsync("Taranan Channel ID boş olamaz.");
+      await context.HandleErrorAsync("Scanned Channel ID cannot be empty.");
       return;
     }
 

@@ -1,7 +1,6 @@
-﻿namespace SecureVault.App.Application.Contracts.DTOs.QrCodeLogin
+﻿namespace SecureVault.App.Application.Contracts.DTOs.QrCodeLogin;
+
+public class CreateChannelDto
 {
-    public class CreateChannelDto
-    {
-        public string ChannelId { get; set; }
-    }
+    public string ChannelId { get; set; }
 }

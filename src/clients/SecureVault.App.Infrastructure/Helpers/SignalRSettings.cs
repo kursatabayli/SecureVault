@@ -1,7 +1,6 @@
-﻿namespace SecureVault.App.Infrastructure.Helpers
+﻿namespace SecureVault.App.Infrastructure.Helpers;
+
+public class SignalRSettings
 {
-    public class SignalRSettings
-    {
-        public string HubPath { get; set; } = string.Empty;
-    }
+    public string HubPath { get; set; } = string.Empty;
 }

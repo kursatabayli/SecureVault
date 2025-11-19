@@ -19,7 +19,7 @@ namespace SecureVault.App.Resources.Localization {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "17.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "18.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     public class SharedResources {
@@ -70,6 +70,24 @@ namespace SecureVault.App.Resources.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Failed to retrieve the item from the database..
+        /// </summary>
+        public static string GetFailed {
+            get {
+                return ResourceManager.GetString("GetFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to update the item&apos;s counter..
+        /// </summary>
+        public static string HOTPCounterUpdateFailed {
+            get {
+                return ResourceManager.GetString("HOTPCounterUpdateFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to An error occurred while loading data..
         /// </summary>
         public static string LoadFailed {
@@ -84,6 +102,15 @@ namespace SecureVault.App.Resources.Localization {
         public static string NetworkError {
             get {
                 return ResourceManager.GetString("NetworkError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The selected item is not a valid HOTP code..
+        /// </summary>
+        public static string NotHotp {
+            get {
+                return ResourceManager.GetString("NotHotp", resourceCulture);
             }
         }
         

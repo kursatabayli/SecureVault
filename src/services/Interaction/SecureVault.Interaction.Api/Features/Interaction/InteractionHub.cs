@@ -24,6 +24,7 @@ public class InteractionHub : Hub
       var userId = GetUserIdFromContext();
       if (string.IsNullOrEmpty(userId))
       {
+        _logger.LogWarning("OnConnectedAsync: User ID not found in claims (sub or NameIdentifier). Connection aborted. ConnectionId: {ConnectionId}", Context.ConnectionId);
         Context.Abort();
         return;
       }
@@ -33,7 +34,7 @@ public class InteractionHub : Hub
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "!!!!!!!! ERROR OnConnectedAsync !!!!!!!! ConnectionId: {ConnectionId}", Context.ConnectionId);
+      _logger.LogError(ex, "Unexpected error in OnConnectedAsync. ConnectionId: {ConnectionId}", Context.ConnectionId);
 
       Context.Abort();
     }

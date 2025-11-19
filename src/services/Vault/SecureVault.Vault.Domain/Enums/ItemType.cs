@@ -1,9 +1,8 @@
-﻿namespace SecureVault.Vault.Domain.Enums
+﻿namespace SecureVault.Vault.Domain.Enums;
+
+public enum ItemType
 {
-    public enum ItemType
-    {
-        Password = 1,
-        TwoFactorAuth = 2,
-        CreditCard = 3,
-    }
+    Password = 1,
+    TwoFactorAuth = 2,
+    CreditCard = 3,
 }

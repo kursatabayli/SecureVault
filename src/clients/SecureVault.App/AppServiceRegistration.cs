@@ -5,41 +5,41 @@ using Nager.PublicSuffix.RuleParsers;
 using Nager.PublicSuffix.RuleProviders;
 using SecureVault.App.Application.Contracts.Abstractions.UI;
 using SecureVault.App.Auth;
-using SecureVault.App.Services;
+using SecureVault.App.Services.Implementations;
+using SecureVault.App.Services.Interfaces;
 
-namespace SecureVault.App
+namespace SecureVault.App;
+
+public static class AppServiceRegistration
 {
-    public static class AppServiceRegistration
+    public static IServiceCollection AddAppServices(this IServiceCollection services)
     {
-        public static IServiceCollection AddAppServices(this IServiceCollection services)
+        services.AddSingleton<IAppLifecycleManager, AppLifecycleManager>();
+        services.AddSingleton<CustomAuthStateProvider>();
+        services.AddSingleton<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
+        services.AddSingleton<IAuthenticationStateNotifier>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
+        services.AddScoped<IOtpService, OtpService>();
+        services.AddScoped<IQrCodeScannerService, QrCodeScannerService>();
+        services.AddScoped<ITwoFactorAuthCodeCreationService, TwoFactorAuthCodeCreationService>();
+        services.AddScoped<IQrCodeGenerateService, QrCodeGenerateService>();
+
+        services.AddSingleton<IDomainParser>(serviceProvider =>
         {
-            services.AddSingleton<IAppLifecycleManager, AppLifecycleManager>();
-            services.AddSingleton<CustomAuthStateProvider>();
-            services.AddSingleton<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
-            services.AddSingleton<IAuthenticationStateNotifier>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
-            services.AddScoped<IOtpService, OtpService>();
-            services.AddScoped<IQrCodeScannerService, QrCodeScannerService>();
-            services.AddScoped<ITwoFactorAuthCodeCreationService, TwoFactorAuthCodeCreationService>();
-            services.AddScoped<IQrCodeGenerateService, QrCodeGenerateService>();
+            using var stream = FileSystem.OpenAppPackageFileAsync("public_suffix_list.dat")
+                                         .GetAwaiter()
+                                         .GetResult();
 
-            services.AddSingleton<IDomainParser>(serviceProvider =>
-            {
-                using var stream = FileSystem.OpenAppPackageFileAsync("public_suffix_list.dat")
-                                             .GetAwaiter()
-                                             .GetResult();
+            using var reader = new StreamReader(stream);
+            var fileContent = reader.ReadToEnd();
 
-                using var reader = new StreamReader(stream);
-                var fileContent = reader.ReadToEnd();
+            var ruleParser = new TldRuleParser(TldRuleDivisionFilter.All);
+            var rules = ruleParser.ParseRules(fileContent);
 
-                var ruleParser = new TldRuleParser(TldRuleDivisionFilter.All);
-                var rules = ruleParser.ParseRules(fileContent);
+            var ruleProvider = new StaticRuleProvider(rules);
 
-                var ruleProvider = new StaticRuleProvider(rules);
+            return new DomainParser(ruleProvider);
+        });
 
-                return new DomainParser(ruleProvider);
-            });
-
-            return services;
-        }
+        return services;
     }
 }

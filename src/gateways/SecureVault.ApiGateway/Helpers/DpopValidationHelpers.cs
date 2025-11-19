@@ -117,7 +117,14 @@ public static class DpopValidationHelpers
             var expiration = iatTime.AddMinutes(5);
             await jtiCache.StoreJtiAsync(jti, expiration);
 
+            Log.Debug("[DPoP] Stored JTI {Jti} in cache. Expires: {Expiration}", jti, expiration);
+
             return (true, jkt);
+        }
+        catch (SecurityTokenValidationException stvex)
+        {
+            Log.Warning(stvex, "[DPoP] Token validation failed (e.g., invalid signature).");
+            return (false, null);
         }
         catch (Exception ex)
         {
@@ -139,9 +146,9 @@ public static class DpopValidationHelpers
 
             return null;
         }
-
-        catch (JsonException)
+        catch (JsonException ex)
         {
+            Log.Warning(ex, "[DPoP] Failed to parse 'cnf' claim JSON: {CnfJson}", cnfJson);
             return null;
         }
     }

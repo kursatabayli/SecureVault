@@ -2,10 +2,9 @@
 using SecureVault.App.Application.Contracts.Repositories;
 using SecureVault.Shared.Result;
 
-namespace SecureVault.App.Application.Contracts.Abstractions.Sync
+namespace SecureVault.App.Application.Contracts.Abstractions.Sync;
+
+public interface ISyncDataProcessor
 {
-    public interface ISyncDataProcessor
-    {
-        Task<Result> ProcessServerDataAsync(IReadOnlyCollection<VaultItemDto> serverItems);
-    }
+    Task<Result> ProcessServerDataAsync(IReadOnlyCollection<VaultItemDto> serverItems);
 }

@@ -1,11 +1,10 @@
-﻿namespace SecureVault.App.Models.SessionModels
+﻿namespace SecureVault.App.Models.SessionModels;
+
+public class DeviceDetailModel
 {
-    public class DeviceDetailModel
-    {
-        public string UniqueDeviceId { get; init; }
-        public string? DeviceName { get; init; }
-        public string? DeviceModel { get; init; }
-        public string? DeviceManufacturer { get; init; }
-        public string? OperatingSystem { get; init; }
-    }
+    public string UniqueDeviceId { get; init; }
+    public string? DeviceName { get; init; }
+    public string? DeviceModel { get; init; }
+    public string? DeviceManufacturer { get; init; }
+    public string? OperatingSystem { get; init; }
 }

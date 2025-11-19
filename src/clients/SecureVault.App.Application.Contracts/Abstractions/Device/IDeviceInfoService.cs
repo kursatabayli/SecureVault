@@ -1,11 +1,10 @@
-﻿namespace SecureVault.App.Application.Contracts.Abstractions.Device
+﻿namespace SecureVault.App.Application.Contracts.Abstractions.Device;
+
+public interface IDeviceInfoService
 {
-    public interface IDeviceInfoService
-    {
-        Task<string> GetUniqueDeviceIdAsync();
-        string GetDeviceModel();
-        string GetDeviceManufacturer();
-        string GetDeviceName();
-        string GetOperatingSystemInfo();
-    }
+    Task<string> GetUniqueDeviceIdAsync();
+    string GetDeviceModel();
+    string GetDeviceManufacturer();
+    string GetDeviceName();
+    string GetOperatingSystemInfo();
 }

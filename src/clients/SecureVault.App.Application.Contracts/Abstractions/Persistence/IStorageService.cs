@@ -1,33 +1,32 @@
 ﻿using SecureVault.App.Application.Contracts.DTOs.Auth;
 
-namespace SecureVault.App.Application.Contracts.Abstractions.Persistence
-{
-    public interface IStorageService
-    {
-        //Secure Storage
-        Task<string?> GetAccessTokenAsync();
-        Task<string?> GetRefreshTokenAsync();
-        DateTime? GetAccessTokenExpiration();
-        DateTime? GetRefreshTokenExpiration();
-        Task<string?> GetPrivateKeyAsync();
-        Task<byte[]> GetEncryptionKeyAsByteAsync();
-        Task<byte[]> GetPrivateKeyAsByteAsync();
-        Task<string?> GetUniqueDeviceIdAsync();
-        Task SetUniqueDeviceIdAsync(string id);
-        Task SetTokensAsync(AuthResponseDto authResponseDto);
-        Task SetKeysAsync(byte[] privateKey, byte[] encryptionKey);
-        Task<byte[]> GetOrCreateDbKeyAsync();
-        Task<string?> GetOrCreateDbPathAsync();
-        Task<string?> GetDPoPKeyAsync();
-        Task SetDPoPKeyAsync(string dpopJwk);
+namespace SecureVault.App.Application.Contracts.Abstractions.Persistence;
 
-        //Preferences
-        void SetEmail(string email);
-        string GetEmail();
-        void SetLastSyncDate(DateTimeOffset syncDate);
-        DateTimeOffset GetLastSyncDate();
-        void SetAuthenticationState(bool authState);
-        bool IsAuthenticated();
-        Task ClearAll();
-    }
+public interface IStorageService
+{
+    //Secure Storage
+    Task<string?> GetAccessTokenAsync();
+    Task<string?> GetRefreshTokenAsync();
+    DateTime? GetAccessTokenExpiration();
+    DateTime? GetRefreshTokenExpiration();
+    Task<string?> GetPrivateKeyAsync();
+    Task<byte[]> GetEncryptionKeyAsByteAsync();
+    Task<byte[]> GetPrivateKeyAsByteAsync();
+    Task<string?> GetUniqueDeviceIdAsync();
+    Task SetUniqueDeviceIdAsync(string id);
+    Task SetTokensAsync(AuthResponseDto authResponseDto);
+    Task SetKeysAsync(byte[] privateKey, byte[] encryptionKey);
+    Task<byte[]> GetOrCreateDbKeyAsync();
+    Task<string?> GetOrCreateDbPathAsync();
+    Task<string?> GetDPoPKeyAsync();
+    Task SetDPoPKeyAsync(string dpopJwk);
+
+    //Preferences
+    void SetEmail(string email);
+    string GetEmail();
+    void SetLastSyncDate(DateTimeOffset syncDate);
+    DateTimeOffset GetLastSyncDate();
+    void SetAuthenticationState(bool authState);
+    bool IsAuthenticated();
+    Task ClearAll();
 }

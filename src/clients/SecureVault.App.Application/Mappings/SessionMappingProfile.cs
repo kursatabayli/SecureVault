@@ -2,14 +2,13 @@
 using SecureVault.App.Application.Contracts.DTOs.Session;
 using SecureVault.App.Application.Features.CQRS.Sessions.Results;
 
-namespace SecureVault.App.Application.Mappings
+namespace SecureVault.App.Application.Mappings;
+
+public class SessionMappingProfile : Profile
 {
-    public class SessionMappingProfile : Profile
+    public SessionMappingProfile()
     {
-        public SessionMappingProfile()
-        {
-            CreateMap<UserSessionsDto, UserSessionsResult>();
-            CreateMap<DeviceDetailDto, DeviceDetailResult>();
-        }
+        CreateMap<UserSessionsDto, UserSessionsResult>();
+        CreateMap<DeviceDetailDto, DeviceDetailResult>();
     }
 }

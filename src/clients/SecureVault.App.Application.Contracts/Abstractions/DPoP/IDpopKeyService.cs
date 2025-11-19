@@ -1,6 +1,6 @@
 using Microsoft.IdentityModel.Tokens;
 
-namespace SecureVault.App.Application.Contracts.Abstractions.Persistence;
+namespace SecureVault.App.Application.Contracts.Abstractions.DPoP;
 
 public record DpopKey(ECDsaSecurityKey SigningKey, string PublicJwkString);
 

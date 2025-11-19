@@ -1,37 +1,36 @@
-﻿namespace SecureVault.Identity.Domain.Entities
+﻿namespace SecureVault.Identity.Domain.Entities;
+
+public class User
 {
-    public class User
+    public Guid Id { get; private set; }
+    public string Email { get; private set; }
+    public byte[] PublicKey { get; private set; }
+    public byte[] Salt { get; private set; }
+    public UserInfo UserInfo { get; private set; }
+    public DateTimeOffset CreatedAt { get; private set; }
+    public DateTimeOffset UpdatedAt { get; private set; }
+    public virtual UserRecoveryData UserRecoveryData { get; private set; }
+    public virtual ICollection<UserSession> UserSessions { get; private set; } = [];
+
+    private User() { }
+
+    public static User Create(string email, byte[] publicKey, byte[] salt, UserInfo userInfo)
     {
-        public Guid Id { get; private set; }
-        public string Email { get; private set; }
-        public byte[] PublicKey { get; private set; }
-        public byte[] Salt { get; private set; }
-        public UserInfo UserInfo { get; private set; }
-        public DateTimeOffset CreatedAt { get; private set; }
-        public DateTimeOffset UpdatedAt { get; private set; }
-        public virtual UserRecoveryData UserRecoveryData { get; private set; }
-        public virtual ICollection<UserSession> UserSessions { get; private set; } = [];
-
-        private User() { }
-
-        public static User Create(string email, byte[] publicKey, byte[] salt, UserInfo userInfo)
+        var creationTime = DateTimeOffset.UtcNow;
+        return new User
         {
-            var creationTime = DateTimeOffset.UtcNow;
-            return new User
-            {
-                Id = Guid.NewGuid(),
-                Email = email.ToLowerInvariant(),
-                PublicKey = publicKey,
-                Salt = salt,
-                UserInfo = userInfo,
-                CreatedAt = creationTime,
-                UpdatedAt = creationTime
-            };
-        }
-        public void UpdateUserInfo(UserInfo userInfo)
-        {
-            UserInfo = userInfo;
-            UpdatedAt = DateTimeOffset.UtcNow;
-        }
+            Id = Guid.NewGuid(),
+            Email = email.ToLowerInvariant(),
+            PublicKey = publicKey,
+            Salt = salt,
+            UserInfo = userInfo,
+            CreatedAt = creationTime,
+            UpdatedAt = creationTime
+        };
+    }
+    public void UpdateUserInfo(UserInfo userInfo)
+    {
+        UserInfo = userInfo;
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 }

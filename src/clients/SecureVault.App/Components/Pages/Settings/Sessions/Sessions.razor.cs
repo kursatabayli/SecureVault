@@ -10,152 +10,151 @@ using SecureVault.App.Application.Features.CQRS.Sessions.Queries;
 using SecureVault.App.Models.SessionModels;
 using Color = MudBlazor.Color;
 
-namespace SecureVault.App.Components.Pages.Settings.Sessions
+namespace SecureVault.App.Components.Pages.Settings.Sessions;
+
+public partial class Sessions : ComponentBase, IAsyncDisposable
 {
-    public partial class Sessions : ComponentBase, IAsyncDisposable
+    [Inject] private IMediator Mediator { get; set; } = default!;
+    [Inject] private IMapper Mapper { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+    [Inject] private IStorageService StorageService { get; set; } = default!;
+    [Inject] private IActiveSessionTracker ActiveSessionTracker { get; set; } = default!;
+    private IReadOnlySet<string> _activeDeviceIds = new HashSet<string>();
+
+    private List<UserSessionsModel> _sessions = [];
+    private bool _isLoading = true;
+    private string? _loadError;
+    private string? _uniqueDeviceId;
+    private Guid? _revokingSessionId;
+    protected override async Task OnInitializedAsync()
     {
-        [Inject] private IMediator Mediator { get; set; } = default!;
-        [Inject] private IMapper Mapper { get; set; } = default!;
-        [Inject] private ISnackbar Snackbar { get; set; } = default!;
-        [Inject] private IDialogService DialogService { get; set; } = default!;
-        [Inject] private IStorageService StorageService { get; set; } = default!;
-        [Inject] private IActiveSessionTracker ActiveSessionTracker { get; set; } = default!;
-        private IReadOnlySet<string> _activeDeviceIds = new HashSet<string>();
+        _uniqueDeviceId = await StorageService.GetUniqueDeviceIdAsync();
+        _activeDeviceIds = ActiveSessionTracker.ActiveDeviceIds;
+        ActiveSessionTracker.OnChange += OnActiveSessionChange;
+        await LoadSessionsAsync();
+    }
+    private async Task OnActiveSessionChange()
+    {
+        _activeDeviceIds = ActiveSessionTracker.ActiveDeviceIds;
+        await LoadSessionsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
 
-        private List<UserSessionsModel> _sessions = [];
-        private bool _isLoading = true;
-        private string? _loadError;
-        private string? _uniqueDeviceId;
-        private Guid? _revokingSessionId;
-        protected override async Task OnInitializedAsync()
+    private async Task LoadSessionsAsync()
+    {
+        _isLoading = true;
+        try
         {
-            _uniqueDeviceId = await StorageService.GetUniqueDeviceIdAsync();
-            _activeDeviceIds = ActiveSessionTracker.ActiveDeviceIds;
-            ActiveSessionTracker.OnChange += OnActiveSessionChange;
-            await LoadSessionsAsync();
-        }
-        private async Task OnActiveSessionChange()
-        {
-            _activeDeviceIds = ActiveSessionTracker.ActiveDeviceIds;
-            await LoadSessionsAsync();
-            await InvokeAsync(StateHasChanged);
-        }
-
-        private async Task LoadSessionsAsync()
-        {
-            _isLoading = true;
-            try
-            {
-                var result = await Mediator.Send(new GetUserSessionsQuery());
-                if (result.IsSuccess)
-                    _sessions = Mapper.Map<List<UserSessionsModel>>(result.Value);
-                else
-                    _loadError = result.Error.Message;
-
-                _sessions = [.. _sessions.OrderByDescending(IsCurrentSession).ThenByDescending(s => s.LastUsedAt)];
-            }
-            catch (Exception ex)
-            {
-                _loadError = $"Oturumlar yüklenirken bir hata oluştu: {ex.Message}";
-            }
-            finally
-            {
-                _isLoading = false;
-            }
-        }
-
-        private async Task ShowRevokeConfirmation(UserSessionsModel session)
-        {
-            var parameters = new DialogParameters<ConfirmationDialog>
-            {
-                { x => x.ContentText, "Bu oturumu sonlandırmak istediğinizden emin misiniz? Bu işlem geri alınamaz." },
-                { x => x.ButtonText, "Evet, Sonlandır" },
-                { x => x.Color, Color.Error }
-            };
-
-            var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Oturumu Sonlandır", parameters);
-            var result = await dialog.Result;
-
-            if (result is not null && !result.Canceled)
-            {
-                await RevokeSession(session);
-            }
-        }
-        private async Task RevokeSession(UserSessionsModel session)
-        {
-            _revokingSessionId = session.Id;
-            StateHasChanged();
-
-            var command = new RevokeUserSessionCommand { SessionId = session.Id, IsActiveNow = IsActuallyActive(session) };
-            var result = await Mediator.Send(command);
-
+            var result = await Mediator.Send(new GetUserSessionsQuery());
             if (result.IsSuccess)
-            {
-                session.IsRevoked = true;
-                Snackbar.Add("Oturum başarıyla sonlandırıldı.", Severity.Success);
-            }
+                _sessions = Mapper.Map<List<UserSessionsModel>>(result.Value);
             else
-            {
-                Snackbar.Add($"Oturum sonlandırılamadı: {result.Error.Message}", Severity.Error);
-            }
+                _loadError = result.Error.Message;
 
-            _revokingSessionId = null;
-            StateHasChanged();
+            _sessions = [.. _sessions.OrderByDescending(IsCurrentSession).ThenByDescending(s => s.LastUsedAt)];
         }
-
-        private bool IsCurrentSession(UserSessionsModel session) => session.DeviceDetails.UniqueDeviceId == _uniqueDeviceId;
-        private bool IsActuallyActive(UserSessionsModel session)
+        catch (Exception ex)
         {
-            if (IsCurrentSession(session) || session.IsRevoked)
-                return false;
-
-            return _activeDeviceIds.Contains(session.DeviceDetails.UniqueDeviceId);
+            _loadError = $"Oturumlar yüklenirken bir hata oluştu: {ex.Message}";
         }
-
-        private string GetDeviceIcon(DeviceDetailModel device)
+        finally
         {
-            var os = device.OperatingSystem?.ToLower() ?? "";
-            return os switch
-            {
-                "android" => Icons.Material.Filled.Smartphone,
-                "windows" => Icons.Material.Filled.Computer,
-                _ => Icons.Material.Filled.Devices,
-            };
+            _isLoading = false;
         }
+    }
 
-        private string FormatDeviceName(DeviceDetailModel device) => string.IsNullOrWhiteSpace(device.DeviceName) ? device.DeviceManufacturer : device.DeviceName;
-
-        private string FormatLastUsed(DateTimeOffset? lastUsedAt)
+    private async Task ShowRevokeConfirmation(UserSessionsModel session)
+    {
+        var parameters = new DialogParameters<ConfirmationDialog>
         {
-            if (!lastUsedAt.HasValue) return "Bilinmiyor";
+            { x => x.ContentText, "Bu oturumu sonlandırmak istediğinizden emin misiniz? Bu işlem geri alınamaz." },
+            { x => x.ButtonText, "Evet, Sonlandır" },
+            { x => x.Color, Color.Error }
+        };
 
-            var diff = DateTimeOffset.UtcNow - lastUsedAt.Value;
+        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Oturumu Sonlandır", parameters);
+        var result = await dialog.Result;
 
-            if (diff.TotalMinutes < 1) return "Az önce";
-            if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} dakika önce";
-            if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} saat önce";
-            if (diff.TotalDays < 30) return $"{(int)diff.TotalDays} gün önce";
-
-            return lastUsedAt.Value.ToLocalTime().ToString("dd MMMM yyyy");
-        }
-
-        private async Task OpenAuthorizeDeviceDialog()
+        if (result is not null && !result.Canceled)
         {
-            var options = new DialogOptions
-            {
-                BackdropClick = false,
-                CloseOnEscapeKey = false,
-            };
-            var dialog = await DialogService.ShowAsync<AuthorizeDeviceDialog>("Yeni Cihazı Yetkilendir", options);
-            var result = await dialog.Result;
-            if (!result.Canceled)
-                await LoadSessionsAsync();
+            await RevokeSession(session);
+        }
+    }
+    private async Task RevokeSession(UserSessionsModel session)
+    {
+        _revokingSessionId = session.Id;
+        StateHasChanged();
+
+        var command = new RevokeUserSessionCommand { SessionId = session.Id, IsActiveNow = IsActuallyActive(session) };
+        var result = await Mediator.Send(command);
+
+        if (result.IsSuccess)
+        {
+            session.IsRevoked = true;
+            Snackbar.Add("Oturum başarıyla sonlandırıldı.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add($"Oturum sonlandırılamadı: {result.Error.Message}", Severity.Error);
         }
 
-        public ValueTask DisposeAsync()
+        _revokingSessionId = null;
+        StateHasChanged();
+    }
+
+    private bool IsCurrentSession(UserSessionsModel session) => session.DeviceDetails.UniqueDeviceId == _uniqueDeviceId;
+    private bool IsActuallyActive(UserSessionsModel session)
+    {
+        if (IsCurrentSession(session) || session.IsRevoked)
+            return false;
+
+        return _activeDeviceIds.Contains(session.DeviceDetails.UniqueDeviceId);
+    }
+
+    private string GetDeviceIcon(DeviceDetailModel device)
+    {
+        var os = device.OperatingSystem?.ToLower() ?? "";
+        return os switch
         {
-            ActiveSessionTracker.OnChange -= OnActiveSessionChange;
-            return ValueTask.CompletedTask;
-        }
+            "android" => Icons.Material.Filled.Smartphone,
+            "windows" => Icons.Material.Filled.Computer,
+            _ => Icons.Material.Filled.Devices,
+        };
+    }
+
+    private string FormatDeviceName(DeviceDetailModel device) => string.IsNullOrWhiteSpace(device.DeviceName) ? device.DeviceManufacturer : device.DeviceName;
+
+    private string FormatLastUsed(DateTimeOffset? lastUsedAt)
+    {
+        if (!lastUsedAt.HasValue) return "Bilinmiyor";
+
+        var diff = DateTimeOffset.UtcNow - lastUsedAt.Value;
+
+        if (diff.TotalMinutes < 1) return "Az önce";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} dakika önce";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} saat önce";
+        if (diff.TotalDays < 30) return $"{(int)diff.TotalDays} gün önce";
+
+        return lastUsedAt.Value.ToLocalTime().ToString("dd MMMM yyyy");
+    }
+
+    private async Task OpenAuthorizeDeviceDialog()
+    {
+        var options = new DialogOptions
+        {
+            BackdropClick = false,
+            CloseOnEscapeKey = false,
+        };
+        var dialog = await DialogService.ShowAsync<AuthorizeDeviceDialog>("Yeni Cihazı Yetkilendir", options);
+        var result = await dialog.Result;
+        if (!result.Canceled)
+            await LoadSessionsAsync();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        ActiveSessionTracker.OnChange -= OnActiveSessionChange;
+        return ValueTask.CompletedTask;
     }
 }

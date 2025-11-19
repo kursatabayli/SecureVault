@@ -1,41 +1,40 @@
 ﻿using Microsoft.AspNetCore.Components;
 using MudBlazor;
-using SecureVault.App.Services;
+using SecureVault.App.Services.Interfaces;
 
-namespace SecureVault.App.Components.Helpers
+namespace SecureVault.App.Components.Helpers;
+
+public partial class ScanQRCodeDialog : ComponentBase
 {
-    public partial class ScanQRCodeDialog : ComponentBase
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
+    [Inject] IQrCodeScannerService QrScannerService { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
-        [Inject] IQrCodeScannerService QrScannerService { get; set; }
+        if (firstRender)
+            await ScanAndCloseAsync();
+    }
 
-        protected override async Task OnAfterRenderAsync(bool firstRender)
+    private async Task ScanAndCloseAsync()
+    {
+        try
         {
-            if (firstRender)
-                await ScanAndCloseAsync();
-        }
+            string qrCodeText = await QrScannerService.ScanAsync();
 
-        private async Task ScanAndCloseAsync()
-        {
-            try
+            if (!string.IsNullOrEmpty(qrCodeText))
             {
-                string qrCodeText = await QrScannerService.ScanAsync();
-
-                if (!string.IsNullOrEmpty(qrCodeText))
-                {
-                    MudDialog.Close(DialogResult.Ok(qrCodeText));
-                }
-                else
-                {
-                    MudDialog.Cancel();
-                }
+                MudDialog.Close(DialogResult.Ok(qrCodeText));
             }
-            catch (Exception)
+            else
             {
                 MudDialog.Cancel();
             }
         }
-
-        private void Cancel() => MudDialog.Cancel();
+        catch (Exception)
+        {
+            MudDialog.Cancel();
+        }
     }
+
+    private void Cancel() => MudDialog.Cancel();
 }

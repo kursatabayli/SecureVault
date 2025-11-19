@@ -9,7 +9,9 @@ public class CompletedState : QrLoginStateBase
 
   public override async Task HandleEnterAsync(QrLoginSessionManager context)
   {
-    await context.SetState(QrSessionState.Completed, "Yetkilendirme tamamlandı.", true);
+    Logger.LogInformation("Entering CompletedState: Stopping QR refresh timer.");
+
+    await context.SetState(QrSessionState.Completed, "Authorization complete.", true);
 
     await context.QrCodeRefresher.StopAsync();
 

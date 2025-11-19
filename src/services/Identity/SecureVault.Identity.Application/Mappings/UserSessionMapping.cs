@@ -2,14 +2,13 @@
 using SecureVault.Identity.Application.Features.CQRS.UserSessions.Results;
 using SecureVault.Identity.Domain.Entities;
 
-namespace SecureVault.Identity.Application.Mappings
+namespace SecureVault.Identity.Application.Mappings;
+
+public class UserSessionMapping : Profile
 {
-    public class UserSessionMapping : Profile
+    public UserSessionMapping()
     {
-        public UserSessionMapping()
-        {
-            CreateMap<DeviceDetail, DeviceDetailResult>();
-            CreateMap<UserSession, UserSessionResult>();
-        }
+        CreateMap<DeviceDetail, DeviceDetailResult>();
+        CreateMap<UserSession, UserSessionResult>();
     }
 }

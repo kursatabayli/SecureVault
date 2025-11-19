@@ -1,4 +1,3 @@
-using System;
 using Microsoft.Extensions.Logging;
 using SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin.enums;
 
@@ -10,7 +9,8 @@ public class ExchangingKeysState : QrLoginStateBase
 
   public override async Task HandleEnterAsync(QrLoginSessionManager context)
   {
-    await context.SetState(QrSessionState.ExchangingKeys, "Anahtar değişimi yapılıyor...");
+    Logger.LogInformation("Entering ExchangingKeysState. Initiating ECDH key exchange...");
+    await context.SetState(QrSessionState.ExchangingKeys, "Exchanging keys...");
 
     if (context.IsPublicKeySent)
     {
@@ -21,13 +21,15 @@ public class ExchangingKeysState : QrLoginStateBase
     try
     {
       var publicKeyBase64 = context.SecureChannelManager.InitiateKeyExchange();
+
+      Logger.LogInformation("Sending local public key to peer...");
       await context.HubConnection.SendMessageAsync("PublicKey", publicKeyBase64);
       context.IsPublicKeySent = true;
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Failed to initiate key exchange and send public key.");
-      await context.HandleErrorAsync($"Anahtar değişimi başlatılamadı: {ex.Message}");
+      await context.HandleErrorAsync($"Failed to initiate key exchange: {ex.Message}");
     }
   }
 
@@ -41,12 +43,13 @@ public class ExchangingKeysState : QrLoginStateBase
 
         context.SecureChannelManager.FinalizeKeyExchange(payload);
 
+        Logger.LogInformation("Key exchange finalized. Transitioning to SecureChannelState.");
         await context.TransitionToAsync(new SecureChannelState(Logger));
       }
       catch (Exception ex)
       {
         Logger.LogError(ex, "Failed to finalize key exchange with received public key.");
-        await context.HandleErrorAsync($"Güvenli anahtar oluşturulamadı: {ex.Message}");
+        await context.HandleErrorAsync($"Failed to create secure key: {ex.Message}");
       }
     }
     else

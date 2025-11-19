@@ -28,12 +28,12 @@ public class QrLoginHub : Hub
         string channelId = httpContext.Request.Headers["X-Channel-Id"];
         if (string.IsNullOrEmpty(channelId))
         {
-            _logger.LogWarning("OnConnectedAsync: X-Channel-Id header eksik veya boş. Bağlantı reddedildi. ConnectionId: {ConnectionId}", Context.ConnectionId);
+            _logger.LogWarning("OnConnectedAsync: X-Channel-Id header is missing or empty. Connection aborted. ConnectionId: {ConnectionId}", Context.ConnectionId);
             Context.Abort();
             return;
         }
 
-        _logger.LogInformation("OnConnectedAsync: İstemci bağlanıyor. ChannelId: {ChannelId}, ConnectionId: {ConnectionId}", channelId, Context.ConnectionId);
+        _logger.LogInformation("OnConnectedAsync: Client connecting. ChannelId: {ChannelId}, ConnectionId: {ConnectionId}", channelId, Context.ConnectionId);
 
         try
         {
@@ -41,18 +41,17 @@ public class QrLoginHub : Hub
 
             if (!success)
             {
-                _logger.LogWarning("OnConnectedAsync: Kanal kaydı başarısız. ChannelId: {ChannelId}, ConnId: {ConnectionId}, Raporlanan Sayı: {Count}", channelId, Context.ConnectionId, newCount);
+                _logger.LogWarning("OnConnectedAsync: Channel registration failed. ChannelId: {ChannelId}, ConnId: {ConnectionId}, Reported Count: {Count}", channelId, Context.ConnectionId, newCount);
                 await Clients.Caller.SendAsync("Error", "ChannelIsFullOrBusy");
                 Context.Abort();
                 return;
             }
 
             await Groups.AddToGroupAsync(Context.ConnectionId, channelId);
-            _logger.LogInformation("OnConnectedAsync: İstemci gruba eklendi. Rol: {Role}, ChannelId: {ChannelId}, ConnId: {ConnectionId}, Toplam Üye: {UserCount}", role, channelId, Context.ConnectionId, newCount);
-
+            _logger.LogInformation("OnConnectedAsync: Client added to group. Role: {Role}, ChannelId: {ChannelId}, ConnId: {ConnectionId}, Total Members: {UserCount}", role, channelId, Context.ConnectionId, newCount);
             if (role == "Joiner" && newCount == 2)
             {
-                _logger.LogInformation("OnConnectedAsync: Kanal hazır. Gruba 'ChannelReady' gönderiliyor. ChannelId: {ChannelId}", channelId);
+                _logger.LogInformation("OnConnectedAsync: Channel is ready. Sending 'ChannelReady' to group. ChannelId: {ChannelId}", channelId);
                 await Clients.Group(channelId).SendAsync("ReceiveMessage", "ChannelReady", string.Empty);
             }
 
@@ -62,7 +61,7 @@ public class QrLoginHub : Hub
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "!!!!!!!! ERROR OnConnectedAsync !!!!!!!! ChannelId: {ChannelId}, ConnectionId: {ConnectionId}", channelId, Context.ConnectionId);
+            _logger.LogError(ex, "Unexpected error in OnConnectedAsync. ChannelId: {ChannelId}, ConnectionId: {ConnectionId}", channelId, Context.ConnectionId);
             Context.Abort();
         }
     }
@@ -85,7 +84,7 @@ public class QrLoginHub : Hub
 
         if (!success)
         {
-            _logger.LogError("SwitchToNewChannel: Yeni kanal için kayıt BAŞARISIZ OLDU. {ConnectionId}", Context.ConnectionId);
+            _logger.LogError("SwitchToNewChannel: Registration for new channel FAILED. {ConnectionId}", Context.ConnectionId);
             await Clients.Caller.SendAsync("Error", "FailedToSwitchChannel");
             throw new InvalidOperationException("Failed to register new channel during switch.");
         }
@@ -98,6 +97,7 @@ public class QrLoginHub : Hub
 
     public async Task SendMessageToChannel(string channelId, string messageType, string? payload)
     {
+        _logger.LogInformation("Sending message. Type: {MessageType}, ChannelId: {ChannelId}, FromConnection: {ConnectionId}", messageType, channelId, Context.ConnectionId);
         await Clients.OthersInGroup(channelId).SendAsync("ReceiveMessage", messageType, payload);
     }
 

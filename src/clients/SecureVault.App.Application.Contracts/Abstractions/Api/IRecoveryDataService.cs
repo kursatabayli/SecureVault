@@ -1,6 +1,5 @@
-﻿namespace SecureVault.App.Application.Contracts.Abstractions.Api
+﻿namespace SecureVault.App.Application.Contracts.Abstractions.Api;
+
+public interface IRecoveryDataService
 {
-    public interface IRecoveryDataService
-    {
-    }
 }

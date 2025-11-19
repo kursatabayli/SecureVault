@@ -10,116 +10,129 @@ using SecureVault.App.Application.Contracts.Repositories;
 using SecureVault.App.Domain.Entities;
 using SecureVault.Shared.Result;
 
-namespace SecureVault.App.Infrastructure.Services.Sync
-{
-    public class SyncProcessor<TEntity> : ISyncProcessor where TEntity : class, ISynchronizableEntity, IRealmObject, new()
-    {
-        private readonly ILogger<SyncProcessor<TEntity>> _logger;
-        private readonly IRepository<TEntity> _repository;
-        private readonly IVaultItemService _vaultItemService;
-        private readonly ICryptoService _cryptoService;
-        private readonly IStorageService _storageService;
-        private readonly IEntityPayloadFactory<TEntity> _payloadFactory;
+namespace SecureVault.App.Infrastructure.Services.Sync;
 
-        public SyncProcessor(ILogger<SyncProcessor<TEntity>> logger, IRepository<TEntity> repository, IVaultItemService vaultItemService, ICryptoService cryptoService, IStorageService storageService, IEntityPayloadFactory<TEntity> payloadFactory)
+public class SyncProcessor<TEntity> : ISyncProcessor where TEntity : class, ISynchronizableEntity, IRealmObject, new()
+{
+    private readonly ILogger<SyncProcessor<TEntity>> _logger;
+    private readonly IRepository<TEntity> _repository;
+    private readonly IVaultItemService _vaultItemService;
+    private readonly ICryptoService _cryptoService;
+    private readonly IStorageService _storageService;
+    private readonly IEntityPayloadFactory<TEntity> _payloadFactory;
+
+    public SyncProcessor(ILogger<SyncProcessor<TEntity>> logger, IRepository<TEntity> repository, IVaultItemService vaultItemService, ICryptoService cryptoService, IStorageService storageService, IEntityPayloadFactory<TEntity> payloadFactory)
+    {
+        _logger = logger;
+        _repository = repository;
+        _vaultItemService = vaultItemService;
+        _cryptoService = cryptoService;
+        _storageService = storageService;
+        _payloadFactory = payloadFactory;
+    }
+
+    public async Task ProcessAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogTrace("Processing unsynced records for {EntityType}.", typeof(TEntity).Name);
+
+        var unsyncedItemsQuery = await _repository.Find(e => !e.IsSynced);
+        var unsyncedItems = unsyncedItemsQuery.ToList();
+
+        if (!unsyncedItems.Any())
         {
-            _logger = logger;
-            _repository = repository;
-            _vaultItemService = vaultItemService;
-            _cryptoService = cryptoService;
-            _storageService = storageService;
-            _payloadFactory = payloadFactory;
+            _logger.LogInformation("No unsynced {EntityType} items found to push.", typeof(TEntity).Name);
+            return;
         }
 
-        public async Task ProcessAsync(CancellationToken cancellationToken)
+        _logger.LogInformation("Found {Count} unsynced {EntityType} items to push.", unsyncedItems.Count(), typeof(TEntity).Name);
+
+        var encryptionKey = await _storageService.GetEncryptionKeyAsByteAsync();
+        if (encryptionKey is null)
         {
-            _logger.LogTrace("{EntityType} için senkronize edilmemiş kayıtlar işleniyor.", typeof(TEntity).Name);
+            _logger.LogError("Failed to retrieve encryption key. {EntityType} synchronization (push) cancelled.", typeof(TEntity).Name);
+            return;
+        }
 
-            var unsyncedItemsQuery = await _repository.Find(e => !e.IsSynced);
-            var unsyncedItems = unsyncedItemsQuery.ToList();
 
-            if (!unsyncedItems.Any())
-                return;
+        var itemsToCreate = new List<CreateVaultItemDto>();
+        var itemsToUpdate = new List<UpdateVaultItemDto>();
+        var itemsToDelete = new List<Guid>();
 
-            _logger.LogInformation("{Count} adet senkronize edilmemiş {EntityType} bulundu.", unsyncedItems.Count(), typeof(TEntity).Name);
+        var localItemsToMarkSynced = new List<TEntity>();
+        var localItemsToDelete = new List<TEntity>();
 
-            var encryptionKey = await _storageService.GetEncryptionKeyAsByteAsync();
-            if (encryptionKey is null)
+        foreach (var item in unsyncedItems)
+        {
+            try
             {
-                _logger.LogError("Şifreleme anahtarı alınamadı. {EntityType} senkronizasyonu iptal edildi.", typeof(TEntity).Name);
-                return;
-            }
+                var payload = _payloadFactory.CreatePayload(item);
 
-
-            var itemsToCreate = new List<CreateVaultItemDto>();
-            var itemsToUpdate = new List<UpdateVaultItemDto>();
-            var itemsToDelete = new List<Guid>();
-
-            var localItemsToMarkSynced = new List<TEntity>();
-            var localItemsToDelete = new List<TEntity>();
-
-            foreach (var item in unsyncedItems)
-            {
-                try
+                if (item.IsDeleted)
                 {
-                    var payload = _payloadFactory.CreatePayload(item);
-
-                    if (item.IsDeleted)
-                    {
-                        itemsToDelete.Add(item.Id);
-                        localItemsToDelete.Add(item);
-                    }
-                    else if (item.Version == 1)
-                    {
-                        _logger.LogInformation("Uzak sunucuda oluşturuluyor: {EntityType} ID:{Id}", typeof(TEntity).Name, item.Id);
-
-                        var encryptedData = _cryptoService.Encrypt(payload.DtoToEncrypt, encryptionKey);
-                        var createDto = new CreateVaultItemDto
-                        {
-                            Id = item.Id,
-                            ItemType = payload.ItemType,
-                            EncryptedData = encryptedData,
-                            CreatedAt = item.UpdatedAt,
-                        };
-                        itemsToCreate.Add(createDto);
-                        localItemsToMarkSynced.Add(item);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Uzak sunucuda güncelleniyor: {EntityType} ID:{Id}, Version:{Version}", typeof(TEntity).Name, item.Id, item.Version);
-
-                        var encryptedData = _cryptoService.Encrypt(payload.DtoToEncrypt, encryptionKey);
-                        var updateDto = new UpdateVaultItemDto
-                        {
-                            Id = item.Id,
-                            EncryptedData = encryptedData,
-                            Version = item.Version,
-                            UpdatedAt = item.UpdatedAt,
-                        };
-
-                        itemsToUpdate.Add(updateDto);
-                        localItemsToMarkSynced.Add(item);
-                    }
+                    _logger.LogInformation("Pushing DELETE to remote server: {EntityType} ID:{Id}", typeof(TEntity).Name, item.Id);
+                    itemsToDelete.Add(item.Id);
+                    localItemsToDelete.Add(item);
                 }
-                catch (Exception ex)
+                else if (item.Version == 1)
                 {
-                    _logger.LogError(ex, "{EntityType} ID:{Id} senkronizasyonu sırasında bir hata oluştu.", typeof(TEntity).Name, item.Id);
+                    _logger.LogInformation("Pushing CREATE to remote server: {EntityType} ID:{Id}", typeof(TEntity).Name, item.Id);
+
+                    var encryptedData = _cryptoService.Encrypt(payload.DtoToEncrypt, encryptionKey);
+                    var createDto = new CreateVaultItemDto
+                    {
+                        Id = item.Id,
+                        ItemType = payload.ItemType,
+                        EncryptedData = encryptedData,
+                        CreatedAt = item.UpdatedAt,
+                    };
+                    itemsToCreate.Add(createDto);
+                    localItemsToMarkSynced.Add(item);
+                }
+                else
+                {
+                    _logger.LogInformation("Pushing UPDATE to remote server: {EntityType} ID:{Id}, Version:{Version}", typeof(TEntity).Name, item.Id, item.Version);
+
+                    var encryptedData = _cryptoService.Encrypt(payload.DtoToEncrypt, encryptionKey);
+                    var updateDto = new UpdateVaultItemDto
+                    {
+                        Id = item.Id,
+                        EncryptedData = encryptedData,
+                        Version = item.Version,
+                        UpdatedAt = item.UpdatedAt,
+                    };
+
+                    itemsToUpdate.Add(updateDto);
+                    localItemsToMarkSynced.Add(item);
                 }
             }
-            var createResult = itemsToCreate.Any() ? await _vaultItemService.CreateVaultItemsAsync(itemsToCreate, cancellationToken) : Result.Success();
-            var updateResult = itemsToUpdate.Any() ? await _vaultItemService.UpdateVaultItemsAsync(itemsToUpdate, cancellationToken) : Result.Success();
-            var deleteResult = itemsToDelete.Any() ? await _vaultItemService.DeleteVaultItemsAsync(itemsToDelete, cancellationToken) : Result.Success();
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while processing {EntityType} ID:{Id} for synchronization.", typeof(TEntity).Name, item.Id);
+            }
+        }
+        var createResult = itemsToCreate.Any() ? await _vaultItemService.CreateVaultItemsAsync(itemsToCreate, cancellationToken) : Result.Success();
+        var updateResult = itemsToUpdate.Any() ? await _vaultItemService.UpdateVaultItemsAsync(itemsToUpdate, cancellationToken) : Result.Success();
+        var deleteResult = itemsToDelete.Any() ? await _vaultItemService.DeleteVaultItemsAsync(itemsToDelete, cancellationToken) : Result.Success();
 
-            if (createResult.IsSuccess && updateResult.IsSuccess && deleteResult.IsSuccess)
+        if (createResult.IsSuccess && updateResult.IsSuccess && deleteResult.IsSuccess)
+        {
+            _logger.LogInformation("API Push successful. Applying local DB changes ({MarkedSyncedCount} items, {DeletedCount} items)...",
+                localItemsToMarkSynced.Count, localItemsToDelete.Count);
+
+            try
             {
                 await _repository.ApplyLocalPushChangesAsync(localItemsToMarkSynced, localItemsToDelete);
-                _logger.LogInformation("{EntityType} için PUSH işlemi başarıyla tamamlandı.", typeof(TEntity).Name);
+                _logger.LogInformation("PUSH operation for {EntityType} completed successfully.", typeof(TEntity).Name);
             }
-            else
+            catch (Exception ex)
             {
-                _logger.LogError("PUSH işlemi sırasında API hatası. Hatalar: C:{CreateError}, U:{UpdateError}, D:{DeleteError}",
-                    createResult.Error?.Message, updateResult.Error?.Message, deleteResult.Error?.Message);
+                _logger.LogCritical(ex, "CRITICAL: API Push succeeded but local DB update failed! Data is now inconsistent and may re-sync. {EntityType}", typeof(TEntity).Name);
             }
+        }
+        else
+        {
+            _logger.LogError("PUSH operation failed due to API errors. Errors: C:{CreateError}, U:{UpdateError}, D:{DeleteError}",
+                createResult.Error?.Message, updateResult.Error?.Message, deleteResult.Error?.Message);
         }
     }
 }

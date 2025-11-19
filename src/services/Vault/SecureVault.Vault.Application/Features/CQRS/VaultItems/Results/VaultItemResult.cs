@@ -1,14 +1,13 @@
 ﻿using SecureVault.Vault.Domain.Enums;
 
-namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Results
+namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Results;
+
+public class VaultItemResult
 {
-    public class VaultItemResult
-    {
-        public Guid Id { get; set; }
-        public ItemType ItemType { get; set; }
-        public byte[] EncryptedData { get; set; }
-        public int Version { get; set; }
-        public DateTimeOffset CreatedAt { get; set; }
-        public DateTimeOffset UpdatedAt { get; set; }
-    }
+    public Guid Id { get; set; }
+    public ItemType ItemType { get; set; }
+    public byte[] EncryptedData { get; set; }
+    public int Version { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
 }
