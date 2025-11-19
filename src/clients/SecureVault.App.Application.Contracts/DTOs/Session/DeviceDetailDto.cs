@@ -1,11 +1,10 @@
-﻿namespace SecureVault.App.Application.Contracts.DTOs.Session
+﻿namespace SecureVault.App.Application.Contracts.DTOs.Session;
+
+public class DeviceDetailDto
 {
-    public class DeviceDetailDto
-    {
-        public string UniqueDeviceId { get; init; }
-        public string? DeviceName { get; init; }
-        public string? DeviceModel { get; init; }
-        public string? DeviceManufacturer { get; init; }
-        public string? OperatingSystem { get; init; }
-    }
+    public string UniqueDeviceId { get; init; }
+    public string? DeviceName { get; init; }
+    public string? DeviceModel { get; init; }
+    public string? DeviceManufacturer { get; init; }
+    public string? OperatingSystem { get; init; }
 }

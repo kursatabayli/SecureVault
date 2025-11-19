@@ -3,6 +3,7 @@ using Refit;
 using SecureVault.App.Application.Contracts.Abstractions.Api;
 using SecureVault.App.Application.Contracts.Abstractions.Database;
 using SecureVault.App.Application.Contracts.Abstractions.Device;
+using SecureVault.App.Application.Contracts.Abstractions.DPoP;
 using SecureVault.App.Application.Contracts.Abstractions.Interaction;
 using SecureVault.App.Application.Contracts.Abstractions.Persistence;
 using SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin;
@@ -15,6 +16,7 @@ using SecureVault.App.Infrastructure.Repositories;
 using SecureVault.App.Infrastructure.Services.Api;
 using SecureVault.App.Infrastructure.Services.Database;
 using SecureVault.App.Infrastructure.Services.Device;
+using SecureVault.App.Infrastructure.Services.DPoP;
 using SecureVault.App.Infrastructure.Services.Interaction;
 using SecureVault.App.Infrastructure.Services.Interaction.Handlers;
 using SecureVault.App.Infrastructure.Services.QrCodeLogin;
@@ -26,141 +28,140 @@ using System.Net.Security;
 using System.Security.Authentication;
 using System.Text.Json;
 
-namespace SecureVault.App.Infrastructure
+namespace SecureVault.App.Infrastructure;
+
+public static class InfrastructureServiceRegistration
 {
-    public static class InfrastructureServiceRegistration
+    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration config)
     {
-        public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration config)
+        //api
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IVaultItemService, VaultItemService>();
+        services.AddScoped<IUserSessionService, UserSessionService>();
+        services.AddScoped<IRecoveryDataService, RecoveryDataService>();
+        services.AddScoped<IRegisterService, RegisterService>();
+
+        //device
+        services.AddScoped<IDeviceInfoService, DeviceInfoService>();
+
+        //persistence
+        services.AddSingleton(Preferences.Default);
+        services.AddSingleton(SecureStorage.Default);
+        services.AddScoped<IStorageService, StorageService>();
+        services.AddScoped<IDpopKeyService, DpopKeyService>();
+        services.AddScoped<IDpopProofService, DpopProofService>();
+        services.AddMemoryCache();
+
+        //http handlers
+        services.AddTransient<DeviceHeadersHandler>();
+        services.AddTransient<RefreshTokenHandler>();
+        services.AddTransient<DpopHandler>();
+        services.AddTransient<PollyResiliencyHandler>();
+        services.AddSingleton<IProtectedHttpHandlerPipelineBuilder, ProtectedHttpHandlerPipelineBuilder>();
+        services.AddSingleton<IPublicHttpHandlerPipelineBuilder, PublicHttpHandlerPipelineBuilder>();
+
+        //repositories
+        services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
+        services.AddScoped<IPasswordRepository, PasswordRepository>();
+        services.AddScoped<ITwoFactorAuthCodeRepository, TwoFactorAuthCodeRepository>();
+
+
+        //db context
+        services.AddScoped<IRealmService, RealmService>();
+        services.AddSingleton<IDatabaseManager, DatabaseManager>();
+
+        //sync services
+        services.AddSingleton(Connectivity.Current);
+        services.AddSingleton<IBackgroundSyncService, BackgroundSyncService>();
+        services.AddScoped<ISyncDataProcessor, SyncDataProcessor>();
+        services.AddScoped<ISyncProcessor, SyncProcessor<PasswordEntity>>();
+        services.AddScoped<ISyncProcessor, SyncProcessor<TwoFactorAuthCodeEntity>>();
+        services.AddScoped<PasswordSyncHandler>();
+        services.AddScoped<TwoFactorAuthSyncHandler>();
+        services.AddScoped<IEntityDataProcessor>(sp => sp.GetRequiredService<PasswordSyncHandler>());
+        services.AddScoped<IEntityDataProcessor>(sp => sp.GetRequiredService<TwoFactorAuthSyncHandler>());
+        services.AddScoped<IEntityPayloadFactory<PasswordEntity>>(sp => sp.GetRequiredService<PasswordSyncHandler>());
+        services.AddScoped<IEntityPayloadFactory<TwoFactorAuthCodeEntity>>(sp => sp.GetRequiredService<TwoFactorAuthSyncHandler>());
+        services.AddSingleton<ISyncLock, SyncLock>();
+        services.AddSingleton<IActiveSessionTracker, ActiveSessionTracker>();
+
+        //interaction services
+        services.AddSingleton<IInteractionConnectionService, InteractionConnectionService>();
+        services.AddSingleton<ISignalRHubEventHandler, SyncRequiredHandler>();
+        services.AddSingleton<ISignalRHubEventHandler, ActiveDevicesUpdatedHandler>();
+        services.AddSingleton<ISignalRHubEventHandler, UserSessionRevokedHandler>();
+
+        //qr code login
+        services.AddSingleton<IQrLoginOrchestratorFactory, QrLoginOrchestratorFactory>();
+        services.AddTransient<IQrLoginOrchestrator, QrLoginOrchestratorService>();
+        services.AddTransient<IQrHubConnection, QrHubConnection>();
+        services.AddTransient<ISecureChannelManager, SecureChannelManager>();
+        services.AddTransient<IQrLoginSessionManager, QrLoginSessionManager>();
+        services.AddTransient<IQrCodeRefresher, QrCodeRefresher>();
+
+        services.Configure<ApiSettings>(config.GetSection(nameof(ApiSettings)));
+        services.Configure<SignalRSettings>(config.GetSection(nameof(SignalRSettings)));
+        services.Configure<QrCodeSettings>(config.GetSection(nameof(QrCodeSettings)));
+
+        var apiSettings = config.GetSection(nameof(ApiSettings)).Get<ApiSettings>()
+                ?? throw new InvalidOperationException("ApiSettings not found.");
+
+        //refit
+        static HttpClientHandler configureHandler(string baseUrl)
         {
-            //api
-            services.AddScoped<IAuthService, AuthService>();
-            services.AddScoped<IVaultItemService, VaultItemService>();
-            services.AddScoped<IUserSessionService, UserSessionService>();
-            services.AddScoped<IRecoveryDataService, RecoveryDataService>();
-            services.AddScoped<IRegisterService, RegisterService>();
-
-            //device
-            services.AddScoped<IDeviceInfoService, DeviceInfoService>();
-
-            //persistence
-            services.AddSingleton(Preferences.Default);
-            services.AddSingleton(SecureStorage.Default);
-            services.AddScoped<IStorageService, StorageService>();
-            services.AddScoped<IDpopKeyService, DpopKeyService>();
-            services.AddScoped<IDpopProofService, DpopProofService>();
-            services.AddMemoryCache();
-
-            //http handlers
-            services.AddTransient<DeviceHeadersHandler>();
-            services.AddTransient<RefreshTokenHandler>();
-            services.AddTransient<DpopHandler>();
-            services.AddTransient<PollyResiliencyHandler>();
-            services.AddSingleton<IProtectedHttpHandlerPipelineBuilder, ProtectedHttpHandlerPipelineBuilder>();
-            services.AddSingleton<IPublicHttpHandlerPipelineBuilder, PublicHttpHandlerPipelineBuilder>();
-
-            //repositories
-            services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
-            services.AddScoped<IPasswordRepository, PasswordRepository>();
-            services.AddScoped<ITwoFactorAuthCodeRepository, TwoFactorAuthCodeRepository>();
-
-
-            //db context
-            services.AddScoped<IRealmService, RealmService>();
-            services.AddSingleton<IDatabaseManager, DatabaseManager>();
-
-            //sync services
-            services.AddSingleton(Connectivity.Current);
-            services.AddSingleton<IBackgroundSyncService, BackgroundSyncService>();
-            services.AddScoped<ISyncDataProcessor, SyncDataProcessor>();
-            services.AddScoped<ISyncProcessor, SyncProcessor<PasswordEntity>>();
-            services.AddScoped<ISyncProcessor, SyncProcessor<TwoFactorAuthCodeEntity>>();
-            services.AddScoped<PasswordSyncHandler>();
-            services.AddScoped<TwoFactorAuthSyncHandler>();
-            services.AddScoped<IEntityDataProcessor>(sp => sp.GetRequiredService<PasswordSyncHandler>());
-            services.AddScoped<IEntityDataProcessor>(sp => sp.GetRequiredService<TwoFactorAuthSyncHandler>());
-            services.AddScoped<IEntityPayloadFactory<PasswordEntity>>(sp => sp.GetRequiredService<PasswordSyncHandler>());
-            services.AddScoped<IEntityPayloadFactory<TwoFactorAuthCodeEntity>>(sp => sp.GetRequiredService<TwoFactorAuthSyncHandler>());
-            services.AddSingleton<ISyncLock, SyncLock>();
-            services.AddSingleton<IActiveSessionTracker, ActiveSessionTracker>();
-
-            //interaction services
-            services.AddSingleton<IInteractionConnectionService, InteractionConnectionService>();
-            services.AddSingleton<ISignalRHubEventHandler, SyncRequiredHandler>();
-            services.AddSingleton<ISignalRHubEventHandler, ActiveDevicesUpdatedHandler>();
-            services.AddSingleton<ISignalRHubEventHandler, UserSessionRevokedHandler>();
-
-            //qr code login
-            services.AddSingleton<IQrLoginOrchestratorFactory, QrLoginOrchestratorFactory>();
-            services.AddTransient<IQrLoginOrchestrator, QrLoginOrchestratorService>();
-            services.AddTransient<IQrHubConnection, QrHubConnection>();
-            services.AddTransient<ISecureChannelManager, SecureChannelManager>();
-            services.AddTransient<IQrLoginSessionManager, QrLoginSessionManager>();
-            services.AddTransient<IQrCodeRefresher, QrCodeRefresher>();
-
-            services.Configure<ApiSettings>(config.GetSection(nameof(ApiSettings)));
-            services.Configure<SignalRSettings>(config.GetSection(nameof(SignalRSettings)));
-            services.Configure<QrCodeSettings>(config.GetSection(nameof(QrCodeSettings)));
-
-            var apiSettings = config.GetSection(nameof(ApiSettings)).Get<ApiSettings>()
-                    ?? throw new InvalidOperationException("ApiSettings not found.");
-
-            //refit
-            static HttpClientHandler configureHandler(string baseUrl)
+            string devHost = string.Empty;
+            if (!string.IsNullOrEmpty(baseUrl) &&
+                    Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
             {
-                string devHost = string.Empty;
-                if (!string.IsNullOrEmpty(baseUrl) &&
-                        Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
-                {
-                    devHost = baseUri.Host;
-                }
+                devHost = baseUri.Host;
+            }
 
-                return new()
+            return new()
+            {
+                SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
                 {
-                    SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
-                    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
-                    {
 #if DEBUG
-                        if (!string.IsNullOrEmpty(devHost) &&
-                            message.RequestUri.Host.Equals(devHost, StringComparison.OrdinalIgnoreCase))
-                        {
-                            Console.WriteLine($"[SSL-DEBUG] Certificate validation bypassed for local dev host: {devHost}");
-                            return true;
-                        }
-#endif
-                        return errors == SslPolicyErrors.None;
+                    if (!string.IsNullOrEmpty(devHost) &&
+                        message.RequestUri.Host.Equals(devHost, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Console.WriteLine($"[SSL-DEBUG] Certificate validation bypassed for local dev host: {devHost}");
+                        return true;
                     }
-                };
-            }
-
-            RefitSettings refitSettings = new()
-            {
-                ContentSerializer = new SystemTextJsonContentSerializer(new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                })
+#endif
+                    return errors == SslPolicyErrors.None;
+                }
             };
-            void configureClient(HttpClient client)
-            {
-                client.BaseAddress = new Uri(apiSettings.BaseUrl);
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            }
-            services.AddRefitClient<ISecureVaultAuthorizeApi>(refitSettings)
-                    .ConfigureHttpClient(configureClient)
-                    .AddHttpMessageHandler<PollyResiliencyHandler>()
-                    .AddHttpMessageHandler<DeviceHeadersHandler>()
-                    .AddHttpMessageHandler<RefreshTokenHandler>()
-                    .AddHttpMessageHandler<DpopHandler>()
-                    .ConfigurePrimaryHttpMessageHandler(() => configureHandler(apiSettings.BaseUrl));
-
-            services.AddRefitClient<ISecureVaultAnonymousApi>(refitSettings)
-                    .ConfigureHttpClient(configureClient)
-                    .AddHttpMessageHandler<PollyResiliencyHandler>()
-                    .AddHttpMessageHandler<DeviceHeadersHandler>()
-                    .AddHttpMessageHandler<DpopHandler>()
-                    .ConfigurePrimaryHttpMessageHandler(() => configureHandler(apiSettings.BaseUrl));
-
-            return services;
         }
+
+        RefitSettings refitSettings = new()
+        {
+            ContentSerializer = new SystemTextJsonContentSerializer(new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            })
+        };
+        void configureClient(HttpClient client)
+        {
+            client.BaseAddress = new Uri(apiSettings.BaseUrl);
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        }
+        services.AddRefitClient<ISecureVaultAuthorizeApi>(refitSettings)
+                .ConfigureHttpClient(configureClient)
+                .AddHttpMessageHandler<PollyResiliencyHandler>()
+                .AddHttpMessageHandler<DeviceHeadersHandler>()
+                .AddHttpMessageHandler<RefreshTokenHandler>()
+                .AddHttpMessageHandler<DpopHandler>()
+                .ConfigurePrimaryHttpMessageHandler(() => configureHandler(apiSettings.BaseUrl));
+
+        services.AddRefitClient<ISecureVaultAnonymousApi>(refitSettings)
+                .ConfigureHttpClient(configureClient)
+                .AddHttpMessageHandler<PollyResiliencyHandler>()
+                .AddHttpMessageHandler<DeviceHeadersHandler>()
+                .AddHttpMessageHandler<DpopHandler>()
+                .ConfigurePrimaryHttpMessageHandler(() => configureHandler(apiSettings.BaseUrl));
+
+        return services;
     }
 }

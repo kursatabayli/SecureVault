@@ -2,30 +2,31 @@
 using Microsoft.IdentityModel.JsonWebTokens;
 using StackExchange.Redis;
 
-namespace SecureVault.ApiGateway.MiddleWares
+namespace SecureVault.ApiGateway.MiddleWares;
+
+public class TokenBlacklistMiddleware
 {
-    public class TokenBlacklistMiddleware
+    private readonly RequestDelegate _next;
+    private readonly ILogger<TokenBlacklistMiddleware> _logger;
+    private const string BlacklistKeyPrefix = "blacklist:";
+
+    public TokenBlacklistMiddleware(RequestDelegate next, ILogger<TokenBlacklistMiddleware> logger)
     {
-        private readonly RequestDelegate _next;
-        private readonly ILogger<TokenBlacklistMiddleware> _logger;
-        private const string BlacklistKeyPrefix = "blacklist:";
+        _next = next;
+        _logger = logger;
+    }
 
-        public TokenBlacklistMiddleware(RequestDelegate next, ILogger<TokenBlacklistMiddleware> logger)
+    public async Task InvokeAsync(HttpContext context, IDistributedCache cache)
+    {
+        if (context.User.Identity?.IsAuthenticated == true)
         {
-            _next = next;
-            _logger = logger;
-        }
+            var jti = context.User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
 
-        public async Task InvokeAsync(HttpContext context, IDistributedCache cache)
-        {
-            if (context.User.Identity?.IsAuthenticated == true)
+            if (!string.IsNullOrEmpty(jti))
             {
-                var jti = context.User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
-
-                if (!string.IsNullOrEmpty(jti))
+                try
                 {
                     var redisKey = $"{BlacklistKeyPrefix}{jti}";
-
                     var blacklistedToken = await cache.GetAsync(redisKey);
 
                     if (blacklistedToken != null)
@@ -37,9 +38,13 @@ namespace SecureVault.ApiGateway.MiddleWares
                         return;
                     }
                 }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to check token blacklist (cache connection issue?). Allowing request to proceed (fail-open). JTI: {Jti}", jti);
+                }
             }
-
-            await _next(context);
         }
+
+        await _next(context);
     }
 }

@@ -1,25 +1,35 @@
 ﻿using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 using SecureVault.Identity.Application.Contracts.Services;
 using System.Text;
 using System.Text.Json;
 
-namespace SecureVault.Identity.Infrastructure.Services
+namespace SecureVault.Identity.Infrastructure.Services;
+
+public class RedisCacheService : ICacheService
 {
-    public class RedisCacheService : ICacheService
+    private readonly IDistributedCache _cache;
+    private readonly ILogger<RedisCacheService> _logger;
+
+    public RedisCacheService(IDistributedCache cache, ILogger<RedisCacheService> logger)
     {
-        private readonly IDistributedCache _cache;
+        _cache = cache;
+        _logger = logger;
+    }
 
-        public RedisCacheService(IDistributedCache cache)
-        {
-            _cache = cache;
-        }
-
-        public async Task<T?> GetAsync<T>(string key)
+    public async Task<T?> GetAsync<T>(string key)
+    {
+        try
         {
             var value = await _cache.GetAsync(key);
 
             if (value == null || value.Length == 0)
+            {
+                _logger.LogDebug("Cache miss for key: {CacheKey}", key);
                 return default;
+            }
+
+            _logger.LogDebug("Cache hit for key: {CacheKey}", key);
 
             if (typeof(T) == typeof(string))
             {
@@ -28,8 +38,16 @@ namespace SecureVault.Identity.Infrastructure.Services
 
             return JsonSerializer.Deserialize<T>(value);
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting data from cache for key: {CacheKey}", key);
+            return default;
+        }
+    }
 
-        public async Task SetAsync(string key, object data, TimeSpan? expiry = null)
+    public async Task SetAsync(string key, object data, TimeSpan? expiry = null)
+    {
+        try
         {
             var options = new DistributedCacheEntryOptions();
             if (expiry.HasValue)
@@ -48,14 +66,41 @@ namespace SecureVault.Identity.Infrastructure.Services
             }
 
             await _cache.SetAsync(key, bytes, options);
+
+            _logger.LogDebug("Cache set for key: {CacheKey}. Expiry: {Expiry}", key, expiry?.ToString() ?? "None");
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting data in cache for key: {CacheKey}", key);
+        }
+    }
 
-        public async Task RemoveAsync(string key) => await _cache.RemoveAsync(key);
+    public async Task RemoveAsync(string key)
+    {
+        try
+        {
+            await _cache.RemoveAsync(key);
+            _logger.LogDebug("Cache removed for key: {CacheKey}", key);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing data from cache for key: {CacheKey}", key);
+        }
+    }
 
-        public async Task<bool> ExistsAsync(string key)
+    public async Task<bool> ExistsAsync(string key)
+    {
+        try
         {
             var value = await _cache.GetAsync(key);
-            return value != null;
+            var exists = value != null;
+            _logger.LogDebug("Cache exists check for key: {CacheKey}. Result: {Exists}", key, exists);
+            return exists;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking existence in cache for key: {CacheKey}", key);
+            return false;
         }
     }
 }

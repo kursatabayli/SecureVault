@@ -60,6 +60,8 @@ public class DpopJwtEventsHandler
         return;
       }
 
+      _logger.LogInformation("[DPoP] DPoP proof validated successfully. JKT {Jkt} attached to context. URI: {Uri}", jkt, requestUri);
+
       context.HttpContext.Items["ValidatedDPoPThumbprint"] = jkt;
     }
     catch (Exception ex)
@@ -67,20 +69,6 @@ public class DpopJwtEventsHandler
       _logger.LogError(ex, "DPoP proof validation error.");
       context.Fail("DPoP proof validation failed.");
       return;
-    }
-
-    if (!string.IsNullOrEmpty(authorizationHeader))
-    {
-      if (authorizationHeader.StartsWith("DPoP ", StringComparison.OrdinalIgnoreCase))
-      {
-        context.Token = authorizationHeader.Substring("DPoP ".Length).Trim();
-      }
-      else
-      {
-        _logger.LogWarning("Unsupported Authorization scheme. Only 'DPoP' is allowed. URI: {Uri}", requestUri);
-        context.Fail("Unsupported authorization scheme. Use DPoP.");
-        return;
-      }
     }
   }
 
@@ -96,6 +84,7 @@ public class DpopJwtEventsHandler
 
     if (string.IsNullOrEmpty(proofJkt) && string.IsNullOrEmpty(tokenJkt))
     {
+      _logger.LogInformation("[DPoP] JKTs not present on proof or token (Bearer token flow). Validation continues.");
       return Task.CompletedTask;
     }
 
@@ -103,11 +92,11 @@ public class DpopJwtEventsHandler
     {
       if (string.Equals(proofJkt, tokenJkt, StringComparison.Ordinal))
       {
-        _logger.LogInformation("[DPoP] JKT'ler başarıyla eşleşti.");
+        _logger.LogInformation("[DPoP] JKTs matched successfully (DPoP flow).");
         return Task.CompletedTask;
       }
 
-      _logger.LogWarning("[DPoP] JKT'ler EŞLEŞMİYOR! Proof={ProofJkt}, Token={TokenJkt}", proofJkt, tokenJkt);
+      _logger.LogWarning("[DPoP] JKTs DO NOT MATCH! Proof={ProofJkt}, Token={TokenJkt}", proofJkt, tokenJkt);
       context.HttpContext.Items.Remove("ValidatedDPoPThumbprint");
       context.Fail("DPoP token-binding mismatch.");
       return Task.CompletedTask;
@@ -116,9 +105,15 @@ public class DpopJwtEventsHandler
     context.HttpContext.Items.Remove("ValidatedDPoPThumbprint");
 
     if (string.IsNullOrEmpty(proofJkt))
+    {
+      _logger.LogWarning("[DPoP] Validation failed: DPoP token (Jkt: {TokenJkt}) requires a DPoP proof, but none was provided.", tokenJkt);
       context.Fail("DPoP token requires DPoP proof.");
+    }
     else
+    {
+      _logger.LogWarning("[DPoP] Validation failed: DPoP proof (Jkt: {ProofJkt}) provided for a non-DPoP (Bearer) token.", proofJkt);
       context.Fail("DPoP proof provided for a non-DPoP token.");
+    }
 
     return Task.CompletedTask;
   }

@@ -1,8 +1,7 @@
-﻿namespace SecureVault.App.Application.Contracts.Abstractions.Cryptography
+﻿namespace SecureVault.App.Application.Contracts.Abstractions.Cryptography;
+
+public interface IBouncyCastleCryptoService
 {
-    public interface IBouncyCastleCryptoService
-    {
-        (byte[] Salt, byte[] PublicKey) GenerateValidKeyPair(string password);
-        string SignHash(byte[] hash, byte[] privateKey);
-    }
+    (byte[] Salt, byte[] PublicKey) GenerateValidKeyPair(string password);
+    string SignHash(byte[] hash, byte[] privateKey);
 }

@@ -1,9 +1,8 @@
-﻿namespace SecureVault.App.Application.Contracts.DTOs.VaultItem
+﻿namespace SecureVault.App.Application.Contracts.DTOs.VaultItem;
+
+public enum ItemType
 {
-    public enum ItemType
-    {
-        Password = 1,
-        TwoFactorAuth = 2,
-        CreditCard = 3,
-    }
+    Password = 1,
+    TwoFactorAuth = 2,
+    CreditCard = 3,
 }

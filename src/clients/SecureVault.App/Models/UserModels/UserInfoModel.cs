@@ -1,9 +1,8 @@
-﻿namespace SecureVault.App.Models.UserModels
+﻿namespace SecureVault.App.Models.UserModels;
+
+public class UserInfoModel
 {
-    public class UserInfoModel
-    {
-        public string Name { get; set; }
-        public string Surname { get; set; }
-        public string PhoneNumber { get; set; }
-    }
+    public string Name { get; set; }
+    public string Surname { get; set; }
+    public string PhoneNumber { get; set; }
 }

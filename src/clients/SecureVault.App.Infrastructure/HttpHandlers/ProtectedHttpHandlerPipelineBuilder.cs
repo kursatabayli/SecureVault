@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SecureVault.App.Infrastructure.Helpers;
 
@@ -10,8 +11,8 @@ public interface IProtectedHttpHandlerPipelineBuilder
 
 internal class ProtectedHttpHandlerPipelineBuilder : BaseHttpHandlerPipelineBuilder, IProtectedHttpHandlerPipelineBuilder
 {
-  public ProtectedHttpHandlerPipelineBuilder(IServiceProvider serviceProvider, IOptions<ApiSettings> apiSettings)
-      : base(serviceProvider, apiSettings)
+  public ProtectedHttpHandlerPipelineBuilder(IServiceProvider serviceProvider, ILogger<ProtectedHttpHandlerPipelineBuilder> logger, IOptions<ApiSettings> apiSettings)
+      : base(serviceProvider, logger, apiSettings)
   {
   }
 

@@ -4,28 +4,27 @@ using SecureVault.Identity.Application.Services;
 using SecureVault.Identity.Infrastructure.Repositories;
 using SecureVault.Identity.Infrastructure.Services;
 
-namespace SecureVault.Identity.Api.Extensions
+namespace SecureVault.Identity.Api.Extensions;
+
+public static class ServiceExtensions
 {
-    public static class ServiceExtensions
+    public static IServiceCollection RegisterServices(this IServiceCollection services)
     {
-        public static IServiceCollection RegisterServices(this IServiceCollection services)
-        {
-            //Services
-            services.AddScoped<IUnitOfWork, UnitOfWork>();
-            services.AddScoped<IJwtTokenService, JwtTokenService>();
-            services.AddScoped<IEcdsaVerificationService, EcdsaVerificationService>();
-            services.AddScoped<ICacheService, RedisCacheService>();
+        //Services
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<IEcdsaVerificationService, EcdsaVerificationService>();
+        services.AddScoped<ICacheService, RedisCacheService>();
 
-            //Repositories
-            services.AddScoped<IUserRepository, UserRepository>();
-            services.AddScoped<IUserSessionRepository, UserSessionRepository>();
-            services.AddScoped<IUserRecoveryDataRepository, UserRecoveryDataRepository>();
+        //Repositories
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUserSessionRepository, UserSessionRepository>();
+        services.AddScoped<IUserRecoveryDataRepository, UserRecoveryDataRepository>();
 
-            //Application Services
-            services.AddScoped<IUserSessionService, UserSessionService>();
-            services.AddScoped<ITokenValidationService, TokenValidationService>();
+        //Application Services
+        services.AddScoped<IUserSessionService, UserSessionService>();
+        services.AddScoped<ITokenValidationService, TokenValidationService>();
 
-            return services;
-        }
+        return services;
     }
 }

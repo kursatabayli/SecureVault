@@ -1,7 +1,6 @@
-﻿namespace SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin
+﻿namespace SecureVault.App.Application.Contracts.Abstractions.QrCodeLogin;
+
+public interface IQrLoginOrchestratorFactory
 {
-    public interface IQrLoginOrchestratorFactory
-    {
-        IQrLoginOrchestrator Create();
-    }
+    IQrLoginOrchestrator Create();
 }

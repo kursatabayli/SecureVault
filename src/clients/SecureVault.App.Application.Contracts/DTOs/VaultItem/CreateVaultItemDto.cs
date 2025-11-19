@@ -1,10 +1,9 @@
-﻿namespace SecureVault.App.Application.Contracts.DTOs.VaultItem
+﻿namespace SecureVault.App.Application.Contracts.DTOs.VaultItem;
+
+public class CreateVaultItemDto
 {
-    public class CreateVaultItemDto
-    {
-        public Guid Id { get; set; }
-        public ItemType ItemType { get; set; }
-        public byte[] EncryptedData { get; set; }
-        public DateTimeOffset CreatedAt { get; set; }
-    }
+    public Guid Id { get; set; }
+    public ItemType ItemType { get; set; }
+    public byte[] EncryptedData { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
 }

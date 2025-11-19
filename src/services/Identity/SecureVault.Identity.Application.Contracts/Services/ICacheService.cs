@@ -1,10 +1,9 @@
-﻿namespace SecureVault.Identity.Application.Contracts.Services
+﻿namespace SecureVault.Identity.Application.Contracts.Services;
+
+public interface ICacheService
 {
-    public interface ICacheService
-    {
-        Task<T?> GetAsync<T>(string key);
-        Task SetAsync(string key, object data, TimeSpan? expiry = null);
-        Task RemoveAsync(string key);
-        Task<bool> ExistsAsync(string key);
-    }
+    Task<T?> GetAsync<T>(string key);
+    Task SetAsync(string key, object data, TimeSpan? expiry = null);
+    Task RemoveAsync(string key);
+    Task<bool> ExistsAsync(string key);
 }

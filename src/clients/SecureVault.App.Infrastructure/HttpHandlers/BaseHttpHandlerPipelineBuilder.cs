@@ -1,4 +1,5 @@
 using System.Net.Security;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SecureVault.App.Infrastructure.Helpers;
 
@@ -7,11 +8,13 @@ namespace SecureVault.App.Infrastructure.HttpHandlers;
 internal abstract class BaseHttpHandlerPipelineBuilder
 {
   protected readonly IServiceProvider ServiceProvider;
+  protected readonly ILogger _logger;
   private readonly string _devHost;
 
-  protected BaseHttpHandlerPipelineBuilder(IServiceProvider serviceProvider, IOptions<ApiSettings> apiSettings)
+  protected BaseHttpHandlerPipelineBuilder(IServiceProvider serviceProvider, ILogger logger, IOptions<ApiSettings> apiSettings)
   {
     ServiceProvider = serviceProvider;
+    _logger = logger;
     var settings = apiSettings.Value;
     _devHost = string.Empty;
 
@@ -30,7 +33,7 @@ internal abstract class BaseHttpHandlerPipelineBuilder
 #if DEBUG
         if (!string.IsNullOrEmpty(_devHost) && message.RequestUri.Host.Equals(_devHost, StringComparison.OrdinalIgnoreCase))
         {
-          Console.WriteLine($"[SSL-DEBUG] Certificate validation bypassed for {_devHost} via {GetType().Name}.");
+          _logger.LogWarning("[SSL-DEBUG] Certificate validation bypassed for {DevHost} via {HandlerType}.", _devHost, GetType().Name);
           return true;
         }
 #endif

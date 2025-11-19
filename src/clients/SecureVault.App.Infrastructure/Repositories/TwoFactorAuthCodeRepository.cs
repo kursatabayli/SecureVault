@@ -2,12 +2,11 @@
 using SecureVault.App.Application.Contracts.Repositories;
 using SecureVault.App.Domain.Entities;
 
-namespace SecureVault.App.Infrastructure.Repositories
+namespace SecureVault.App.Infrastructure.Repositories;
+
+public class TwoFactorAuthCodeRepository : GenericRepository<TwoFactorAuthCodeEntity>, ITwoFactorAuthCodeRepository
 {
-    public class TwoFactorAuthCodeRepository : GenericRepository<TwoFactorAuthCodeEntity>, ITwoFactorAuthCodeRepository
+    public TwoFactorAuthCodeRepository(IRealmService realmService) : base(realmService)
     {
-        public TwoFactorAuthCodeRepository(IRealmService realmService) : base(realmService)
-        {
-        }
     }
 }

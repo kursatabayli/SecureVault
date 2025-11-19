@@ -8,37 +8,45 @@ using SecureVault.Identity.Application.Features.CQRS.UserSessions.Results;
 using SecureVault.Identity.Application.Messages;
 using SecureVault.Shared.Result;
 
-namespace SecureVault.Identity.Application.Features.CQRS.UserSessions.Handlers
+namespace SecureVault.Identity.Application.Features.CQRS.UserSessions.Handlers;
+
+public class GetAllUserSessionsByUserIdQueryHandler : IRequestHandler<GetAllUserSessionsByUserIdQuery, Result<IReadOnlyCollection<UserSessionResult>>>
 {
-    public class GetAllUserSessionsByUserIdQueryHandler : IRequestHandler<GetAllUserSessionsByUserIdQuery, Result<IReadOnlyCollection<UserSessionResult>>>
+    private readonly IUserSessionRepository _userSessionRepository;
+    private readonly IMapper _mapper;
+    private readonly ILogger<GetAllUserSessionsByUserIdQueryHandler> _logger;
+    private readonly IStringLocalizer<ReturnMessages> _returnMessages;
+
+    public GetAllUserSessionsByUserIdQueryHandler(IUserSessionRepository userSessionRepository, IMapper mapper, ILogger<GetAllUserSessionsByUserIdQueryHandler> logger, IStringLocalizer<ReturnMessages> returnMessages)
     {
-        private readonly IUserSessionRepository _userSessionRepository;
-        private readonly IMapper _mapper;
-        private readonly ILogger<GetAllUserSessionsByUserIdQueryHandler> _logger;
-        private readonly IStringLocalizer<ReturnMessages> _returnMessages;
+        _userSessionRepository = userSessionRepository;
+        _mapper = mapper;
+        _logger = logger;
+        _returnMessages = returnMessages;
+    }
 
-        public GetAllUserSessionsByUserIdQueryHandler(IUserSessionRepository userSessionRepository, IMapper mapper, ILogger<GetAllUserSessionsByUserIdQueryHandler> logger, IStringLocalizer<ReturnMessages> returnMessages)
+    public async Task<Result<IReadOnlyCollection<UserSessionResult>>> Handle(GetAllUserSessionsByUserIdQuery request, CancellationToken cancellationToken)
+    {
+        try
         {
-            _userSessionRepository = userSessionRepository;
-            _mapper = mapper;
-            _logger = logger;
-            _returnMessages = returnMessages;
+            var userSessions = await _userSessionRepository.GetAllSessionsByUserIdAsync(request.UserId);
+            var userSessionResults = _mapper.Map<IReadOnlyCollection<UserSessionResult>>(userSessions);
+
+            if (userSessionResults == null || !userSessionResults.Any())
+            {
+                _logger.LogInformation("No user sessions found for User: {UserId}", request.UserId);
+            }
+            else
+            {
+                _logger.LogInformation("Successfully retrieved {SessionCount} user sessions for User: {UserId}", userSessionResults.Count, request.UserId);
+            }
+
+            return Result<IReadOnlyCollection<UserSessionResult>>.Success(userSessionResults);
         }
-
-        public async Task<Result<IReadOnlyCollection<UserSessionResult>>> Handle(GetAllUserSessionsByUserIdQuery request, CancellationToken cancellationToken)
+        catch (Exception ex)
         {
-            try
-            {
-                var userSessions = await _userSessionRepository.GetAllSessionsByUserIdAsync(request.UserId);
-                var userSessionResults = _mapper.Map<IReadOnlyCollection<UserSessionResult>>(userSessions);
-
-                return Result<IReadOnlyCollection<UserSessionResult>>.Success(userSessionResults);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Kullanıcı oturumları getirilirken bir hata oluştu. UserId: {UserId}", request.UserId);
-                return new Error(ErrorCodes.InternalServerError, _returnMessages[ErrorCodes.InternalServerError]);
-            }
+            _logger.LogError(ex, "An error occurred while retrieving user sessions. UserId: {UserId}", request.UserId);
+            return new Error(ErrorCodes.InternalServerError, _returnMessages[ErrorCodes.InternalServerError]);
         }
     }
 }

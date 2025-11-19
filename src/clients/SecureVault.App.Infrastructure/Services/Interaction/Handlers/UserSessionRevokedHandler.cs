@@ -20,8 +20,15 @@ public class UserSessionRevokedHandler : ISignalRHubEventHandler
   {
     connection.On("UserSessionRevoked", async () =>
     {
-      _logger.LogInformation("Sunucudan 'UserSessionRevoked' bildirimi alındı. Kullanıcı oturumu iptal ediliyor.");
-      await _authenticationStateNotifier.NotifyUserLogout();
+      try
+      {
+        _logger.LogInformation("Received 'UserSessionRevoked' notification from server. Logging out user.");
+        await _authenticationStateNotifier.NotifyUserLogout();
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error handling 'UserSessionRevoked' notification.");
+      }
     });
   }
 }

@@ -4,15 +4,14 @@ using SecureVault.App.Application.Features.CQRS.TwoFactorAuthCodes.Results;
 using SecureVault.App.Domain.Entities;
 using SecureVault.App.Models.TwoFactorAuthCodeModels;
 
-namespace SecureVault.App.Mappings
+namespace SecureVault.App.Mappings;
+
+public class TwoFactorAuthCodeMappingProfile : Profile
 {
-    public class TwoFactorAuthCodeMappingProfile : Profile
+    public TwoFactorAuthCodeMappingProfile()
     {
-        public TwoFactorAuthCodeMappingProfile()
-        {
-            CreateMap<TwoFactorAuthCodeEntity, TwoFactorAuthCodeModel>();
-            CreateMap<TwoFactorAuthCodeResult, TwoFactorAuthCodeModel>();
-            CreateMap<TwoFactorAuthCodeModel, CreateTwoFactorAuthCodeCommand>();
-        }
+        CreateMap<TwoFactorAuthCodeEntity, TwoFactorAuthCodeModel>();
+        CreateMap<TwoFactorAuthCodeResult, TwoFactorAuthCodeModel>();
+        CreateMap<TwoFactorAuthCodeModel, CreateTwoFactorAuthCodeCommand>();
     }
 }

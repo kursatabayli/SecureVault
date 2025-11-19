@@ -2,49 +2,48 @@
 using Microsoft.JSInterop;
 using SecureVault.App.Models.RecoveryKeyModels;
 
-namespace SecureVault.App.Components.Pages.Register
+namespace SecureVault.App.Components.Pages.Register;
+
+public partial class RecoveryKeyDisplay : ComponentBase
 {
-    public partial class RecoveryKeyDisplay : ComponentBase
+    private bool _isCopied = false;
+    private string _buttonAnimationClass = "";
+    private bool _recoveryKeyConfirmed = false;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
+    [Parameter] public RecoveryKeyModel RecoveryKey { get; set; } = null!;
+    [Parameter] public EventCallback OnSubmit { get; set; }
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    private async Task HandleSubmit()
     {
-        private bool _isCopied = false;
-        private string _buttonAnimationClass = "";
-        private bool _recoveryKeyConfirmed = false;
-        [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
-        [Parameter] public RecoveryKeyModel RecoveryKey { get; set; } = null!;
-        [Parameter] public EventCallback OnSubmit { get; set; }
-        [Parameter] public EventCallback OnBack { get; set; }
-
-        private async Task HandleSubmit()
+        if (OnSubmit.HasDelegate)
         {
-            if (OnSubmit.HasDelegate)
-            {
-                await OnSubmit.InvokeAsync();
-            }
+            await OnSubmit.InvokeAsync();
         }
-        private async Task HandleBack()
+    }
+    private async Task HandleBack()
+    {
+        if (OnBack.HasDelegate)
         {
-            if (OnBack.HasDelegate)
-            {
-                await OnBack.InvokeAsync();
-            }
+            await OnBack.InvokeAsync();
         }
-        private async Task CopyToClipboard()
-        {
-            if (_isCopied || RecoveryKey is null) return;
-            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", RecoveryKey.Mnemonic);
-            _isCopied = true;
-            _buttonAnimationClass = "copied-pop-in-animation";
-            StateHasChanged();
+    }
+    private async Task CopyToClipboard()
+    {
+        if (_isCopied || RecoveryKey is null) return;
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", RecoveryKey.Mnemonic);
+        _isCopied = true;
+        _buttonAnimationClass = "copied-pop-in-animation";
+        StateHasChanged();
 
-            await Task.Delay(2000);
+        await Task.Delay(2000);
 
-            _buttonAnimationClass = "copied-pop-out-animation";
-            StateHasChanged();
+        _buttonAnimationClass = "copied-pop-out-animation";
+        StateHasChanged();
 
-            await Task.Delay(300);
+        await Task.Delay(300);
 
-            _isCopied = false;
-            StateHasChanged();
-        }
+        _isCopied = false;
+        StateHasChanged();
     }
 }

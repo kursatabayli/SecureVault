@@ -9,261 +9,260 @@ using SecureVault.Identity.Infrastructure.Context;
 
 #nullable disable
 
-namespace SecureVault.Identity.Infrastructure.Migrations
+namespace SecureVault.Identity.Infrastructure.Migrations;
+
+[DbContext(typeof(AppDbContext))]
+[Migration("20250909203741_InitialCreate")]
+partial class InitialCreate
 {
-    [DbContext(typeof(AppDbContext))]
-    [Migration("20250909203741_InitialCreate")]
-    partial class InitialCreate
+    /// <inheritdoc />
+    protected override void BuildTargetModel(ModelBuilder modelBuilder)
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
-        {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.9")
-                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+        modelBuilder
+            .HasAnnotation("ProductVersion", "9.0.9")
+            .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+        NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("SecureVault.Identity.Domain.Entities.User", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+        modelBuilder.Entity("SecureVault.Identity.Domain.Entities.User", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid")
+                    .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("NOW()");
+                b.Property<DateTimeOffset>("CreatedAt")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at")
+                    .HasDefaultValueSql("NOW()");
 
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("email");
+                b.Property<string>("Email")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("character varying(100)")
+                    .HasColumnName("email");
 
-                    b.Property<byte[]>("PublicKey")
-                        .IsRequired()
-                        .HasColumnType("bytea")
-                        .HasColumnName("public_key");
+                b.Property<byte[]>("PublicKey")
+                    .IsRequired()
+                    .HasColumnType("bytea")
+                    .HasColumnName("public_key");
 
-                    b.Property<byte[]>("Salt")
-                        .IsRequired()
-                        .HasColumnType("bytea")
-                        .HasColumnName("salt");
+                b.Property<byte[]>("Salt")
+                    .IsRequired()
+                    .HasColumnType("bytea")
+                    .HasColumnName("salt");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("NOW()");
+                b.Property<DateTimeOffset>("UpdatedAt")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at")
+                    .HasDefaultValueSql("NOW()");
 
-                    b.HasKey("Id")
-                        .HasName("pk_users");
+                b.HasKey("Id")
+                    .HasName("pk_users");
 
-                    b.HasIndex("Email")
-                        .IsUnique()
-                        .HasDatabaseName("ix_users_email");
+                b.HasIndex("Email")
+                    .IsUnique()
+                    .HasDatabaseName("ix_users_email");
 
-                    b.ToTable("users", (string)null);
-                });
+                b.ToTable("users", (string)null);
+            });
 
-            modelBuilder.Entity("SecureVault.Identity.Domain.Entities.UserRecoveryData", b =>
-                {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+        modelBuilder.Entity("SecureVault.Identity.Domain.Entities.UserRecoveryData", b =>
+            {
+                b.Property<Guid>("UserId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("user_id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("NOW()");
+                b.Property<DateTimeOffset>("CreatedAt")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at")
+                    .HasDefaultValueSql("NOW()");
 
-                    b.Property<byte[]>("RecoveryData")
-                        .IsRequired()
-                        .HasColumnType("bytea")
-                        .HasColumnName("recovery_data");
+                b.Property<byte[]>("RecoveryData")
+                    .IsRequired()
+                    .HasColumnType("bytea")
+                    .HasColumnName("recovery_data");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("NOW()");
+                b.Property<DateTimeOffset>("UpdatedAt")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at")
+                    .HasDefaultValueSql("NOW()");
 
-                    b.HasKey("UserId")
-                        .HasName("pk_user_recovery_data");
+                b.HasKey("UserId")
+                    .HasName("pk_user_recovery_data");
 
-                    b.ToTable("user_recovery_data", (string)null);
-                });
+                b.ToTable("user_recovery_data", (string)null);
+            });
 
-            modelBuilder.Entity("SecureVault.Identity.Domain.Entities.UserSession", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+        modelBuilder.Entity("SecureVault.Identity.Domain.Entities.UserSession", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid")
+                    .HasColumnName("id");
 
-                    b.Property<string>("AccessTokenJti")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("access_token_jti");
+                b.Property<string>("AccessTokenJti")
+                    .IsRequired()
+                    .HasColumnType("text")
+                    .HasColumnName("access_token_jti");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("NOW()");
+                b.Property<DateTimeOffset>("CreatedAt")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at")
+                    .HasDefaultValueSql("NOW()");
 
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
+                b.Property<DateTimeOffset>("ExpiresAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("expires_at");
 
-                    b.Property<string>("IpAddress")
-                        .HasMaxLength(45)
-                        .HasColumnType("character varying(45)")
-                        .HasColumnName("ip_address");
+                b.Property<string>("IpAddress")
+                    .HasMaxLength(45)
+                    .HasColumnType("character varying(45)")
+                    .HasColumnName("ip_address");
 
-                    b.Property<bool>("IsPersistent")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_persistent");
+                b.Property<bool>("IsPersistent")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("boolean")
+                    .HasDefaultValue(false)
+                    .HasColumnName("is_persistent");
 
-                    b.Property<bool>("IsRevoked")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_revoked");
+                b.Property<bool>("IsRevoked")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("boolean")
+                    .HasDefaultValue(false)
+                    .HasColumnName("is_revoked");
 
-                    b.Property<DateTimeOffset?>("LastUsedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_used_at");
+                b.Property<DateTimeOffset?>("LastUsedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("last_used_at");
 
-                    b.Property<string>("RefreshTokenJti")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("refresh_token_jti");
+                b.Property<string>("RefreshTokenJti")
+                    .IsRequired()
+                    .HasColumnType("text")
+                    .HasColumnName("refresh_token_jti");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                b.Property<Guid>("UserId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("user_id");
 
-                    b.HasKey("Id")
-                        .HasName("pk_user_sessions");
+                b.HasKey("Id")
+                    .HasName("pk_user_sessions");
 
-                    b.HasIndex("RefreshTokenJti")
-                        .HasDatabaseName("ix_user_sessions_refresh_token_jti");
+                b.HasIndex("RefreshTokenJti")
+                    .HasDatabaseName("ix_user_sessions_refresh_token_jti");
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_user_sessions_user_id");
+                b.HasIndex("UserId")
+                    .HasDatabaseName("ix_user_sessions_user_id");
 
-                    b.ToTable("user_sessions", (string)null);
-                });
+                b.ToTable("user_sessions", (string)null);
+            });
 
-            modelBuilder.Entity("SecureVault.Identity.Domain.Entities.User", b =>
-                {
-                    b.OwnsOne("SecureVault.Identity.Domain.Entities.UserInfo", "UserInfo", b1 =>
-                        {
-                            b1.Property<Guid>("UserId")
-                                .HasColumnType("uuid");
+        modelBuilder.Entity("SecureVault.Identity.Domain.Entities.User", b =>
+            {
+                b.OwnsOne("SecureVault.Identity.Domain.Entities.UserInfo", "UserInfo", b1 =>
+                    {
+                        b1.Property<Guid>("UserId")
+                            .HasColumnType("uuid");
 
-                            b1.Property<string>("Name")
-                                .IsRequired()
-                                .HasColumnType("text");
+                        b1.Property<string>("Name")
+                            .IsRequired()
+                            .HasColumnType("text");
 
-                            b1.Property<string>("PhoneNumber")
-                                .IsRequired()
-                                .HasColumnType("text");
+                        b1.Property<string>("PhoneNumber")
+                            .IsRequired()
+                            .HasColumnType("text");
 
-                            b1.Property<string>("Surname")
-                                .IsRequired()
-                                .HasColumnType("text");
+                        b1.Property<string>("Surname")
+                            .IsRequired()
+                            .HasColumnType("text");
 
-                            b1.HasKey("UserId");
+                        b1.HasKey("UserId");
 
-                            b1.ToTable("users");
+                        b1.ToTable("users");
 
-                            b1.ToJson("user_info");
+                        b1.ToJson("user_info");
 
-                            b1.WithOwner()
-                                .HasForeignKey("UserId")
-                                .HasConstraintName("fk_users_users_id");
-                        });
+                        b1.WithOwner()
+                            .HasForeignKey("UserId")
+                            .HasConstraintName("fk_users_users_id");
+                    });
 
-                    b.Navigation("UserInfo")
-                        .IsRequired();
-                });
+                b.Navigation("UserInfo")
+                    .IsRequired();
+            });
 
-            modelBuilder.Entity("SecureVault.Identity.Domain.Entities.UserRecoveryData", b =>
-                {
-                    b.HasOne("SecureVault.Identity.Domain.Entities.User", "User")
-                        .WithOne("UserRecoveryData")
-                        .HasForeignKey("SecureVault.Identity.Domain.Entities.UserRecoveryData", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_user_recovery_data_users_user_id");
+        modelBuilder.Entity("SecureVault.Identity.Domain.Entities.UserRecoveryData", b =>
+            {
+                b.HasOne("SecureVault.Identity.Domain.Entities.User", "User")
+                    .WithOne("UserRecoveryData")
+                    .HasForeignKey("SecureVault.Identity.Domain.Entities.UserRecoveryData", "UserId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired()
+                    .HasConstraintName("fk_user_recovery_data_users_user_id");
 
-                    b.Navigation("User");
-                });
+                b.Navigation("User");
+            });
 
-            modelBuilder.Entity("SecureVault.Identity.Domain.Entities.UserSession", b =>
-                {
-                    b.HasOne("SecureVault.Identity.Domain.Entities.User", "User")
-                        .WithMany("UserSessions")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_user_sessions_users_user_id");
+        modelBuilder.Entity("SecureVault.Identity.Domain.Entities.UserSession", b =>
+            {
+                b.HasOne("SecureVault.Identity.Domain.Entities.User", "User")
+                    .WithMany("UserSessions")
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired()
+                    .HasConstraintName("fk_user_sessions_users_user_id");
 
-                    b.OwnsOne("SecureVault.Identity.Domain.Entities.DeviceDetail", "DeviceDetails", b1 =>
-                        {
-                            b1.Property<Guid>("UserSessionId")
-                                .HasColumnType("uuid");
+                b.OwnsOne("SecureVault.Identity.Domain.Entities.DeviceDetail", "DeviceDetails", b1 =>
+                    {
+                        b1.Property<Guid>("UserSessionId")
+                            .HasColumnType("uuid");
 
-                            b1.Property<string>("DeviceManufacturer")
-                                .HasColumnType("text");
+                        b1.Property<string>("DeviceManufacturer")
+                            .HasColumnType("text");
 
-                            b1.Property<string>("DeviceModel")
-                                .HasColumnType("text");
+                        b1.Property<string>("DeviceModel")
+                            .HasColumnType("text");
 
-                            b1.Property<string>("DeviceName")
-                                .HasColumnType("text");
+                        b1.Property<string>("DeviceName")
+                            .HasColumnType("text");
 
-                            b1.Property<string>("OperatingSystem")
-                                .HasColumnType("text");
+                        b1.Property<string>("OperatingSystem")
+                            .HasColumnType("text");
 
-                            b1.Property<string>("UniqueDeviceId")
-                                .IsRequired()
-                                .HasColumnType("text");
+                        b1.Property<string>("UniqueDeviceId")
+                            .IsRequired()
+                            .HasColumnType("text");
 
-                            b1.HasKey("UserSessionId");
+                        b1.HasKey("UserSessionId");
 
-                            b1.ToTable("user_sessions");
+                        b1.ToTable("user_sessions");
 
-                            b1.ToJson("device_details");
+                        b1.ToJson("device_details");
 
-                            b1.WithOwner()
-                                .HasForeignKey("UserSessionId")
-                                .HasConstraintName("fk_user_sessions_user_sessions_id");
-                        });
+                        b1.WithOwner()
+                            .HasForeignKey("UserSessionId")
+                            .HasConstraintName("fk_user_sessions_user_sessions_id");
+                    });
 
-                    b.Navigation("DeviceDetails")
-                        .IsRequired();
+                b.Navigation("DeviceDetails")
+                    .IsRequired();
 
-                    b.Navigation("User");
-                });
+                b.Navigation("User");
+            });
 
-            modelBuilder.Entity("SecureVault.Identity.Domain.Entities.User", b =>
-                {
-                    b.Navigation("UserRecoveryData")
-                        .IsRequired();
+        modelBuilder.Entity("SecureVault.Identity.Domain.Entities.User", b =>
+            {
+                b.Navigation("UserRecoveryData")
+                    .IsRequired();
 
-                    b.Navigation("UserSessions");
-                });
+                b.Navigation("UserSessions");
+            });
 #pragma warning restore 612, 618
-        }
     }
 }

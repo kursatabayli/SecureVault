@@ -38,21 +38,21 @@ public class RedisQrLoginChannelService : IQrLoginChannelService
         {
             if (await tranCreator.ExecuteAsync())
             {
-                _logger.LogInformation("RegisterConnectionAsync: YENİ kanal oluşturuldu (Creator). {ChannelId}, Count=1", channelId);
+                _logger.LogInformation("RegisterConnectionAsync: NEW channel created (Creator). {ChannelId}, Count=1", channelId);
                 return (true, 1, "Creator");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "RegisterConnectionAsync (Creator Path): Transaction HATA. {ChannelId}", channelId);
+            _logger.LogError(ex, "RegisterConnectionAsync (Creator Path): Transaction ERROR. {ChannelId}", channelId);
             return (false, -1, null);
         }
 
-        _logger.LogInformation("RegisterConnectionAsync: Kanal mevcut, katılma deneniyor (Joiner). {ChannelId}", channelId);
+        _logger.LogInformation("RegisterConnectionAsync: Channel exists, attempting to join (Joiner). {ChannelId}", channelId);
 
         if (!await ValidateChannelAsync(channelId))
         {
-            _logger.LogWarning("RegisterConnectionAsync (Joiner Path): Kanal geçerli değil (Waiting değil veya süresi dolmuş). {ChannelId}", channelId);
+            _logger.LogWarning("RegisterConnectionAsync (Joiner Path): Channel is not valid (not 'Waiting' or expired). {ChannelId}", channelId);
             return (false, -1, "Invalid");
         }
 
@@ -70,19 +70,19 @@ public class RedisQrLoginChannelService : IQrLoginChannelService
             if (await tranJoiner.ExecuteAsync())
             {
                 var finalCount = (int)await newCountTask;
-                _logger.LogInformation("RegisterConnectionAsync: Joiner katıldı. {ChannelId}, New Count={NewCount}", channelId, finalCount);
+                _logger.LogInformation("RegisterConnectionAsync: Joiner joined. {ChannelId}, New Count={NewCount}", channelId, finalCount);
                 return (true, finalCount, "Joiner");
             }
             else
             {
                 var currentCount = await _redisDb.StringGetAsync(countKey);
-                _logger.LogWarning("RegisterConnectionAsync (Joiner Path): Transaction BAŞARISIZ. Koşul (count == 1) sağlanamadı. Güncel Count: {Count}", currentCount.HasValue ? currentCount.ToString() : "NULL");
+                _logger.LogWarning("RegisterConnectionAsync (Joiner Path): Transaction FAILED. Condition (count == 1) not met. Current Count: {Count}", currentCount.HasValue ? currentCount.ToString() : "NULL");
                 return (false, (int)(currentCount.HasValue ? currentCount : -1), "BusyOrFull");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "RegisterConnectionAsync (Joiner Path): Transaction HATA. {ChannelId}", channelId);
+            _logger.LogError(ex, "RegisterConnectionAsync (Joiner Path): Transaction ERROR. {ChannelId}", channelId);
             return (false, -1, null);
         }
     }
@@ -90,7 +90,7 @@ public class RedisQrLoginChannelService : IQrLoginChannelService
     public async Task<bool> ValidateChannelAsync(string channelId)
     {
         var key = GetChannelStateKey(channelId);
-        _logger.LogInformation("ValidateChannelAsync: Kanal doğrulanıyor. Anahtar: {Key}", key);
+        _logger.LogInformation("ValidateChannelAsync: Validating channel. Key: {Key}", key);
 
         try
         {
@@ -98,17 +98,17 @@ public class RedisQrLoginChannelService : IQrLoginChannelService
 
             if (!state.HasValue)
             {
-                _logger.LogWarning("ValidateChannelAsync: Anahtar bulunamadı veya süresi dolmuş. Anahtar: {Key}", key);
+                _logger.LogWarning("ValidateChannelAsync: Key not found or expired. Key: {Key}", key);
                 return false;
             }
 
             bool isValid = state == "Waiting";
-            _logger.LogInformation("ValidateChannelAsync: Kanal durumu '{State}'. Geçerli: {IsValid}", state.ToString(), isValid);
+            _logger.LogInformation("ValidateChannelAsync: Channel state '{State}'. IsValid: {IsValid}", state.ToString(), isValid);
             return isValid;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "ValidateChannelAsync: Doğrulama sırasında HATA oluştu. Anahtar: {Key}", key);
+            _logger.LogError(ex, "ValidateChannelAsync: Error occurred during validation. Key: {Key}", key);
             return false;
         }
     }
@@ -119,20 +119,21 @@ public class RedisQrLoginChannelService : IQrLoginChannelService
             GetChannelStateKey(channelId),
             GetChannelCountKey(channelId)
         };
-        _logger.LogInformation("MarkChannelAsCompletedAsync: {ChannelId} için anahtarlar siliniyor.", channelId);
+        _logger.LogInformation("MarkChannelAsCompletedAsync: Deleting keys for {ChannelId}.", channelId);
         try
         {
             await _redisDb.KeyDeleteAsync(keys);
+            _logger.LogInformation("MarkChannelAsCompletedAsync: Successfully deleted keys for {ChannelId}.", channelId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "MarkChannelAsCompletedAsync: Silme sırasında HATA oluştu. ChannelId: {ChannelId}", channelId);
+            _logger.LogError(ex, "MarkChannelAsCompletedAsync: ERROR during deletion. ChannelId: {ChannelId}", channelId);
         }
     }
 
     public async Task<string?> LeaveChannelAsync(string connectionId)
     {
-        _logger.LogInformation("LeaveChannelAsync: {ConnectionId} ayrılıyor.", connectionId);
+        _logger.LogInformation("LeaveChannelAsync: {ConnectionId} is leaving.", connectionId);
         var connKey = GetConnectionKey(connectionId);
 
         try
@@ -141,20 +142,20 @@ public class RedisQrLoginChannelService : IQrLoginChannelService
 
             if (!channelId.HasValue)
             {
-                _logger.LogWarning("LeaveChannelAsync: {ConnectionId} için kanal bulunamadı (belki süresi doldu).", connectionId);
+                _logger.LogWarning("LeaveChannelAsync: No channel found for {ConnectionId} (perhaps expired).", connectionId);
                 return null;
             }
 
             var countKey = GetChannelCountKey(channelId.ToString());
 
             var newCount = await _redisDb.StringDecrementAsync(countKey);
-            _logger.LogInformation("LeaveChannelAsync: {ConnectionId} ayrıldı. Kanal: {ChannelId}, Yeni Sayı: {NewCount}", connectionId, channelId.ToString(), newCount);
+            _logger.LogInformation("LeaveChannelAsync: {ConnectionId} left. Channel: {ChannelId}, New Count: {NewCount}", connectionId, channelId.ToString(), newCount);
 
             return channelId.ToString();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "LeaveChannelAsync: HATA oluştu. ConnectionId: {ConnectionId}", connectionId);
+            _logger.LogError(ex, "LeaveChannelAsync: ERROR occurred. ConnectionId: {ConnectionId}", connectionId);
             return null;
         }
     }

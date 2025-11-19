@@ -6,80 +6,91 @@ using SecureVault.App.Application.Contracts.DTOs.Session;
 using SecureVault.Shared.Result;
 using System.Threading;
 
-namespace SecureVault.App.Infrastructure.Services.Api
+namespace SecureVault.App.Infrastructure.Services.Api;
+
+public class UserSessionService : IUserSessionService
 {
-    public class UserSessionService : IUserSessionService
+    private readonly ISecureVaultAuthorizeApi _secureVaultApi;
+    private readonly ILogger<UserSessionService> _logger;
+
+    public UserSessionService(ISecureVaultAuthorizeApi secureVaultApi, ILogger<UserSessionService> logger)
     {
-        private readonly ISecureVaultAuthorizeApi _secureVaultApi;
-        private readonly ILogger<UserSessionService> _logger;
+        _secureVaultApi = secureVaultApi;
+        _logger = logger;
+    }
 
-        public UserSessionService(ISecureVaultAuthorizeApi secureVaultApi, ILogger<UserSessionService> logger)
+    public async Task<Result<List<UserSessionsDto>>> GetUserSessionsAsync(CancellationToken cancellationToken)
+    {
+        try
         {
-            _secureVaultApi = secureVaultApi;
-            _logger = logger;
+            _logger.LogInformation("Attempting to get user sessions from API...");
+            var sessions = await _secureVaultApi.GetUserSessionsAsync(cancellationToken);
+
+            _logger.LogInformation("Successfully retrieved {Count} user sessions.", sessions.Count);
+            return sessions;
         }
-
-        public async Task<Result<List<UserSessionsDto>>> GetUserSessionsAsync(CancellationToken cancellationToken)
+        catch (BrokenCircuitException ex)
         {
-            try
-            {
-                var sessions = await _secureVaultApi.GetUserSessionsAsync(cancellationToken);
-                return sessions;
-            }
-            catch (BrokenCircuitException)
-            {
-                _logger.LogError("Devre açık. Kullanıcı oturumları alınamadı.");
-                return Result<List<UserSessionsDto>>.Failure(new Error("Service.Unavailable", "Servis geçici olarak kullanılamıyor. Lütfen birkaç dakika sonra tekrar deneyin."));
-            }
-            catch (ApiException ex)
-            {
-                _logger.LogError(ex, "Kullanıcı oturumları alınırken API hatası. Durum Kodu: {StatusCode}", ex.StatusCode);
-                var error = await ex.GetContentAsAsync<Error>();
-                return Result<List<UserSessionsDto>>.Failure(error ?? new Error("Api.RequestFailed", "Oturumlar yüklenemedi."));
-            }
-            catch (HttpRequestException ex)
-            {
-                _logger.LogError(ex, "Kullanıcı oturumları alınırken ağ hatası.");
-                return Result<List<UserSessionsDto>>.Failure(new Error("Service.ConnectionError", "Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin."));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Kullanıcı oturumları alınırken beklenmedik bir hata oluştu.");
-                return Result<List<UserSessionsDto>>.Failure(new Error("Client.UnexpectedError", "Beklenmedik bir hata oluştu."));
-            }
+            _logger.LogError(ex, "Get user sessions failed: Circuit Breaker is open.");
+            return Result<List<UserSessionsDto>>.Failure(new Error("Service.Unavailable", "Service is temporarily unavailable. Please try again in a few minutes."));
         }
-
-        public async Task<Result> LogoutAnyWhereAsync(Guid sessionId, CancellationToken cancellationToken)
+        catch (ApiException ex)
         {
-            try
-            {
-                var response = await _secureVaultApi.LogoutSessionAsync(sessionId, cancellationToken);
+            _logger.LogError(ex, "Get user sessions failed: API error. Status Code: {StatusCode}", ex.StatusCode);
+            var error = await ex.GetContentAsAsync<Error>();
+            return Result<List<UserSessionsDto>>.Failure(error ?? new Error("Api.RequestFailed", "Failed to load sessions."));
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Get user sessions failed: Network error.");
+            return Result<List<UserSessionsDto>>.Failure(new Error("Service.ConnectionError", "Could not connect to the server. Please check your internet connection."));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Get user sessions failed: Unexpected error.");
+            return Result<List<UserSessionsDto>>.Failure(new Error("Client.UnexpectedError", "An unexpected error occurred."));
+        }
+    }
 
-                return response.IsSuccessStatusCode
-                    ? Result.Success()
-                    : Result.Failure(await response.Error.GetContentAsAsync<Error>() ?? new Error("Client.DeleteFailed", "Oturum sonlandırılamadı."));
-            }
-            catch (BrokenCircuitException)
+    public async Task<Result> LogoutAnyWhereAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            _logger.LogInformation("Attempting to revoke (logout) session: {SessionId}", sessionId);
+            var response = await _secureVaultApi.LogoutSessionAsync(sessionId, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
             {
-                _logger.LogError("Devre açık. Oturum sonlandırılamadı.");
-                return Result.Failure(new Error("Service.Unavailable", "Servis geçici olarak kullanılamıyor. Lütfen birkaç dakika sonra tekrar deneyin."));
+                _logger.LogInformation("Successfully revoked session: {SessionId}", sessionId);
+                return Result.Success();
             }
-            catch (ApiException ex)
-            {
-                _logger.LogError(ex, "Oturum sonlandırılırken API hatası. Durum Kodu: {StatusCode}", ex.StatusCode);
-                var error = await ex.GetContentAsAsync<Error>();
-                return Result.Failure(error ?? new Error("Client.DeleteFailed", "Oturum sonlandırılamadı."));
-            }
-            catch (HttpRequestException ex)
-            {
-                _logger.LogError(ex, "Oturum sonlandırılırken ağ hatası.");
-                return Result.Failure(new Error("Service.ConnectionError", "Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin."));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Oturum sonlandırılırken beklenmedik bir hata oluştu.");
-                return Result.Failure(new Error("Client.UnexpectedError", "Beklenmedik bir hata oluştu."));
-            }
+
+            var error = await response.Error.GetContentAsAsync<Error>() ?? new Error("Client.DeleteFailed", "Failed to revoke session.");
+            _logger.LogWarning("Failed to revoke session {SessionId} (API business logic error): {ErrorCode} - {ErrorMessage}",
+                sessionId, error.Code, error.Message);
+
+            return Result.Failure(error);
+        }
+        catch (BrokenCircuitException ex)
+        {
+            _logger.LogError(ex, "Revoke session failed: Circuit Breaker is open. SessionId: {SessionId}", sessionId);
+            return Result.Failure(new Error("Service.Unavailable", "Service is temporarily unavailable. Please try again in a few minutes."));
+        }
+        catch (ApiException ex)
+        {
+            _logger.LogError(ex, "Revoke session failed: API error. SessionId: {SessionId}, Status Code: {StatusCode}", sessionId, ex.StatusCode);
+            var error = await ex.GetContentAsAsync<Error>();
+            return Result.Failure(error ?? new Error("Client.DeleteFailed", "Failed to revoke session."));
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Revoke session failed: Network error. SessionId: {SessionId}", sessionId);
+            return Result.Failure(new Error("Service.ConnectionError", "Could not connect to the server. Please check your internet connection."));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Revoke session failed: Unexpected error. SessionId: {SessionId}", sessionId);
+            return Result.Failure(new Error("Client.UnexpectedError", "An unexpected error occurred."));
         }
     }
 }

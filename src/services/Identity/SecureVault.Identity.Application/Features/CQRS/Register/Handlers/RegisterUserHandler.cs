@@ -8,48 +8,52 @@ using SecureVault.Identity.Application.Messages;
 using SecureVault.Identity.Domain.Entities;
 using SecureVault.Shared.Result;
 
-namespace SecureVault.Identity.Application.Features.CQRS.Register.Handlers
+namespace SecureVault.Identity.Application.Features.CQRS.Register.Handlers;
+
+public class RegisterUserHandler : IRequestHandler<RegisterUserCommand, Result>
 {
-    public class RegisterUserHandler : IRequestHandler<RegisterUserCommand, Result>
+    private readonly IUserRepository _userRepository;
+    private readonly IUserRecoveryDataRepository _userRecoveryDataRepository;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IStringLocalizer<ReturnMessages> _returnMessages;
+    private readonly ILogger<RegisterUserHandler> _logger;
+
+    public RegisterUserHandler(IUserRepository userRepository, IUnitOfWork unitOfWork, IStringLocalizer<ReturnMessages> returnMessages, ILogger<RegisterUserHandler> logger, IUserRecoveryDataRepository userRecoveryDataRepository)
     {
-        private readonly IUserRepository _userRepository;
-        private readonly IUserRecoveryDataRepository _userRecoveryDataRepository;
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IStringLocalizer<ReturnMessages> _returnMessages;
-        private readonly ILogger<RegisterUserHandler> _logger;
+        _userRepository = userRepository;
+        _unitOfWork = unitOfWork;
+        _returnMessages = returnMessages;
+        _logger = logger;
+        _userRecoveryDataRepository = userRecoveryDataRepository;
+    }
 
-        public RegisterUserHandler(IUserRepository userRepository, IUnitOfWork unitOfWork, IStringLocalizer<ReturnMessages> returnMessages, ILogger<RegisterUserHandler> logger, IUserRecoveryDataRepository userRecoveryDataRepository)
+    public async Task<Result> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
+    {
+        try
         {
-            _userRepository = userRepository;
-            _unitOfWork = unitOfWork;
-            _returnMessages = returnMessages;
-            _logger = logger;
-            _userRecoveryDataRepository = userRecoveryDataRepository;
+            var existingUser = await _userRepository.GetByEmailAsync(request.Email);
+            if (existingUser is not null)
+            {
+                _logger.LogWarning("Registration failed: Email already in use. Email: {Email}", request.Email);
+                return Result.Failure(new Error(ErrorCodes.Auth.EmailInUse, _returnMessages[ErrorCodes.Auth.EmailInUse]));
+            }
+
+            var newUser = User.Create(request.Email, request.PublicKey, request.Salt, request.UserInfo);
+            var newRecoveryData = UserRecoveryData.Create(newUser.Id, request.RecoveryData);
+
+            await _userRepository.AddAsync(newUser);
+            await _userRecoveryDataRepository.CreateAsync(newRecoveryData);
+
+            await _unitOfWork.SaveChangesWithTransactionAsync();
+
+            _logger.LogInformation("New user registered successfully. UserId: {UserId}, Email: {Email}", newUser.Id, request.Email);
+
+            return Result.Success();
         }
-
-        public async Task<Result> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
+        catch (Exception ex)
         {
-            try
-            {
-                var existingUser = await _userRepository.GetByEmailAsync(request.Email);
-                if (existingUser is not null)
-                    return Result.Failure(new Error(ErrorCodes.Auth.EmailInUse, _returnMessages[ErrorCodes.Auth.EmailInUse]));
-
-                var newUser = User.Create(request.Email, request.PublicKey, request.Salt, request.UserInfo);
-                var newRecoveryData = UserRecoveryData.Create(newUser.Id, request.RecoveryData);
-
-                await _userRepository.AddAsync(newUser);
-                await _userRecoveryDataRepository.CreateAsync(newRecoveryData);
-
-                await _unitOfWork.SaveChangesAsync();
-
-                return Result.Success();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Kullanıcı kaydı sırasında beklenmedik bir hata oluştu. Email: {Email}", request.Email);
-                return Result.Failure(new Error(ErrorCodes.InternalServerError, _returnMessages[ErrorCodes.InternalServerError]));
-            }
+            _logger.LogError(ex, "An unexpected error occurred during user registration. Email: {Email}", request.Email);
+            return Result.Failure(new Error(ErrorCodes.InternalServerError, _returnMessages[ErrorCodes.InternalServerError]));
         }
     }
 }

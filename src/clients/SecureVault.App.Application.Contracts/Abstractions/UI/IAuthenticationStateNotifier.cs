@@ -1,9 +1,8 @@
-﻿namespace SecureVault.App.Application.Contracts.Abstractions.UI
+﻿namespace SecureVault.App.Application.Contracts.Abstractions.UI;
+
+public interface IAuthenticationStateNotifier
 {
-    public interface IAuthenticationStateNotifier
-    {
-        event Func<bool, Task> OnAuthenticationStateChangedAsync;
-        Task NotifyUserAuthenticated(string accessToken);
-        Task NotifyUserLogout();
-    }
+    event Func<bool, Task> OnAuthenticationStateChangedAsync;
+    Task NotifyUserAuthenticated(string accessToken);
+    Task NotifyUserLogout();
 }

@@ -1,14 +1,13 @@
-﻿namespace SecureVault.App.Domain.Entities
-{
-    public interface ISynchronizableEntity
-    {
-        Guid Id { get; }
-        int Version { get; }
-        bool IsSynced { get; }
-        bool IsDeleted { get; }
-        DateTimeOffset UpdatedAt { get; }
+﻿namespace SecureVault.App.Domain.Entities;
 
-        void MarkAsSynced();
-        void MarkAsDeleted();
-    }
+public interface ISynchronizableEntity
+{
+    Guid Id { get; }
+    int Version { get; }
+    bool IsSynced { get; }
+    bool IsDeleted { get; }
+    DateTimeOffset UpdatedAt { get; }
+
+    void MarkAsSynced();
+    void MarkAsDeleted();
 }

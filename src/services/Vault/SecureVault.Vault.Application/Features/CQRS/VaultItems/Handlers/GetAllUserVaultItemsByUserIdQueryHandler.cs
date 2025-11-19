@@ -8,36 +8,44 @@ using SecureVault.Vault.Application.Features.CQRS.VaultItems.Results;
 using SecureVault.Vault.Application.Features.Specifications.VaultItems;
 using SecureVault.Vault.Application.Messages;
 
-namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers
+namespace SecureVault.Vault.Application.Features.CQRS.VaultItems.Handlers;
+
+public class GetAllUserVaultItemsByUserIdQueryHandler : IRequestHandler<GetAllUserVaultItemsByUserIdQuery, Result<IReadOnlyCollection<VaultItemResult>>>
 {
-    public class GetAllUserVaultItemsByUserIdQueryHandler : IRequestHandler<GetAllUserVaultItemsByUserIdQuery, Result<IReadOnlyCollection<VaultItemResult>>>
+    private readonly IVaultItemsRepository _repository;
+    private readonly ILogger<GetAllUserVaultItemsByUserIdQueryHandler> _logger;
+    private readonly IStringLocalizer<ReturnMessages> _returnMessages;
+
+    public GetAllUserVaultItemsByUserIdQueryHandler(IVaultItemsRepository repository, ILogger<GetAllUserVaultItemsByUserIdQueryHandler> logger, IStringLocalizer<ReturnMessages> returnMessages)
     {
-        private readonly IVaultItemsRepository _repository;
-        private readonly ILogger<GetAllUserVaultItemsByUserIdQueryHandler> _logger;
-        private readonly IStringLocalizer<ReturnMessages> _returnMessages;
+        _repository = repository;
+        _logger = logger;
+        _returnMessages = returnMessages;
+    }
 
-        public GetAllUserVaultItemsByUserIdQueryHandler(IVaultItemsRepository repository, ILogger<GetAllUserVaultItemsByUserIdQueryHandler> logger, IStringLocalizer<ReturnMessages> returnMessages)
+    public async Task<Result<IReadOnlyCollection<VaultItemResult>>> Handle(GetAllUserVaultItemsByUserIdQuery request, CancellationToken cancellationToken)
+    {
+        try
         {
-            _repository = repository;
-            _logger = logger;
-            _returnMessages = returnMessages;
+            var spec = new VaultItemsByUserIdSpecification(request.UserId);
+
+            var vaultItemsResult = await _repository.FindAsync(spec);
+
+            if (vaultItemsResult == null || !vaultItemsResult.Any())
+            {
+                _logger.LogInformation("No vault items found for User: {UserId}.", request.UserId);
+            }
+            else
+            {
+                _logger.LogInformation("Successfully retrieved {ItemCount} total vault items for User: {UserId}.", vaultItemsResult.Count, request.UserId);
+            }
+
+            return Result<IReadOnlyCollection<VaultItemResult>>.Success(vaultItemsResult);
         }
-
-        public async Task<Result<IReadOnlyCollection<VaultItemResult>>> Handle(GetAllUserVaultItemsByUserIdQuery request, CancellationToken cancellationToken)
+        catch (Exception ex)
         {
-            try
-            {
-                var spec = new VaultItemsByUserIdSpecification(request.UserId);
-
-                var vaultItemsResult = await _repository.FindAsync(spec);
-
-                return Result<IReadOnlyCollection<VaultItemResult>>.Success(vaultItemsResult);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Kullanıcının vault item'ları listelenirken beklenmedik bir hata oluştu. UserId: {UserId}", request.UserId);
-                return new Error(ErrorCodes.InternalServerError, _returnMessages[ErrorCodes.InternalServerError]);
-            }
+            _logger.LogError(ex, "An unexpected error occurred while retrieving all vault items for user. UserId: {UserId}", request.UserId);
+            return new Error(ErrorCodes.InternalServerError, _returnMessages[ErrorCodes.InternalServerError]);
         }
     }
 }

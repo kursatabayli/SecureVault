@@ -1,7 +1,6 @@
-﻿namespace SecureVault.App.Application.Contracts.Abstractions.Sync
+﻿namespace SecureVault.App.Application.Contracts.Abstractions.Sync;
+
+public interface IBackgroundSyncService
 {
-    public interface IBackgroundSyncService
-    {
-        Task<bool> SynchronizeAsync(CancellationToken cancellationToken);
-    }
+    Task<bool> SynchronizeAsync(CancellationToken cancellationToken);
 }

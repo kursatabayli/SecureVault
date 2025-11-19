@@ -6,12 +6,11 @@ namespace SecureVault.App.Infrastructure.Services.QrCodeLogin;
 public class QrCodeRefresher : IQrCodeRefresher
 {
   private readonly ILogger<QrCodeRefresher> _logger;
+  private CancellationTokenSource? _refreshCts;
+  private Task? _refreshTask;
 
-  public event Func<string, Task> OnQrCodeAvailable;
-  public event Func<string, Task> OnError;
-
-  private CancellationTokenSource _refreshCts;
-  private Task _refreshTask;
+  public event Func<string, Task>? OnQrCodeAvailable;
+  public event Func<string, Task>? OnError;
 
   public QrCodeRefresher(ILogger<QrCodeRefresher> logger)
   {
@@ -23,7 +22,7 @@ public class QrCodeRefresher : IQrCodeRefresher
     if (_refreshTask != null && !_refreshTask.IsCompleted)
     {
       _logger.LogWarning("Refresh timer is already running. Stopping the previous one before starting anew.");
-      _refreshCts?.Cancel();
+      _ = StopAsync();
     }
 
     _refreshCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -76,7 +75,17 @@ public class QrCodeRefresher : IQrCodeRefresher
 
             if (OnQrCodeAvailable != null)
             {
-              await OnQrCodeAvailable.Invoke(newChannelId);
+              _ = Task.Run(async () =>
+              {
+                try
+                {
+                  await OnQrCodeAvailable.Invoke(newChannelId);
+                }
+                catch (Exception subEx)
+                {
+                  _logger.LogError(subEx, "Error in OnQrCodeAvailable subscriber.");
+                }
+              }, cancellationToken);
             }
           }
           else
@@ -92,8 +101,22 @@ public class QrCodeRefresher : IQrCodeRefresher
         {
           _logger.LogError(ex, "Failed to execute switch channel callback automatically.");
 
+          var errorMessage = $"Failed to get new QR code: {ex.Message}";
+
           if (OnError != null)
-            await OnError.Invoke($"Yeni QR kod alınamadı: {ex.Message}");
+          {
+            _ = Task.Run(async () =>
+            {
+              try
+              {
+                await OnError.Invoke(errorMessage);
+              }
+              catch (Exception subEx)
+              {
+                _logger.LogError(subEx, "Error in OnError subscriber.");
+              }
+            }, cancellationToken);
+          }
 
           return;
         }
@@ -107,6 +130,7 @@ public class QrCodeRefresher : IQrCodeRefresher
 
   public async ValueTask DisposeAsync()
   {
+    _logger.LogInformation("Disposing QrCodeRefresher...");
     await StopAsync();
     _refreshCts?.Dispose();
     _refreshCts = null;

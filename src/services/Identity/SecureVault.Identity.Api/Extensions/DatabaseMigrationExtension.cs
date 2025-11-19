@@ -17,26 +17,28 @@ public static class DatabaseMigrationExtension
     var dbContext = services.GetRequiredService<AppDbContext>();
     var logger = services.GetRequiredService<ILogger<WebApplication>>();
 
+    logger.LogInformation("Applying database migrations (Attempt 1/{MaxRetries})...", maxRetries);
+
     while (attempt < maxRetries)
     {
       try
       {
         dbContext.Database.Migrate();
-        logger.LogInformation("Veritabanı migration işlemi başarıyla tamamlandı.");
+        logger.LogInformation("Database migration completed successfully.");
         break;
       }
-      catch (NpgsqlException ex)
+      catch (Exception ex)
       {
         attempt++;
-        logger.LogWarning(ex, "Veritabanı bağlantı hatası (Deneme: {Attempt}/{MaxRetries}). {Delay}ms bekleniyor...", attempt, maxRetries, delayMilliseconds);
+        logger.LogWarning(ex, "Database migration failed (Attempt: {Attempt}/{MaxRetries}). Waiting {Delay}ms...", attempt, maxRetries, delayMilliseconds);
 
         if (attempt >= maxRetries)
         {
-          logger.LogError("Maksimum deneme sayısına ulaşıldı. Veritabanı migration işlemi başarısız.");
+          logger.LogError("Maximum retry attempts reached. Database migration failed.");
           throw;
         }
 
-        Task.Delay(delayMilliseconds).Wait();
+        Thread.Sleep(delayMilliseconds);
       }
     }
   }

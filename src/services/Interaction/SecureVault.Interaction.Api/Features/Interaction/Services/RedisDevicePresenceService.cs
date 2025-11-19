@@ -19,15 +19,15 @@ public class RedisDevicePresenceService : IDevicePresenceService
   public async Task RegisterDeviceAsync(string userId, string deviceId)
   {
     var key = GetUserKey(userId);
-    _logger.LogInformation("RegisterDeviceAsync: Cihaz {DeviceId} 'SetAddAsync' ile {Key} anahtarına ekleniyor...", deviceId, key);
+    _logger.LogInformation("RegisterDeviceAsync: Adding device {DeviceId} to key {Key} using SetAddAsync...", deviceId, key);
     try
     {
       await _redisDb.SetAddAsync(key, deviceId);
-      _logger.LogInformation("RegisterDeviceAsync: Cihaz {DeviceId} başarıyla eklendi. Anahtar: {Key}", deviceId, key);
+      _logger.LogInformation("RegisterDeviceAsync: Device {DeviceId} added successfully. Key: {Key}", deviceId, key);
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "RegisterDeviceAsync: Cihaz {DeviceId} eklenirken HATA oluştu. Anahtar: {Key}", deviceId, key);
+      _logger.LogError(ex, "RegisterDeviceAsync: ERROR adding device {DeviceId}. Key: {Key}", deviceId, key);
       throw;
     }
   }
@@ -35,15 +35,15 @@ public class RedisDevicePresenceService : IDevicePresenceService
   public async Task UnregisterDeviceAsync(string userId, string deviceId)
   {
     var key = GetUserKey(userId);
-    _logger.LogInformation("UnregisterDeviceAsync: Cihaz {DeviceId} 'SetRemoveAsync' ile {Key} anahtarından kaldırılıyor...", deviceId, key);
+    _logger.LogInformation("UnregisterDeviceAsync: Removing device {DeviceId} from key {Key} using SetRemoveAsync...", deviceId, key);
     try
     {
       await _redisDb.SetRemoveAsync(key, deviceId);
-      _logger.LogInformation("UnregisterDeviceAsync: Cihaz {DeviceId} başarıyla kaldırıldı. Anahtar: {Key}", deviceId, key);
+      _logger.LogInformation("UnregisterDeviceAsync: Device {DeviceId} removed successfully. Key: {Key}", deviceId, key);
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "UnregisterDeviceAsync: Cihaz {DeviceId} kaldırılırken HATA oluştu. Anahtar: {Key}", deviceId, key);
+      _logger.LogError(ex, "UnregisterDeviceAsync: ERROR removing device {DeviceId}. Key: {Key}", deviceId, key);
       throw;
     }
   }
@@ -51,18 +51,18 @@ public class RedisDevicePresenceService : IDevicePresenceService
   public async Task<List<string>> GetActiveDevicesAsync(string userId)
   {
     var key = GetUserKey(userId);
-    _logger.LogInformation("GetActiveDevicesAsync: {Key} anahtarındaki cihazlar okunuyor...", key);
+    _logger.LogInformation("GetActiveDevicesAsync: Reading devices from key {Key}...", key);
     try
     {
       var devices = await _redisDb.SetMembersAsync(key);
       var deviceList = devices.Select(d => d.ToString()).ToList();
-      _logger.LogInformation("GetActiveDevicesAsync: {Key} anahtarından {Count} adet cihaz okundu.", key, deviceList.Count);
+      _logger.LogInformation("GetActiveDevicesAsync: Read {Count} devices from key {Key}.", key, deviceList.Count);
       return deviceList;
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "GetActiveDevicesAsync: Cihazlar okunurken HATA oluştu. Anahtar: {Key}", key);
-      return new List<string>();
+      _logger.LogError(ex, "GetActiveDevicesAsync: ERROR reading devices. Key: {Key}", key);
+      return [];
     }
   }
 }

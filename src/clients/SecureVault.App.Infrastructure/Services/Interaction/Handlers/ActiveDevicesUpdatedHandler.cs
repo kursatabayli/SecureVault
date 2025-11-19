@@ -21,8 +21,15 @@ public class ActiveDevicesUpdatedHandler : ISignalRHubEventHandler
   {
     connection.On<List<string>>("ActiveDevicesUpdated", (deviceIds) =>
     {
-      _logger.LogInformation("Aktif cihaz listesi güncellendi. {Count} cihaz aktif.", deviceIds.Count);
-      (_activeSessionTracker as ActiveSessionTracker)?.UpdateActiveDevices(deviceIds);
+      try
+      {
+        _logger.LogInformation("Active device list updated. {Count} devices are active.", deviceIds.Count);
+        (_activeSessionTracker as ActiveSessionTracker)?.UpdateActiveDevices(deviceIds);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error handling 'ActiveDevicesUpdated' notification.");
+      }
     });
   }
 }

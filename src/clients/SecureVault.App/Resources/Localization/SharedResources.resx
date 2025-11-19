@@ -120,11 +120,20 @@
   <data name="Copied" xml:space="preserve">
     <value>Copied to Clipboard</value>
   </data>
+  <data name="GetFailed" xml:space="preserve">
+    <value>Failed to retrieve the item from the database.</value>
+  </data>
+  <data name="HOTPCounterUpdateFailed" xml:space="preserve">
+    <value>Failed to update the item's counter.</value>
+  </data>
   <data name="LoadFailed" xml:space="preserve">
     <value>An error occurred while loading data.</value>
   </data>
   <data name="NetworkError" xml:space="preserve">
     <value>Could not connect to the server. Please check your internet connection.</value>
+  </data>
+  <data name="NotHotp" xml:space="preserve">
+    <value>The selected item is not a valid HOTP code.</value>
   </data>
   <data name="RegistrationSuccessful" xml:space="preserve">
     <value>Your registration was successful!</value>

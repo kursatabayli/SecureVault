@@ -1,75 +1,74 @@
-﻿using SecureVault.App.Services;
+﻿using SecureVault.App.Services.Interfaces;
 using MauiApplication = Microsoft.Maui.Controls.Application;
 
-namespace SecureVault.App
+namespace SecureVault.App;
+
+public partial class App : MauiApplication
 {
-    public partial class App : MauiApplication
+    private readonly IServiceProvider _serviceProvider;
+    private IAppLifecycleManager? _lifecycleManager;
+
+    public App(IServiceProvider serviceProvider)
     {
-        private readonly IServiceProvider _serviceProvider;
-        private IAppLifecycleManager? _lifecycleManager;
+        InitializeComponent();
+        _serviceProvider = serviceProvider;
+    }
 
-        public App(IServiceProvider serviceProvider)
+    protected override void OnStart()
+    {
+        base.OnStart();
+
+    }
+
+    protected override async void OnSleep()
+    {
+        base.OnSleep();
+        if (_lifecycleManager != null)
         {
-            InitializeComponent();
-            _serviceProvider = serviceProvider;
+            await _lifecycleManager.OnSleep();
         }
+    }
 
-        protected override void OnStart()
+    protected override async void OnResume()
+    {
+        base.OnResume();
+        if (_lifecycleManager != null)
         {
-            base.OnStart();
-
+            await _lifecycleManager.OnResume();
         }
+    }
 
-        protected override async void OnSleep()
+    protected override Window CreateWindow(IActivationState? activationState)
+    {
+        var window = new Window
         {
-            base.OnSleep();
-            if (_lifecycleManager != null)
-            {
-                await _lifecycleManager.OnSleep();
-            }
-        }
+            Page = new MainPage(),
+            Title = "Secure Vault"
+        };
 
-        protected override async void OnResume()
-        {
-            base.OnResume();
-            if (_lifecycleManager != null)
-            {
-                await _lifecycleManager.OnResume();
-            }
-        }
-
-        protected override Window CreateWindow(IActivationState? activationState)
-        {
-            var window = new Window
-            {
-                Page = new MainPage(),
-                Title = "Secure Vault"
-            };
-
-            window.Created += async (s, e) =>
+        window.Created += async (s, e) =>
+                    {
+                        try
                         {
-                            try
-                            {
-                                _lifecycleManager = _serviceProvider.GetRequiredService<IAppLifecycleManager>();
+                            _lifecycleManager = _serviceProvider.GetRequiredService<IAppLifecycleManager>();
 
-                                _lifecycleManager.Initialize();
-                                await _lifecycleManager.OnStart();
-                            }
-                            catch (Exception ex)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"FATAL ERROR during AppLifecycleManager setup: {ex}");
-                            }
-                        };
+                            _lifecycleManager.Initialize();
+                            await _lifecycleManager.OnStart();
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"FATAL ERROR during AppLifecycleManager setup: {ex}");
+                        }
+                    };
 
-            window.Destroying += async (s, e) =>
+        window.Destroying += async (s, e) =>
+        {
+            if (_lifecycleManager != null)
             {
-                if (_lifecycleManager != null)
-                {
-                    await _lifecycleManager.OnDestroying();
-                }
-            };
+                await _lifecycleManager.OnDestroying();
+            }
+        };
 
-            return window;
-        }
+        return window;
     }
 }

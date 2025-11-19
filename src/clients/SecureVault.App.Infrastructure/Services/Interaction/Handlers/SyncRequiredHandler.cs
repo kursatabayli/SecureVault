@@ -20,8 +20,15 @@ public class SyncRequiredHandler : ISignalRHubEventHandler
   {
     connection.On("SyncRequired", async () =>
     {
-      _logger.LogInformation("Sunucudan 'SyncRequired' bildirimi alındı. Catch-Up Sync tetikleniyor.");
-      await _backgroundSyncService.SynchronizeAsync(CancellationToken.None);
+      try
+      {
+        _logger.LogInformation("Received 'SyncRequired' notification from server. Triggering Catch-Up Sync.");
+        await _backgroundSyncService.SynchronizeAsync(CancellationToken.None);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error handling 'SyncRequired' notification.");
+      }
     });
   }
 }

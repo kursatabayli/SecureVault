@@ -14,7 +14,8 @@ public class CreatingChannelState : QrLoginStateBase
 
   public override async Task HandleEnterAsync(QrLoginSessionManager context)
   {
-    await context.SetState(QrSessionState.CreatingChannel, "Oturum kanalı oluşturuluyor...");
+    Logger.LogInformation("Entering CreatingChannelState: Starting new Hub connection...");
+    await context.SetState(QrSessionState.CreatingChannel, "Creating session channel...");
 
     try
     {
@@ -23,22 +24,24 @@ public class CreatingChannelState : QrLoginStateBase
 
       if (string.IsNullOrEmpty(context.ChannelId))
       {
-        await context.HandleErrorAsync("Sunucudan kanal ID'si alınamadı.");
+        Logger.LogError("Hub connection started but returned a null or empty Channel ID.");
+        await context.HandleErrorAsync("Could not get Channel ID from server.");
         return;
       }
 
+      Logger.LogInformation("Successfully created channel {ChannelId}. Notifying QR availability.", context.ChannelId);
       context.NotifyQrCodeAvailable(context.ChannelId);
       await context.TransitionToAsync(new AwaitingPeerState(Logger, _cancellationToken));
     }
     catch (OperationCanceledException)
     {
-      Logger.LogInformation("Kullanıcı tarafından oturum oluşturma iptal edildi.");
+      Logger.LogInformation("Session creation canceled by user.");
       await context.TransitionToAsync(new IdleState(Logger));
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Oturum başlatılamadı.");
-      await context.HandleErrorAsync($"Oturum başlatılamadı: {ex.Message}");
+      Logger.LogError(ex, "Failed to start session.");
+      await context.HandleErrorAsync($"Failed to start session: {ex.Message}");
     }
   }
 }

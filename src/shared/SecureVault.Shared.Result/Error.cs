@@ -1,7 +1,6 @@
-﻿namespace SecureVault.Shared.Result
+﻿namespace SecureVault.Shared.Result;
+
+public record Error(string Code, string Message)
 {
-    public record Error(string Code, string Message)
-    {
-        public static readonly Error None = new(string.Empty, string.Empty);
-    }
+    public static readonly Error None = new(string.Empty, string.Empty);
 }

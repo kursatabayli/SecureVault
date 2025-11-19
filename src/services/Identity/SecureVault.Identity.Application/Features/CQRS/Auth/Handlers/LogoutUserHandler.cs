@@ -4,45 +4,46 @@ using SecureVault.Identity.Application.Contracts.Services;
 using SecureVault.Identity.Application.Features.CQRS.Auth.Commands;
 using SecureVault.Shared.Result;
 
-namespace SecureVault.Identity.Application.Features.CQRS.Auth.Handlers
-{
-    public class LogoutUserHandler : IRequestHandler<LogoutUserCommand, Result>
-    {
-        private readonly ITokenValidationService _tokenValidationService;
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<LogoutUserHandler> _logger;
+namespace SecureVault.Identity.Application.Features.CQRS.Auth.Handlers;
 
-        public LogoutUserHandler(ITokenValidationService tokenValidationService, IUnitOfWork unitOfWork, ILogger<LogoutUserHandler> logger)
+public class LogoutUserHandler : IRequestHandler<LogoutUserCommand, Result>
+{
+    private readonly ITokenValidationService _tokenValidationService;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<LogoutUserHandler> _logger;
+
+    public LogoutUserHandler(ITokenValidationService tokenValidationService, IUnitOfWork unitOfWork, ILogger<LogoutUserHandler> logger)
+    {
+        _tokenValidationService = tokenValidationService;
+        _unitOfWork = unitOfWork;
+        _logger = logger;
+    }
+
+    public async Task<Result> Handle(LogoutUserCommand request, CancellationToken cancellationToken)
+    {
+        var validationResult = await _tokenValidationService.ValidateAndGetSessionAsync(request.AccessToken, request.RefreshToken, request.DpopJkt);
+
+        if (validationResult.IsFailure)
         {
-            _tokenValidationService = tokenValidationService;
-            _unitOfWork = unitOfWork;
-            _logger = logger;
+            _logger.LogWarning("Refresh token provided for logout was already invalid (or DPoP proof was missing/mismatched).");
+            return Result.Success();
         }
 
-        public async Task<Result> Handle(LogoutUserCommand request, CancellationToken cancellationToken)
+        var session = validationResult.Value;
+
+        try
         {
-            var validationResult = await _tokenValidationService.ValidateAndGetSessionAsync(request.AccessToken, request.RefreshToken);
+            session.Revoke();
+            await _unitOfWork.SaveChangesAsync();
 
-            if (validationResult.IsFailure)
-            {
-                _logger.LogWarning("Logout için sağlanan refresh token zaten geçersizdi.");
-                return Result.Success();
-            }
+            _logger.LogInformation("User logged out successfully. Session revoked. UserId: {UserId}, SessionId: {SessionId}", session.UserId, session.Id);
 
-            var session = validationResult.Value;
-
-            try
-            {
-                session.Revoke();
-                await _unitOfWork.SaveChangesAsync();
-
-                return Result.Success();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Logout sırasında oturum iptal edilirken beklenmedik bir hata oluştu. UserId: {UserId}", validationResult.Value);
-                return Result.Success();
-            }
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An unexpected error occurred while revoking the session during logout. UserId: {UserId}, SessionId: {SessionId}", session.UserId, session.Id);
+            return Result.Success();
         }
     }
 }

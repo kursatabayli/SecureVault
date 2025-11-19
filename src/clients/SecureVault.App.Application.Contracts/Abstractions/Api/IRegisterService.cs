@@ -1,10 +1,9 @@
 ﻿using SecureVault.App.Application.Contracts.DTOs.Register;
 using SecureVault.Shared.Result;
 
-namespace SecureVault.App.Application.Contracts.Abstractions.Api
+namespace SecureVault.App.Application.Contracts.Abstractions.Api;
+
+public interface IRegisterService
 {
-    public interface IRegisterService
-    {
-        Task<Result?> RegisterAsync(RegisterUserDto registerUserDto, CancellationToken cancellationToken);
-    }
+    Task<Result?> RegisterAsync(RegisterUserDto registerUserDto, CancellationToken cancellationToken);
 }

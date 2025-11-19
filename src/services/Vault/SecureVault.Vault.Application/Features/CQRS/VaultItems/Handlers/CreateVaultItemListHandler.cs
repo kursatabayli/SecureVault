@@ -25,7 +25,7 @@ public class CreateVaultItemListHandler : IRequestHandler<CreateVaultItemListCom
   {
     if (request.VaultItems == null || !request.VaultItems.Any())
     {
-      _logger.LogWarning("CreateVaultItemListCommand boş bir liste ile çağrıldı.");
+      _logger.LogWarning("CreateVaultItemListCommand was called with an empty list.");
       return Result.Success();
     }
     var firstItem = request.VaultItems.First();
@@ -44,11 +44,17 @@ public class CreateVaultItemListHandler : IRequestHandler<CreateVaultItemListCom
 
       await _repository.AddRangeAsync(vaultItems);
 
+      _logger.LogInformation(
+                "Successfully created {ItemCount} new vault items for User: {UserId}. CreatedByDevice: {DeviceId}",
+                vaultItems.Count, userId, deviceId);
+
       return Result.Success();
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Vault item oluşturulurken beklenmedik bir hata oluştu. UserId: {UserId}", request.VaultItems.FirstOrDefault().UserId);
+      _logger.LogError(ex,
+                "An unexpected error occurred while creating vault items. UserId: {UserId}, DeviceId: {DeviceId}",
+                userId, deviceId);
       return Result.Failure(new Error(ErrorCodes.InternalServerError, _returnMessages[ErrorCodes.InternalServerError]));
     }
   }

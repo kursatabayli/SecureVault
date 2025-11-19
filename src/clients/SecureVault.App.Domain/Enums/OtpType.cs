@@ -1,8 +1,7 @@
-﻿namespace SecureVault.App.Domain.Enums
+﻿namespace SecureVault.App.Domain.Enums;
+
+public enum OtpType : int
 {
-    public enum OtpType : int
-    {
-        TOTP,
-        HOTP
-    }
+    TOTP,
+    HOTP
 }

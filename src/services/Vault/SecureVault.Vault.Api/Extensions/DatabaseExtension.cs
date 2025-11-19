@@ -1,28 +1,27 @@
 ﻿using MongoDB.Driver;
 
-namespace SecureVault.Vault.Api.Extensions
+namespace SecureVault.Vault.Api.Extensions;
+
+public static class DatabaseExtension
 {
-    public static class DatabaseExtension
+    public static IServiceCollection AddMongoDbConfiguration(this IServiceCollection services, IHostApplicationBuilder builder)
     {
-        public static IServiceCollection AddMongoDbConfiguration(this IServiceCollection services, IHostApplicationBuilder builder)
-        {
-            builder.AddMongoDBClient("vault-db");
+        builder.AddMongoDBClient("vault-db");
 
-            services.AddScoped(sp =>
+        services.AddScoped(sp =>
+              {
+                  var client = sp.GetRequiredService<IMongoClient>();
+
+                  var dbName = builder.Configuration.GetValue<string>("MongoDbSettings:DatabaseName");
+
+                  if (string.IsNullOrEmpty(dbName))
                   {
-                      var client = sp.GetRequiredService<IMongoClient>();
+                      throw new InvalidOperationException("'MongoDbSettings:DatabaseName' is not configured. " + "Ensure this setting is added to appsettings.json or the AppHost.");
+                  }
 
-                      var dbName = builder.Configuration.GetValue<string>("MongoDbSettings:DatabaseName");
+                  return client.GetDatabase(dbName);
+              });
 
-                      if (string.IsNullOrEmpty(dbName))
-                      {
-                          throw new InvalidOperationException("'MongoDbSettings:DatabaseName' ayarı yapılandırılmamış. " + "Bunu appsettings.json'a veya AppHost'a eklediğinizden emin olun.");
-                      }
-
-                      return client.GetDatabase(dbName);
-                  });
-
-            return services;
-        }
+        return services;
     }
 }

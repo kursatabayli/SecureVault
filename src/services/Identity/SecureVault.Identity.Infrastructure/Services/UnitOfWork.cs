@@ -1,46 +1,61 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SecureVault.Identity.Application.Contracts.Services;
 using SecureVault.Identity.Infrastructure.Context;
 
-namespace SecureVault.Identity.Infrastructure.Services
+namespace SecureVault.Identity.Infrastructure.Services;
+
+public class UnitOfWork : IUnitOfWork
 {
-    public class UnitOfWork : IUnitOfWork
+    private readonly AppDbContext _context;
+    private readonly ILogger<UnitOfWork> _logger;
+
+    public UnitOfWork(AppDbContext context, ILogger<UnitOfWork> logger)
     {
-        private readonly AppDbContext _context;
+        _context = context;
+        _logger = logger;
+    }
 
-        public UnitOfWork(AppDbContext context)
+    public async Task SaveChangesAsync()
+    {
+        try
         {
-            _context = context;
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Changes saved successfully (non-transactional).");
         }
-
-        public async Task SaveChangesAsync() => await _context.SaveChangesAsync();
-
-        public async Task SaveChangesWithTransactionAsync()
+        catch (Exception ex)
         {
-            var executionStrategy = _context.Database.CreateExecutionStrategy();
+            _logger.LogError(ex, "Failed to save changes (non-transactional).");
+            throw;
+        }
+    }
 
-            await executionStrategy.ExecuteAsync(async () =>
+    public async Task SaveChangesWithTransactionAsync()
+    {
+        var executionStrategy = _context.Database.CreateExecutionStrategy();
+
+        await executionStrategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                await using var transaction = await _context.Database.BeginTransactionAsync();
-                try
-                {
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-                }
-                catch (Exception)
-                {
-                    await transaction.RollbackAsync();
-                    throw;
-                }
-            });
-        }
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                _logger.LogInformation("Transaction committed successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Transaction failed and is being rolled back.");
+                await transaction.RollbackAsync();
+                throw;
+            }
+        });
+    }
 
-        public async ValueTask DisposeAsync()
-        {
-            if (_context != null)
-                await _context.DisposeAsync();
-        }
-
+    public async ValueTask DisposeAsync()
+    {
+        if (_context != null)
+            await _context.DisposeAsync();
     }
 }
 

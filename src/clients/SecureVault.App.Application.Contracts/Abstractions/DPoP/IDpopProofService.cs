@@ -1,5 +1,4 @@
-
-namespace SecureVault.App.Application.Contracts.Abstractions.Persistence;
+namespace SecureVault.App.Application.Contracts.Abstractions.DPoP;
 
 public interface IDpopProofService
 {

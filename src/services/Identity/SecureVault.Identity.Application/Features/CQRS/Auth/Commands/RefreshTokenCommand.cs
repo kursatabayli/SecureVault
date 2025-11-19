@@ -2,14 +2,13 @@
 using SecureVault.Identity.Application.Contracts.DTOs.AuthDto;
 using SecureVault.Shared.Result;
 
-namespace SecureVault.Identity.Application.Features.CQRS.Auth.Commands
-{
-    public record RefreshTokenCommand(
-        string? AccessToken,
-        string? RefreshToken,
+namespace SecureVault.Identity.Application.Features.CQRS.Auth.Commands;
 
-        string? IpAddress,
-        string? UniqueDeviceId,
-        string? DeviceName,
-        string? DpopJkt) : IRequest<Result<AuthResponse>>;
-}
+public record RefreshTokenCommand(
+    string? AccessToken,
+    string? RefreshToken,
+
+    string? IpAddress,
+    string? UniqueDeviceId,
+    string? DeviceName,
+    string? DpopJkt) : IRequest<Result<AuthResponse>>;
